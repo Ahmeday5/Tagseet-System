@@ -1,0 +1,70 @@
+<div class="pgh">
+  <div>
+    <div class="pgt">الموردون</div>
+    <div class="pgs">إدارة حسابات الموردين والمشتريات وكشوف الحساب</div>
+  </div>
+  <button class="btn btn-sm btn-bl">+ مورد جديد</button>
+</div>
+
+<div class="row justify-content-around g-2">
+  <div class="col-md-4 col-sm-6">
+    <div class="sc">
+      <div class="sc-l">إجمالي المشتريات</div>
+      <div class="sc-v">98,000 ر.س</div>
+    </div>
+  </div>
+  <div class="col-md-4 col-sm-6">
+    <div class="sc">
+      <div class="sc-l">المدفوع</div>
+      <div class="sc-v" style="color:var(--gr)">76,500 ر.س</div>
+    </div>
+  </div>
+  <div class="col-md-4 col-sm-6">
+    <div class="sc">
+      <div class="sc-l">الباقي للموردين</div>
+      <div class="sc-v" style="color:var(--re)">21,500 ر.س</div>
+    </div>
+  </div>
+</div>
+
+<div class="tw mt-3">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>المورد</th>
+        <th>المسؤول</th>
+        <th>الجوال</th>
+        <th>المدينة</th>
+        <th>إجمالي المشتريات</th>
+        <th>الرصيد</th>
+        <th>الحالة</th>
+        <th class="text-center">إجراءات</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (s of suppliers(); track s.id) {
+      <tr>
+        <td class="fw-semibold">{{ s.name }}</td>
+        <td>{{ s.contactName }}</td>
+        <td>{{ s.phone }}</td>
+        <td>{{ s.city }}</td>
+        <td>{{ s.totalPurchases | currencyAr }}</td>
+        <td>
+          <span [style.color]="s.balance > 0 ? 'var(--re)' : 'var(--gr)'">
+            {{ s.balance | currencyAr : true }}
+          </span>
+        </td>
+        <td>
+          <app-badge [text]="getStatusLabel(s.status)" [type]="getStatusBadge(s.status)" />
+        </td>
+        <td class="text-center">
+          <div class="d-flex gap-1 justify-content-center">
+            <button class="btn btn-sm btn-bl">تعديل</button>
+            <button class="btn btn-sm">طلبية</button>
+          </div>
+        </td>
+      </tr>
+      }
+    </tbody>
+  </table>
+</div>

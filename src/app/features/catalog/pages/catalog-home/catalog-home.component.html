@@ -1,0 +1,226 @@
+<div class="pgh">
+  <div>
+    <div class="pgt">الكتالوج والطلبيات</div>
+    <div class="pgs">اختر المنتجات وأنشئ طلبية قسط أو حوّل الطلبيات الواردة إلى عقود</div>
+  </div>
+</div>
+
+<!-- بانر تدفق الطلبيات -->
+<div class="order-banner mb-3">
+  <div class="order-step">
+    <div class="step-icon">📱</div>
+    <div class="step-label">طلب من التطبيق</div>
+  </div>
+  <div class="step-arrow">←</div>
+  <div class="order-step">
+    <div class="step-icon">🔍</div>
+    <div class="step-label">مراجعة الطلب</div>
+  </div>
+  <div class="step-arrow">←</div>
+  <div class="order-step active">
+    <div class="step-icon">📋</div>
+    <div class="step-label">تحويل لعقد</div>
+  </div>
+  <div class="step-arrow">←</div>
+  <div class="order-step">
+    <div class="step-icon">✅</div>
+    <div class="step-label">تفعيل الأقساط</div>
+  </div>
+</div>
+
+<!-- طلبيات معلقة من التطبيق -->
+@if (pendingOrders().length > 0) {
+  <div class="card mb-3">
+    <div class="chdr">
+      <div class="ct">طلبيات معلقة من التطبيق</div>
+      <span class="badge bbad">{{ pendingOrders().length }}</span>
+    </div>
+    <div class="tw">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>العميل</th>
+            <th>الجوال</th>
+            <th>المنتج</th>
+            <th>الكمية</th>
+            <th>تاريخ الطلب</th>
+            <th class="text-center">إجراءات</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (order of pendingOrders(); track order.id) {
+            <tr>
+              <td class="fw-semibold">{{ order.customerName }}</td>
+              <td style="font-size:11px;direction:ltr">{{ order.phone }}</td>
+              <td>{{ order.productName }}</td>
+              <td>{{ order.qty }}</td>
+              <td style="font-size:11px">{{ order.requestDate }}</td>
+              <td class="text-center">
+                <div class="d-flex gap-1 justify-content-center">
+                  <button class="btn btn-sm btn-gr" (click)="convertOrder(order)">تحويل لعقد</button>
+                  <button class="btn btn-sm btn-re" (click)="rejectOrder(order)">رفض</button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+}
+
+<div class="row g-3">
+  <!-- قائمة المنتجات -->
+  <div class="col-12 col-lg-7">
+    <div class="card">
+      <div class="chdr"><div class="ct">قائمة المنتجات</div></div>
+      <div class="tw">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>المنتج</th>
+              <th>المخزن</th>
+              <th>الأرقام التسلسلية</th>
+              <th>السعر</th>
+              <th>هامش الربح</th>
+              <th>المخزون</th>
+              <th class="text-center">إضافة</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (p of products(); track p.id) {
+              <tr>
+                <td>
+                  <div class="fw-semibold">{{ p.name }}</div>
+                  <div style="font-size:10px;color:var(--txt3)">{{ p.category }} · {{ p.sku }}</div>
+                </td>
+                <td style="font-size:11px;color:var(--txt2)">{{ p.warehouseName ?? '—' }}</td>
+                <td style="font-size:10px;color:var(--txt3);direction:ltr">
+                  {{ p.serialStart ?? '—' }} → {{ p.serialEnd ?? '—' }}
+                </td>
+                <td>{{ p.price | currencyAr }}</td>
+                <td style="color:var(--gr);font-size:11px">{{ margin(p) | currencyAr }}</td>
+                <td>
+                  <span [class]="p.stock <= p.minStock ? 'badge bbad' : 'badge bok'">
+                    {{ p.stock }}
+                  </span>
+                </td>
+                <td class="text-center">
+                  <button
+                    class="btn btn-sm btn-bl"
+                    [disabled]="p.stock === 0"
+                    (click)="addToCart(p)"
+                  >+</button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- السلة + حاسبة الأقساط -->
+  <div class="col-12 col-lg-5">
+
+    <!-- السلة -->
+    <div class="card mb-3">
+      <div class="chdr">
+        <div class="ct">السلة</div>
+        <button class="btn btn-sm btn-re" (click)="clearCart()">مسح الكل</button>
+      </div>
+
+      @if (cart().length === 0) {
+        <div class="text-center p-3" style="font-size:11px;color:var(--txt3)">
+          لا توجد أصناف — أضف من الجدول
+        </div>
+      } @else {
+        @for (item of cart(); track item.product.id; let i = $index) {
+          <div class="d-flex align-items-center gap-2 py-2 border-bottom px-2">
+            <div class="flex-grow-1">
+              <div class="fw-semibold" style="font-size:12px">{{ item.product.name }}</div>
+              <div style="font-size:10px;color:var(--txt2)">
+                {{ item.product.price | currencyAr }} × {{ item.qty }}
+                = {{ item.product.price * item.qty | currencyAr }}
+              </div>
+            </div>
+            <div class="d-flex align-items-center gap-1">
+              <button class="btn btn-sm" (click)="changeQty(i, -1)">−</button>
+              <span class="fw-semibold text-center" style="font-size:11px;min-width:20px">{{ item.qty }}</span>
+              <button class="btn btn-sm" (click)="changeQty(i, 1)">+</button>
+            </div>
+            <button class="btn btn-sm btn-re" (click)="removeItem(i)">×</button>
+          </div>
+        }
+      }
+    </div>
+
+    <!-- بيانات العميل + حاسبة الأقساط -->
+    <div class="card">
+      <div class="chdr"><div class="ct">بيانات العميل والأقساط</div></div>
+      <div class="row g-2 mb-2">
+        <div class="col-12 col-sm-6">
+          <label class="form-label">اسم العميل</label>
+          <input class="form-control form-control-sm"
+                 placeholder="أدخل الاسم"
+                 [value]="customerName()"
+                 (input)="customerName.set($any($event.target).value)" />
+        </div>
+        <div class="col-12 col-sm-6">
+          <label class="form-label">رقم الجوال</label>
+          <input class="form-control form-control-sm" type="tel" dir="ltr"
+                 placeholder="05xxxxxxxx"
+                 [value]="customerPhone()"
+                 (input)="customerPhone.set($any($event.target).value)" />
+        </div>
+        <div class="col-12 col-sm-6">
+          <label class="form-label">الدفعة الأولى</label>
+          <input class="form-control form-control-sm" type="number"
+                 [value]="downPayment()"
+                 (input)="downPayment.set(+$any($event.target).value || 0)" />
+        </div>
+        <div class="col-12 col-sm-6">
+          <label class="form-label">نسبة الربح %</label>
+          <input class="form-control form-control-sm" type="number"
+                 [value]="profitRate()"
+                 (input)="profitRate.set(+$any($event.target).value || 0)" />
+        </div>
+        <div class="col-12 col-sm-6">
+          <label class="form-label">عدد الأقساط</label>
+          <input class="form-control form-control-sm" type="number"
+                 [value]="installCount()"
+                 (input)="installCount.set(+$any($event.target).value || 1)" />
+        </div>
+        <div class="col-12 col-sm-6">
+          <label class="form-label">نوع القسط</label>
+          <select class="form-select form-select-sm"
+                  [value]="period()"
+                  (change)="period.set($any($event.target).value)">
+            <option>شهري</option>
+            <option>أسبوعي</option>
+            <option>ربع سنوي</option>
+            <option>نصف سنوي</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="cr"><span>إجمالي السلة</span><span>{{ totalCart() | currencyAr }}</span></div>
+      <div class="cr"><span>الدفعة الأولى</span><span>{{ downPayment() | currencyAr }}</span></div>
+      <div class="cr"><span>بعد الدفعة</span><span>{{ afterDown() | currencyAr }}</span></div>
+      <div class="cr"><span>مبلغ الربح</span><span style="color:var(--gr)">{{ profitAmount() | currencyAr }}</span></div>
+      <div class="ct2"><span>الإجمالي</span><span>{{ grandTotal() | currencyAr }}</span></div>
+      <div class="ci">
+        <span>القسط {{ period() }} × {{ installCount() }}</span>
+        <span>{{ installmentAmount() | currencyAr }}</span>
+      </div>
+
+      <button
+        class="btn btn-bl w-100 mt-3"
+        [disabled]="cart().length === 0"
+        (click)="createOrder()"
+      >
+        إنشاء طلبية قسط
+      </button>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,118 @@
+<div class="pgh">
+  <div>
+    <div class="pgt">المخازن</div>
+    <div class="pgs">إدارة المخزون والأرقام التسلسلية</div>
+  </div>
+  <div class="d-flex gap-2">
+    <button class="btn btn-sm btn-am" routerLink="/warehouse/alerts">
+      ⚠ تنبيهات المخزون ({{ criticalCount() }})
+    </button>
+    <button class="btn btn-sm btn-bl">+ صنف جديد</button>
+  </div>
+</div>
+
+<!-- بطاقات المخازن -->
+<div class="row row-cols-1 row-cols-md-3 g-3 mb-3">
+  @for (loc of locations(); track loc.id) {
+    <div class="col">
+      <div
+        class="wh-card"
+        [class.selected]="selectedLocId() === loc.id"
+        [style.--wh-color]="'var(' + loc.colorVar + ')'"
+        (click)="selectLocation(loc.id)"
+      >
+        <div class="wh-card-header">
+          <div class="wh-card-name">{{ loc.name }}</div>
+          <div class="wh-card-city">{{ loc.city }}</div>
+        </div>
+
+        <div class="row g-2 mb-2">
+          <div class="col-6">
+            <div class="wh-stat-label">مشتريات</div>
+            <div class="wh-stat-val">{{ loc.purchased }}</div>
+          </div>
+          <div class="col-6">
+            <div class="wh-stat-label">مبيعات</div>
+            <div class="wh-stat-val">{{ loc.sold }}</div>
+          </div>
+          <div class="col-6">
+            <div class="wh-stat-label">متاح</div>
+            <div class="wh-stat-val" style="color:var(--wh-color)">{{ loc.available }}</div>
+          </div>
+          <div class="col-6">
+            <div class="wh-stat-label">الربح</div>
+            <div class="wh-stat-val" style="color:var(--gr)">{{ loc.profit | currencyAr }}</div>
+          </div>
+        </div>
+
+        <div class="wh-stat-label mb-1">
+          قيمة المخزون · {{ loc.totalValue | currencyAr }}
+        </div>
+
+        <!-- شريط الاستخدام -->
+        <div class="progress" style="height:6px;border-radius:3px;background:var(--brd)">
+          <div
+            class="progress-bar"
+            [style.width]="utilizationPct(loc) + '%'"
+            [style.background]="utilizationColor(utilizationPct(loc))"
+          ></div>
+        </div>
+        <div style="font-size:9px;color:var(--txt3);margin-top:3px">
+          {{ loc.available }}/{{ loc.capacity }} وحدة متاحة ({{ utilizationPct(loc) }}%)
+        </div>
+      </div>
+    </div>
+  }
+</div>
+
+<!-- جدول تفاصيل المخزن المحدد -->
+@if (selectedLoc()) {
+  <div class="card">
+    <div class="chdr">
+      <div class="ct">تفاصيل {{ selectedLoc()!.name }}</div>
+      <span style="font-size:11px;color:var(--txt2)">{{ detailItems().length }} صنف</span>
+    </div>
+    <div class="tw">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>المنتج</th>
+            <th>الفئة</th>
+            <th>الأرقام التسلسلية</th>
+            <th>الكمية</th>
+            <th>تكلفة الوحدة</th>
+            <th>سعر البيع</th>
+            <th>هامش الربح</th>
+            <th>إجمالي القيمة</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of detailItems(); track item.id) {
+            <tr>
+              <td>
+                <div class="fw-semibold">{{ item.name }}</div>
+                <div style="font-size:10px;color:var(--txt3)">{{ item.sku }}</div>
+              </td>
+              <td style="font-size:11px">{{ item.category }}</td>
+              <td style="font-size:10px;color:var(--txt2);direction:ltr">
+                {{ item.serialStart }} → {{ item.serialEnd }}
+              </td>
+              <td class="fw-bold">{{ item.qty }}</td>
+              <td>{{ item.unitCost | currencyAr }}</td>
+              <td>{{ item.unitPrice | currencyAr }}</td>
+              <td style="color:var(--gr)">{{ margin(item) | currencyAr }}</td>
+              <td class="fw-semibold" style="color:var(--bl)">{{ item.qty * item.unitCost | currencyAr }}</td>
+            </tr>
+          }
+          @empty {
+            <tr>
+              <td colspan="8" class="text-center py-3" style="color:var(--txt3);font-size:11px">
+                لا توجد أصناف في هذا المخزن
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+}

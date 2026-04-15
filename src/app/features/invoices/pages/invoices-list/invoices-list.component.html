@@ -1,0 +1,103 @@
+<!-- إحصائيات سريعة -->
+<div class="row row-cols-2 row-cols-md-4 g-2 mb-3">
+  <div class="col">
+    <div class="sc">
+      <div class="sc-l">إجمالي الفواتير</div>
+      <div class="sc-v">{{ allInvoices().length }}</div>
+    </div>
+  </div>
+  <div class="col">
+    <div class="sc">
+      <div class="sc-l">إجمالي المبلغ</div>
+      <div class="sc-v">{{ totalAmount() | currencyAr }}</div>
+    </div>
+  </div>
+  <div class="col">
+    <div class="sc">
+      <div class="sc-l">المدفوع</div>
+      <div class="sc-v" style="color:var(--gr)">{{ totalPaid() | currencyAr }}</div>
+    </div>
+  </div>
+  <div class="col">
+    <div class="sc">
+      <div class="sc-l">المتبقي</div>
+      <div class="sc-v" style="color:var(--re)">{{ totalRemaining() | currencyAr }}</div>
+    </div>
+  </div>
+</div>
+
+<!-- بحث وفلتر -->
+<div class="d-flex gap-2 mb-3 flex-wrap">
+  <input
+    class="form-control form-control-sm"
+    style="max-width:220px"
+    placeholder="بحث برقم الفاتورة أو المورد..."
+    [value]="searchQuery()"
+    (input)="searchQuery.set($any($event.target).value)"
+  />
+  <select
+    class="form-select form-select-sm"
+    style="max-width:160px"
+    [value]="statusFilter()"
+    (change)="statusFilter.set($any($event.target).value)"
+  >
+    <option value="">كل الحالات</option>
+    <option value="paid">مدفوع</option>
+    <option value="partial">جزئي</option>
+    <option value="unpaid">غير مدفوع</option>
+  </select>
+</div>
+
+<!-- الجدول -->
+<div class="tw">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>رقم الفاتورة</th>
+        <th>المورد</th>
+        <th>المخزن</th>
+        <th>الأصناف</th>
+        <th>الإجمالي</th>
+        <th>المدفوع</th>
+        <th>المتبقي</th>
+        <th>تاريخ الفاتورة</th>
+        <th>الاستحقاق</th>
+        <th>الحالة</th>
+        <th class="text-center">إجراءات</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (inv of invoices(); track inv.id) {
+        <tr>
+          <td class="fw-semibold" style="color:var(--bl)">{{ inv.invoiceNumber }}</td>
+          <td>{{ inv.supplierName }}</td>
+          <td style="font-size:10px;color:var(--txt2)">{{ inv.warehouseName ?? '—' }}</td>
+          <td>{{ inv.itemsCount }}</td>
+          <td>{{ inv.total | currencyAr }}</td>
+          <td style="color:var(--gr)">{{ inv.paid | currencyAr }}</td>
+          <td style="color:var(--re)">{{ inv.remaining | currencyAr }}</td>
+          <td style="font-size:11px">{{ inv.date | dateAr }}</td>
+          <td style="font-size:11px">{{ inv.dueDate ? (inv.dueDate | dateAr) : '—' }}</td>
+          <td>
+            <app-badge [text]="getStatusLabel(inv.status)" [type]="getStatusBadge(inv.status)" />
+          </td>
+          <td class="text-center">
+            <div class="d-flex gap-1 justify-content-center">
+              <button class="btn btn-sm btn-bl">تفاصيل</button>
+              @if (inv.status !== 'paid') {
+                <button class="btn btn-sm btn-gr">دفع</button>
+              }
+            </div>
+          </td>
+        </tr>
+      }
+      @empty {
+        <tr>
+          <td colspan="11" class="text-center py-3" style="color:var(--txt3);font-size:11px">
+            لا توجد فواتير مطابقة
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>

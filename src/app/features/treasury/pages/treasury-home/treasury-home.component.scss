@@ -1,0 +1,14 @@
+/* ── VAT BOX ── */
+.vat-box {
+  background: linear-gradient(135deg, var(--bl) 0%, var(--bl-d) 100%);
+  border-radius: var(--rl);
+  padding: 16px;
+  color: #fff;
+
+  @media (max-width: 576px) { padding: 12px; }
+}
+
+/* ── CASHFLOW ── */
+.cf-pos { color: var(--gr); font-weight: 600; }
+.cf-neg { color: var(--re); font-weight: 600; }
+.cf-net { color: var(--bl); font-weight: 700; }

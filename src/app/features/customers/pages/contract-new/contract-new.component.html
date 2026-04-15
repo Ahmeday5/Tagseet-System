@@ -1,0 +1,148 @@
+<form [formGroup]="form" (ngSubmit)="save()" novalidate>
+  <div class="row g-3">
+
+    <!-- ── Right: forms ── -->
+    <div class="col-12 col-lg-8">
+
+      <div class="card">
+        <div class="ct mb-2">بيانات العميل</div>
+        <div class="row g-2">
+          <div class="col-12 col-sm-6">
+            <label class="form-label">الاسم الكامل <span class="text-danger">*</span></label>
+            <input formControlName="name" type="text" class="form-control"
+              [class.is-invalid]="isInvalid('name')" placeholder="محمد العمري" />
+            @if (isInvalid('name')) { <div class="invalid-feedback">الاسم مطلوب (3 أحرف على الأقل)</div> }
+          </div>
+          <div class="col-12 col-sm-6">
+            <label class="form-label">رقم الهاتف (WhatsApp) <span class="text-danger">*</span></label>
+            <input formControlName="phone" type="tel" class="form-control"
+              [class.is-invalid]="isInvalid('phone')" placeholder="05xxxxxxxx" />
+            @if (isInvalid('phone')) { <div class="invalid-feedback">أدخل رقم جوال سعودي صحيح</div> }
+          </div>
+          <div class="col-12">
+            <label class="form-label">العنوان</label>
+            <input formControlName="address" type="text" class="form-control" placeholder="المدينة، الحي، الشارع" />
+          </div>
+          <div class="col-12 col-sm-6">
+            <label class="form-label">رقم الهوية الوطنية <span class="text-danger">*</span></label>
+            <input formControlName="nationalId" type="text" class="form-control"
+              [class.is-invalid]="isInvalid('nationalId')" placeholder="10 أرقام" />
+            @if (isInvalid('nationalId')) { <div class="invalid-feedback">رقم الهوية يجب أن يكون 10 أرقام</div> }
+          </div>
+          <div class="col-12 col-sm-6">
+            <label class="form-label">المندوب المسؤول</label>
+            <select formControlName="repId" class="form-select">
+              <option value="">-- اختر --</option>
+              <option value="r1">أحمد سالم (5%)</option>
+              <option value="r2">محمد عبدالله (4%)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="ct mb-2">بيانات البضاعة والعقد</div>
+        <div class="row g-2">
+          <div class="col-12 col-sm-6">
+            <label class="form-label">اسم البضاعة</label>
+            <input formControlName="product" type="text" class="form-control" placeholder="وصف المنتج" />
+          </div>
+          <div class="col-12 col-sm-6">
+            <label class="form-label">تاريخ الشراء</label>
+            <input formControlName="purchaseDate" type="date" class="form-control" />
+          </div>
+          <div class="col-12 col-sm-6">
+            <label class="form-label">سعر الشراء (ر.س)</label>
+            <input formControlName="costPrice" type="number" class="form-control" placeholder="0" min="0" />
+          </div>
+          <div class="col-12 col-sm-6">
+            <label class="form-label">سعر البيع كاش (ر.س) <span class="text-danger">*</span></label>
+            <input formControlName="cashPrice" type="number" class="form-control"
+              [class.is-invalid]="isInvalid('cashPrice')" placeholder="0" min="1" />
+            @if (isInvalid('cashPrice')) { <div class="invalid-feedback">أدخل سعراً صحيحاً</div> }
+          </div>
+          <div class="col-12 col-sm-6">
+            <label class="form-label">المقدم (ر.س)</label>
+            <input formControlName="downPayment" type="number" class="form-control" placeholder="0" min="0" />
+          </div>
+          <div class="col-12 col-sm-6">
+            <label class="form-label">نسبة الربح %</label>
+            <input formControlName="profitRate" type="number" class="form-control" placeholder="0" step="0.5" min="0" max="100" />
+          </div>
+          <div class="col-12 col-sm-6">
+            <label class="form-label">نوع الدفع</label>
+            <select formControlName="installmentPeriod" class="form-select">
+              <option>أسبوعي</option>
+              <option>شهري</option>
+              <option>ربع سنوي</option>
+              <option>نصف سنوي</option>
+            </select>
+          </div>
+          <div class="col-12 col-sm-6">
+            <label class="form-label">عدد الأقساط</label>
+            <input formControlName="installmentsCount" type="number" class="form-control" min="1" max="120" />
+          </div>
+          <div class="col-12 col-sm-6">
+            <label class="form-label">موعد السداد (يوم الشهر)</label>
+            <input formControlName="dueDay" type="number" class="form-control" min="1" max="31" />
+          </div>
+          <div class="col-12 col-sm-6">
+            <label class="form-label">تاريخ أول قسط</label>
+            <input formControlName="firstInstallmentDate" type="date" class="form-control" />
+          </div>
+          <div class="col-12">
+            <label class="form-label">ملاحظات</label>
+            <textarea formControlName="notes" class="form-control" rows="2" placeholder="أي ملاحظات على العقد..."></textarea>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ── Left: summary ── -->
+    <div class="col-12 col-lg-4">
+      <div class="card" style="position:sticky;top:0">
+        <div class="ct mb-2">ملخص العقد المحسوب</div>
+        <div class="cr">
+          <span>سعر البيع كاش</span>
+          <span>{{ summary().cashPrice | currencyAr }}</span>
+        </div>
+        <div class="cr">
+          <span>المقدم</span>
+          <span>{{ summary().downPayment | currencyAr }}</span>
+        </div>
+        <div class="cr">
+          <span>الإجمالي بعد المقدم</span>
+          <span>{{ summary().afterDown | currencyAr }}</span>
+        </div>
+        <div class="cr">
+          <span>مبلغ الربح ({{ summary().profitRate }}%)</span>
+          <span>{{ summary().profitAmount | currencyAr }}</span>
+        </div>
+        <div class="ct2">
+          <span>إجمالي البيع بالأقساط</span>
+          <span>{{ summary().totalAmount | currencyAr }}</span>
+        </div>
+        <div class="ci">
+          <span>القسط {{ summary().period }} × {{ summary().count }}</span>
+          <span>{{ summary().installmentAmt | currencyAr }}</span>
+        </div>
+        <hr class="my-2">
+        <div class="cr" style="background:var(--gr-l)">
+          <span style="color:var(--gr)">هامش الربح التقديري</span>
+          <span style="color:var(--gr)">{{ summary().marginProfit | currencyAr }}</span>
+        </div>
+        <div class="d-flex gap-2 mt-3">
+          <button type="submit" class="btn btn-bl flex-fill" [disabled]="isSaving()">
+            {{ isSaving() ? 'جاري الحفظ...' : 'حفظ وطباعة PDF' }}
+          </button>
+          <button type="button" class="btn" (click)="reset()">مسح</button>
+        </div>
+        <button type="button" class="btn btn-wa w-100 mt-2">
+          📱 إرسال نسخة WhatsApp للعميل
+        </button>
+      </div>
+    </div>
+
+  </div>
+</form>

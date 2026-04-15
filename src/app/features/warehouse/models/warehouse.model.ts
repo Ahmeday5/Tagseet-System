@@ -1,0 +1,55 @@
+export type StockAlertLevel = 'critical' | 'low' | 'ok';
+export type AlertSeverity   = 'out' | 'critical' | 'low' | 'ok';
+
+export interface WarehouseItem {
+  id: string;
+  name: string;
+  sku: string;
+  category: string;
+  currentStock: number;
+  minStock: number;
+  maxStock: number;
+  unitCost: number;
+  alertLevel: StockAlertLevel;
+  lastUpdated: string;
+}
+
+export interface InventoryAlert {
+  id: string;
+  name: string;
+  severity: AlertSeverity;
+  currentStock: number;
+  minStock: number;
+  warehouseInfo: string;
+  supplierName?: string;
+  lastSaleDate?: string;
+  suggestedQty: number;
+  canTransfer: boolean;
+  transferSource?: string;
+}
+
+export interface WarehouseLocation {
+  id: string;
+  name: string;
+  city: string;
+  colorVar: string;
+  purchased: number;
+  sold: number;
+  available: number;
+  capacity: number;
+  totalValue: number;
+  profit: number;
+}
+
+export interface WarehouseDetailItem {
+  id: string;
+  warehouseId: string;
+  name: string;
+  sku: string;
+  category: string;
+  serialStart: string;
+  serialEnd: string;
+  qty: number;
+  unitCost: number;
+  unitPrice: number;
+}

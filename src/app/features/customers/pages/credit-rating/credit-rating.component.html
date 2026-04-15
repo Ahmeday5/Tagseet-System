@@ -1,0 +1,43 @@
+<div class="alert alert-primary mb-2">
+  التقييم الائتماني يحسب تلقائياً بناءً على: عدد الأقساط المدفوعة في موعدها، أيام التأخير، عدد إعادة الجدولة، تاريخ التعامل
+</div>
+
+<div class="tw">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>العميل</th>
+        <th>عقود نشطة</th>
+        <th>نسبة الالتزام</th>
+        <th>متوسط التأخير</th>
+        <th>إعادة جدولة</th>
+        <th>تاريخ التعامل</th>
+        <th>التقييم</th>
+        <th>الدرجة</th>
+        <th>التوصية</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (r of ratings(); track r.customerId) {
+        <tr>
+          <td class="fw-semibold" style="text-align:right">{{ r.customerName }}</td>
+          <td>{{ r.activeContracts }}</td>
+          <td [style.color]="getCommitmentColor(r.commitmentRate)">{{ r.commitmentRate }}%</td>
+          <td [style.color]="getDelayColor(r.avgDelayDays)">
+            {{ r.avgDelayDays === 0 ? '0 يوم' : r.avgDelayDays + ' يوم' }}
+          </td>
+          <td>{{ r.rescheduleCount }}</td>
+          <td>{{ r.historyDesc }}</td>
+          <td>
+            <div [class]="'cs-ring cs-' + r.score"
+              style="width:34px;height:34px;font-size:12px;font-weight:700;border-width:2px;margin:auto">
+              {{ r.score }}
+            </div>
+          </td>
+          <td>{{ r.numericScore }}/100</td>
+          <td><app-badge [text]="r.recommendation" [type]="getBadge(r.score)" /></td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>

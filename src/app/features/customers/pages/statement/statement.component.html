@@ -1,0 +1,111 @@
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+  <div class="d-flex gap-2 align-items-center">
+    <label class="form-label mb-0" style="white-space:nowrap">العميل:</label>
+    <select class="form-select form-select-sm" style="width:230px"
+      [ngModel]="statementCustomerId()"
+      (ngModelChange)="statementCustomerId.set($event)">
+      <option value="">-- اختر عميلاً --</option>
+      @for (c of customers(); track c.id) {
+        <option [value]="c.id">{{ c.name }} — {{ c.product }}</option>
+      }
+    </select>
+  </div>
+  <div class="d-flex gap-2">
+    <button class="btn btn-sm">PDF</button>
+    <button class="btn btn-sm btn-wa">📱 WhatsApp</button>
+    <button class="btn btn-sm btn-bl">طباعة</button>
+  </div>
+</div>
+
+@if (statementCustomerId()) {
+
+  <!-- Summary -->
+  <div class="row row-cols-md-3 row-cols-1 g-2 mb-3">
+    <div class="col">
+      <div class="sc">
+        <div class="sc-l">إجمالي العقد</div>
+        <div class="sc-v" style="color:var(--bl)">{{ statementSummary().totalAmount | currencyAr }}</div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="sc">
+        <div class="sc-l">المدفوع</div>
+        <div class="sc-v" style="color:var(--gr)">{{ statementSummary().paidAmount | currencyAr }}</div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="sc">
+        <div class="sc-l">الباقي المستحق</div>
+        <div class="sc-v" style="color:var(--re)">{{ statementSummary().remaining | currencyAr }}</div>
+      </div>
+    </div>
+  </div>
+
+  @if (statementSummary().lateAmount > 0) {
+    <div class="alert alert-warning mb-2">
+      <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+        <path d="M6.5 1L1 12h11L6.5 1z" stroke="currentColor" stroke-width="1.1"/>
+        <path d="M6.5 5.5v3" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/>
+        <circle cx="6.5" cy="10" r=".6" fill="currentColor"/>
+      </svg>
+      إشعار تلقائي: متأخر {{ statementSummary().lateAmount | currencyAr }} — تم إرسال WhatsApp اليوم
+    </div>
+  }
+
+  <!-- Installment table -->
+  <div class="tw">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>الفترة</th>
+          <th>المستحق</th>
+          <th>المدفوع</th>
+          <th>الباقي</th>
+          <th>تاريخ الدفع</th>
+          <th>الطريقة</th>
+          <th>الحالة</th>
+          <th>إجراء</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of statementInstallments(); track row.num) {
+          <tr>
+            <td>{{ row.num }}</td>
+            <td>{{ row.period }}</td>
+            <td>{{ row.due | currencyAr }}</td>
+            <td [style.color]="row.paid > 0 && row.paid < row.due ? 'var(--am)' : ''">
+              {{ row.paid > 0 ? (row.paid | currencyAr) : '—' }}
+            </td>
+            <td [style.color]="row.remaining > 0 ? (row.status === 'partial' ? 'var(--am)' : 'var(--re)') : 'var(--gr)'">
+              {{ row.remaining > 0 ? (row.remaining | currencyAr) : '0' }}
+            </td>
+            <td>{{ row.paymentDate ?? '—' }}</td>
+            <td>{{ row.method ?? '—' }}</td>
+            <td>
+              <app-badge [text]="getInstallmentLabel(row.status)" [type]="getInstallmentBadge(row.status)" />
+            </td>
+            <td>
+              @if (row.status === 'paid') {
+                <button class="btn btn-sm">PDF</button>
+              } @else if (row.status === 'partial' || row.status === 'late') {
+                <button class="btn btn-sm btn-wa" style="padding:2px 7px;font-size:9px">📱</button>
+              } @else {
+                <span style="color:var(--txt3)">—</span>
+              }
+            </td>
+          </tr>
+        }
+        <tr style="background:var(--bg3)">
+          <td colspan="3" class="fw-bold">الإجمالي المتأخر</td>
+          <td colspan="6" class="fw-bold" style="color:var(--re)">
+            {{ statementSummary().lateAmount | currencyAr }}
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+} @else {
+  <div class="text-center p-5" style="color:var(--txt3)">اختر عميلاً لعرض كشف الحساب</div>
+}

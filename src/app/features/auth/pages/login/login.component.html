@@ -1,0 +1,44 @@
+<h2 class="fw-bold mb-1" style="font-size:18px; color:var(--txt)">
+  تسجيل الدخول
+</h2>
+<p class="mb-4" style="font-size:12px; color:var(--txt2)">
+  أدخل بياناتك للوصول إلى النظام
+</p>
+
+<form [formGroup]="form" (ngSubmit)="onSubmit()">
+  <div class="mb-3">
+    <label class="form-label">البريد الإلكتروني</label>
+    <input
+      type="email"
+      class="form-control"
+      formControlName="email"
+      placeholder="admin@taqseet.sa"
+      [class.border-error]="isInvalid('email')"
+    />
+    @if (isInvalid('email')) {
+      <span class="field-error">البريد الإلكتروني مطلوب وصحيح</span>
+    }
+  </div>
+
+  <div class="mb-4">
+    <label class="form-label">كلمة المرور</label>
+    <input
+      type="password"
+      class="form-control"
+      formControlName="password"
+      placeholder="••••••••"
+      [class.border-error]="isInvalid('password')"
+    />
+    @if (isInvalid('password')) {
+      <span class="field-error">كلمة المرور مطلوبة (6 أحرف على الأقل)</span>
+    }
+  </div>
+
+  <button type="submit" class="btn btn-bl w-100" [disabled]="isLoading()">
+    {{ isLoading() ? 'جاري الدخول...' : 'دخول' }}
+  </button>
+
+  <div class="alert alert-primary mt-3" style="font-size: 11px">
+    <span>🔑 للتجربة: admin&#64;taqseet.sa / أي كلمة مرور</span>
+  </div>
+</form>

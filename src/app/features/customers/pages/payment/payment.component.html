@@ -1,0 +1,105 @@
+<div class="row g-3">
+
+  <!-- ── Payment form ── -->
+  <div class="col-12 col-md-6">
+    <div class="card">
+      <div class="ct mb-2">تسجيل دفعة — يقبل التجزئة في نفس الشهر</div>
+
+      <div class="mb-2">
+        <label class="form-label">اختر العميل / العقد</label>
+        <select class="form-select"
+          [ngModel]="selectedContractId()"
+          (ngModelChange)="selectedContractId.set($event); payAmount.set(0)">
+          <option value="">-- اختر --</option>
+          @for (opt of paymentContracts(); track opt.id) {
+            <option [value]="opt.id">{{ opt.label }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="row g-2 mb-2">
+        <div class="col-12 col-sm-6">
+          <label class="form-label">تاريخ الدفع</label>
+          <input type="date" class="form-control"
+            [ngModel]="payDate()" (ngModelChange)="payDate.set($event)" />
+        </div>
+        <div class="col-12 col-sm-6">
+          <label class="form-label">المبلغ المدفوع الآن (ر.س)</label>
+          <input type="number" class="form-control" placeholder="0"
+            [ngModel]="payAmount()" (ngModelChange)="payAmount.set(+$event)" />
+        </div>
+        <div class="col-12">
+          <label class="form-label">طريقة الدفع</label>
+          <select class="form-select"
+            [ngModel]="payMethod()" (ngModelChange)="payMethod.set($event)">
+            <option>نقدي</option>
+            <option>تحويل</option>
+            <option>مدى</option>
+            <option>STC Pay</option>
+            <option>Apple Pay</option>
+          </select>
+        </div>
+      </div>
+
+      @if (paymentInfo(); as info) {
+        <div class="pay-info">
+          <div class="fw-semibold mb-2" style="font-size:11px;color:var(--txt2)">بيان الدفعة الآني</div>
+          <div class="pay-row"><span>القسط المستحق</span><span>{{ info.due | currencyAr }}</span></div>
+          <div class="pay-row">
+            <span>المدفوع سابقاً هذا الشهر</span>
+            <span style="color:var(--gr)">{{ info.prevPaid | currencyAr }}</span>
+          </div>
+          <div class="pay-row"><span>الدفعة الحالية</span><span>{{ info.now | currencyAr }}</span></div>
+          <div class="pay-row">
+            <span style="color:var(--re)">الباقي في هذا الشهر</span>
+            <span style="color:var(--re);font-weight:700">{{ info.remaining | currencyAr }}</span>
+          </div>
+          <hr class="my-1">
+          <div class="pay-row">
+            <span class="fw-bold">إجمالي المستحق (كشف الحساب)</span>
+            <span style="color:var(--re);font-size:13px;font-weight:700">{{ info.total | currencyAr }}</span>
+          </div>
+        </div>
+      }
+
+      <div class="d-flex gap-2 mt-3">
+        <button class="btn btn-bl flex-fill" (click)="recordPayment()">تسجيل الدفعة</button>
+        <button class="btn btn-wa flex-fill">📱 إرسال إيصال</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Recent payments ── -->
+  <div class="col-12 col-md-6">
+    <div class="card">
+      <div class="chdr"><div class="ct">آخر الدفعات المسجلة</div></div>
+      <div class="tw" style="margin-bottom:0">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>العميل</th>
+              <th>المبلغ</th>
+              <th>التاريخ</th>
+              <th>الطريقة</th>
+              <th>الحالة</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (p of recentPayments(); track p.id) {
+              <tr>
+                <td>{{ p.customerName }}</td>
+                <td>{{ p.amount | currencyAr }}</td>
+                <td>{{ p.date }}</td>
+                <td>{{ p.method }}</td>
+                <td>
+                  <app-badge [text]="getStatusLabel(p.status)" [type]="getStatusBadge(p.status)" />
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>

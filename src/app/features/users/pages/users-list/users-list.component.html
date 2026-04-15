@@ -1,0 +1,78 @@
+<div class="pgh">
+  <div>
+    <div class="pgt">الصلاحيات والمستخدمون</div>
+    <div class="pgs">إدارة صلاحيات النظام</div>
+  </div>
+  <button class="btn btn-sm btn-bl">+ مستخدم جديد</button>
+</div>
+
+<!-- جدول المستخدمين -->
+<div class="card mb-2">
+  <div class="chdr"><div class="ct">المستخدمون</div></div>
+  <div class="tw">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>المستخدم</th>
+          <th>البريد</th>
+          <th>الدور</th>
+          <th>آخر دخول</th>
+          <th>الحالة</th>
+          <th class="text-center">إجراءات</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (u of users(); track u.id) {
+          <tr>
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                <div class="user-av">{{ u.name.slice(0, 2) }}</div>
+                <span class="fw-semibold">{{ u.name }}</span>
+              </div>
+            </td>
+            <td>{{ u.email }}</td>
+            <td>
+              <app-badge [text]="getRoleLabel(u.role)" [type]="getRoleBadge(u.role)" />
+            </td>
+            <td>{{ u.lastLogin | dateAr }}</td>
+            <td>
+              <app-badge [text]="u.isActive ? 'نشط' : 'معطّل'" [type]="u.isActive ? 'ok' : 'bad'" />
+            </td>
+            <td class="text-center">
+              <div class="d-flex gap-1 justify-content-center">
+                <button class="btn btn-sm btn-bl">تعديل</button>
+                <button class="btn btn-sm" [class.btn-re]="u.isActive" [class.btn-gr]="!u.isActive">
+                  {{ u.isActive ? 'تعطيل' : 'تفعيل' }}
+                </button>
+              </div>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- مصفوفة الصلاحيات -->
+<div class="card">
+  <div class="chdr"><div class="ct">مصفوفة الصلاحيات</div></div>
+  <div class="pm-grid" style="grid-template-columns: 160px repeat(4, 1fr)">
+    <div class="pm-hdr">القسم</div>
+    <div class="pm-hdr">مدير عام</div>
+    <div class="pm-hdr">مدير</div>
+    <div class="pm-hdr">محاسب</div>
+    <div class="pm-hdr">مشاهد</div>
+
+    @for (perm of permissionGroups; track perm.key) {
+      <div class="pm-row-lbl">{{ perm.label }}</div>
+      <div class="pm-cell"><span class="pm-check">✓</span></div>
+      <div class="pm-cell"><span class="pm-check">✓</span></div>
+      <div class="pm-cell"><span [class]="perm.key === 'treasury' ? 'pm-partial' : 'pm-x'">
+        {{ perm.key === 'treasury' ? '◐' : '✕' }}
+      </span></div>
+      <div class="pm-cell"><span [class]="['reports', 'customers'].includes(perm.key) ? 'pm-partial' : 'pm-x'">
+        {{ ['reports', 'customers'].includes(perm.key) ? '◐' : '✕' }}
+      </span></div>
+    }
+  </div>
+</div>

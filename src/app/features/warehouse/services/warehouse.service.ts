@@ -1,0 +1,83 @@
+import { Injectable } from '@angular/core';
+import { Observable, of } from 'rxjs';
+import { delay } from 'rxjs/operators';
+import { InventoryAlert, WarehouseDetailItem, WarehouseItem, WarehouseLocation } from '../models/warehouse.model';
+
+@Injectable({ providedIn: 'root' })
+export class WarehouseService {
+
+  getAll(): Observable<WarehouseItem[]> {
+    return of([...MOCK_ITEMS]).pipe(delay(200));
+  }
+
+  getAlerts(): Observable<WarehouseItem[]> {
+    return of(MOCK_ITEMS.filter(i => i.alertLevel !== 'ok')).pipe(delay(200));
+  }
+
+  getLocations(): Observable<WarehouseLocation[]> {
+    return of([...MOCK_LOCATIONS]).pipe(delay(200));
+  }
+
+  getDetailItems(warehouseId: string): Observable<WarehouseDetailItem[]> {
+    return of(MOCK_DETAIL_ITEMS.filter(i => i.warehouseId === warehouseId)).pipe(delay(200));
+  }
+
+  getInventoryAlerts(): Observable<InventoryAlert[]> {
+    return of([...MOCK_INVENTORY_ALERTS]).pipe(delay(200));
+  }
+}
+
+const MOCK_ITEMS: WarehouseItem[] = [
+  { id: '1', name: 'Samsung Galaxy S25', sku: 'SAM-S25',  category: 'هواتف', currentStock: 15, minStock: 3,  maxStock: 30, unitCost: 600,  alertLevel: 'ok',       lastUpdated: '2025-04-08' },
+  { id: '2', name: 'iPhone 15 Pro',      sku: 'APL-15P',  category: 'هواتف', currentStock: 2,  minStock: 3,  maxStock: 20, unitCost: 1400, alertLevel: 'critical',  lastUpdated: '2025-04-05' },
+  { id: '3', name: 'Dell XPS 15',        sku: 'DEL-XPS',  category: 'حاسب',  currentStock: 2,  minStock: 2,  maxStock: 10, unitCost: 2000, alertLevel: 'low',       lastUpdated: '2025-04-07' },
+  { id: '4', name: 'ثلاجة LG',          sku: 'LG-RF18',  category: 'أجهزة', currentStock: 6,  minStock: 2,  maxStock: 15, unitCost: 700,  alertLevel: 'ok',        lastUpdated: '2025-04-06' },
+  { id: '5', name: 'تلفاز Samsung 55"', sku: 'SAM-TV55', category: 'أجهزة', currentStock: 1,  minStock: 2,  maxStock: 12, unitCost: 900,  alertLevel: 'critical',  lastUpdated: '2025-04-08' },
+];
+
+const MOCK_LOCATIONS: WarehouseLocation[] = [
+  { id: '1', name: 'مخزن الرياض',  city: 'الرياض',  colorVar: '--te', purchased: 120, sold: 98,  available: 22, capacity: 50,  totalValue: 285000, profit: 42000 },
+  { id: '2', name: 'مخزن جدة',    city: 'جدة',     colorVar: '--pu', purchased: 80,  sold: 61,  available: 19, capacity: 40,  totalValue: 190000, profit: 28500 },
+  { id: '3', name: 'مخزن الدمام', city: 'الدمام',  colorVar: '--am', purchased: 55,  sold: 38,  available: 17, capacity: 30,  totalValue: 125000, profit: 18000 },
+];
+
+const MOCK_INVENTORY_ALERTS: InventoryAlert[] = [
+  {
+    id: '1', name: 'شاشة Samsung 55"', severity: 'out',
+    currentStock: 0, minStock: 2,
+    warehouseInfo: 'المخازن الثلاثة: 0 وحدة — آخر بيعة: 3 مارس',
+    supplierName: 'إلكترونيات الخليج',
+    suggestedQty: 10, canTransfer: false,
+  },
+  {
+    id: '2', name: 'iPhone 15 Pro', severity: 'critical',
+    currentStock: 1, minStock: 5,
+    warehouseInfo: 'مخزن الرياض: 1 وحدة — نقطة إعادة الطلب: 5 وحدات — آخر بيع: 5 وحدات / شهر',
+    suggestedQty: 10, canTransfer: false,
+  },
+  {
+    id: '3', name: 'مخزن الدمام', severity: 'low',
+    currentStock: 2, minStock: 10,
+    warehouseInfo: 'جميع الأصناف: 2 وحدة فقط — يحتاج تجديد شامل',
+    suggestedQty: 15, canTransfer: true, transferSource: 'الرياض',
+  },
+  {
+    id: '4', name: 'Samsung Galaxy S25', severity: 'ok',
+    currentStock: 8, minStock: 3,
+    warehouseInfo: 'الرياض: 5 وحدات | جدة: 3 وحدات — فوق نقطة إعادة الطلب',
+    suggestedQty: 0, canTransfer: false,
+  },
+];
+
+const MOCK_DETAIL_ITEMS: WarehouseDetailItem[] = [
+  // الرياض
+  { id: '1', warehouseId: '1', name: 'Samsung Galaxy S25', sku: 'SAM-S25',  category: 'هواتف', serialStart: 'SAM001', serialEnd: 'SAM015', qty: 15, unitCost: 600,  unitPrice: 800  },
+  { id: '2', warehouseId: '1', name: 'iPhone 15 Pro',      sku: 'APL-15P',  category: 'هواتف', serialStart: 'APL001', serialEnd: 'APL002', qty: 2,  unitCost: 1400, unitPrice: 1800 },
+  { id: '3', warehouseId: '1', name: 'تلفاز Samsung 55"', sku: 'SAM-TV55', category: 'أجهزة', serialStart: 'TV001',  serialEnd: 'TV001',  qty: 1,  unitCost: 900,  unitPrice: 1200 },
+  // جدة
+  { id: '4', warehouseId: '2', name: 'Dell XPS 15',        sku: 'DEL-XPS',  category: 'حاسب',  serialStart: 'DEL001', serialEnd: 'DEL004', qty: 4,  unitCost: 2000, unitPrice: 2500 },
+  { id: '5', warehouseId: '2', name: 'ثلاجة LG',          sku: 'LG-RF18',  category: 'أجهزة', serialStart: 'LG001',  serialEnd: 'LG004',  qty: 4,  unitCost: 700,  unitPrice: 900  },
+  // الدمام
+  { id: '6', warehouseId: '3', name: 'ثلاجة LG',          sku: 'LG-RF18',  category: 'أجهزة', serialStart: 'LG005',  serialEnd: 'LG006',  qty: 2,  unitCost: 700,  unitPrice: 900  },
+  { id: '7', warehouseId: '3', name: 'Samsung Galaxy S25', sku: 'SAM-S25',  category: 'هواتف', serialStart: 'SAM016', serialEnd: 'SAM022', qty: 7,  unitCost: 600,  unitPrice: 800  },
+];

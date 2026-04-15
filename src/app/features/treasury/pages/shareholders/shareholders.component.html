@@ -1,0 +1,78 @@
+<div class="pgh">
+  <div>
+    <div class="pgt">المساهمون</div>
+    <div class="pgs">توزيع الأرباح وإدارة الشراكات</div>
+  </div>
+  <button class="btn btn-sm btn-bl">توزيع أرباح</button>
+</div>
+
+<!-- إحصائيات -->
+<div class="row row-cols-2 row-cols-md-4 g-2 mb-3">
+  <div class="col">
+    <div class="sc">
+      <div class="sc-l">عدد المساهمين</div>
+      <div class="sc-v">{{ shareholders().length }}</div>
+    </div>
+  </div>
+  <div class="col">
+    <div class="sc">
+      <div class="sc-l">إجمالي له (دائن)</div>
+      <div class="sc-v" style="color:var(--gr)">{{ totalCredit() | currencyAr }}</div>
+    </div>
+  </div>
+  <div class="col">
+    <div class="sc">
+      <div class="sc-l">إجمالي عليه (مدين)</div>
+      <div class="sc-v" style="color:var(--re)">{{ totalDebit() | currencyAr }}</div>
+    </div>
+  </div>
+  <div class="col">
+    <div class="sc">
+      <div class="sc-l">صافي الرصيد</div>
+      <div class="sc-v" style="color:var(--bl)">{{ totalNet() | currencyAr }}</div>
+    </div>
+  </div>
+</div>
+
+<!-- الجدول -->
+<div class="tw">
+  <table class="table">
+    <thead>
+      <tr>
+        <th style="width:14%">المساهم</th>
+        <th style="width:11%">الهاتف</th>
+        <th style="width:11%">العنوان</th>
+        <th style="width:12%">له (دائن)</th>
+        <th style="width:12%">عليه (مدين)</th>
+        <th style="width:12%">الرصيد الصافي</th>
+        <th style="width:14%">نسبة الملكية</th>
+        <th style="width:14%">ملاحظة</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (sh of shareholders(); track sh.id) {
+        <tr>
+          <td class="fw-semibold" style="text-align:right">{{ sh.name }}</td>
+          <td style="font-size:11px;direction:ltr">{{ sh.phone }}</td>
+          <td style="font-size:11px">{{ sh.address }}</td>
+          <td style="color:var(--gr)">{{ sh.creditAmount | currencyAr }}</td>
+          <td style="color:var(--re)">{{ sh.debitAmount | currencyAr }}</td>
+          <td class="fw-bold" [style.color]="netBalance(sh) >= 0 ? 'var(--gr)' : 'var(--re)'">
+            {{ netBalance(sh) >= 0 ? '+' : '' }}{{ netBalance(sh) | currencyAr }}
+          </td>
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <span class="fw-bold" style="color:var(--bl);min-width:30px">{{ sh.ownershipPct }}%</span>
+              <div class="progress flex-grow-1" style="height:6px">
+                <div class="progress-bar"
+                     [style.width.%]="sh.ownershipPct"
+                     style="background:var(--bl)"></div>
+              </div>
+            </div>
+          </td>
+          <td style="font-size:11px;color:var(--txt2)">{{ sh.note }}</td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>

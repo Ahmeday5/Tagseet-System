@@ -1,0 +1,44 @@
+.wh-card {
+  background: var(--bg);
+  border: 1.5px solid var(--brd);
+  border-radius: var(--r);
+  padding: 14px;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+
+  &:hover { border-color: var(--wh-color, var(--bl)); }
+
+  &.selected {
+    border-color: var(--wh-color, var(--bl));
+    box-shadow: 0 0 0 3px rgba(var(--wh-color, var(--bl)), 0.1);
+  }
+}
+
+.wh-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.wh-card-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--wh-color, var(--bl));
+}
+
+.wh-card-city {
+  font-size: 10px;
+  color: var(--txt2);
+}
+
+.wh-stat-label {
+  font-size: 10px;
+  color: var(--txt2);
+}
+
+.wh-stat-val {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--txt);
+}

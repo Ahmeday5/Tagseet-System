@@ -1,0 +1,30 @@
+/* ── BAR CHART ── */
+.bar-wrap {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 70px;
+  margin-top: 6px;
+}
+.bar-g {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  flex: 1;
+}
+.bar-i {
+  width: 100%;
+  border-radius: 3px 3px 0 0;
+  min-height: 4px;
+  transition: height 0.3s;
+}
+.bar-l {
+  font-size: 9px;
+  color: var(--txt3);
+}
+.bar-v {
+  font-size: 8px;
+  color: var(--txt2);
+  margin-bottom: 1px;
+}

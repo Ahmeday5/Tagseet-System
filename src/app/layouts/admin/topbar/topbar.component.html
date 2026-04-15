@@ -1,0 +1,65 @@
+<header class="topbar">
+
+  <!-- Mobile: hamburger to open sidebar drawer -->
+  <button class="t-hamburger" (click)="layout.toggleMobile()" aria-label="القائمة">
+    @if (layout.mobileOpen()) {
+      <!-- X icon when open -->
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+        <path d="M3 3l12 12M15 3L3 15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+      </svg>
+    } @else {
+      <!-- hamburger icon when closed -->
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+        <path d="M2 5h14M2 9h14M2 13h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+      </svg>
+    }
+  </button>
+  
+  <!-- Logo -->
+  <a class="logo" routerLink="/dashboard">
+    <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+      <rect width="11" height="11" rx="2" fill="#1B5FA8"/>
+      <rect x="15" width="11" height="11" rx="2" fill="#85B7EB"/>
+      <rect y="15" width="11" height="11" rx="2" fill="#85B7EB"/>
+      <rect x="15" y="15" width="11" height="11" rx="2" fill="#1B5FA8"/>
+    </svg>
+    <span class="logo-text">تقسيط برو v2</span>
+  </a>
+
+  <!-- Quick search — hidden on mobile -->
+  <input
+    class="tsearch"
+    type="search"
+    placeholder="بحث سريع... (عميل، فاتورة، صنف)"
+    [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event)"
+    (keyup.enter)="onSearch()"
+  />
+
+  <div class="tright">
+    <!-- Quick pills — hidden on tablet/below -->
+    <button class="tpill tpill-re" routerLink="/warehouse/alerts">3 أصناف ستنفد</button>
+    <button class="tpill tpill-am" routerLink="/customers">5 متأخرون</button>
+    <button class="tpill tpill-gr">نظام سليم</button>
+
+    <!-- Notifications icon -->
+    <a class="ticon" routerLink="/notifications" title="الإشعارات">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M8 1.5a5.5 5.5 0 00-5.5 5.5v3L1 12h14l-1.5-2.5V7A5.5 5.5 0 008 1.5z"
+          stroke="currentColor" stroke-width="1.2"/>
+        <path d="M6.5 13.5a1.5 1.5 0 003 0" stroke="currentColor" stroke-width="1.2"/>
+      </svg>
+      <div class="tdot"></div>
+    </a>
+
+    <!-- User avatar -->
+    <a class="tav" routerLink="/users" title="{{ currentUser()?.name }}">
+      {{ currentUser()?.avatar }}
+    </a>
+    <span class="tname">{{ currentUser()?.name }}</span>
+    <span class="trole">{{ getRoleLabel() }}</span>
+
+    <!-- Logout -->
+    <button class="btn btn-sm" (click)="logout()" title="تسجيل الخروج">خروج</button>
+  </div>
+
+</header>

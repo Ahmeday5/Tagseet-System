@@ -1,0 +1,9 @@
+/* ── SUMMARY ROW ── */
+.sr {
+  display: flex;
+  justify-content: space-between;
+  padding: 5px 0;
+  font-size: 11px;
+  border-bottom: 1px solid var(--brd);
+  &:last-child { border-bottom: none; font-weight: 600; font-size: 12px; }
+}

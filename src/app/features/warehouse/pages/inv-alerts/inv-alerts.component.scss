@@ -1,0 +1,45 @@
+/* ── INVENTORY ALERT CARDS ── */
+.inv-alert-card {
+  border: 1px solid;
+  border-radius: var(--r);
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.inv-alert-critical { border-color: #f09595; background: var(--re-l); }
+.inv-alert-low      { border-color: #ef9f27; background: var(--am-l); }
+.inv-alert-ok       { border-color: #97c459; background: var(--gr-l); }
+
+/* ── ALERT ICON ── */
+.alert-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.alert-icon-re { background: var(--re); }
+.alert-icon-am { background: var(--am); }
+.alert-icon-gr { background: var(--gr); }
+
+/* ── ALERT TEXT ── */
+.alert-title {
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 3px;
+}
+.alert-title-re { color: var(--re); }
+.alert-title-am { color: var(--am); }
+.alert-title-gr { color: var(--gr); }
+
+.alert-sub {
+  font-size: 11px;
+}
+.alert-sub-re { color: var(--re); }
+.alert-sub-am { color: var(--am); }
+.alert-sub-gr { color: var(--gr); }

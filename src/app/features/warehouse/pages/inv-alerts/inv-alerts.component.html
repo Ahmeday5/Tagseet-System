@@ -1,0 +1,94 @@
+<div class="pgh">
+  <div>
+    <div class="pgt">تنبيهات المخزون</div>
+    <div class="pgs">تنبيه تلقائي عند نفاد الأصناف أو اقترابها من الحد الأدنى</div>
+  </div>
+  <a class="btn btn-sm btn-bl" routerLink="/invoices/new">إنشاء فاتورة مشتريات</a>
+</div>
+
+<!-- إحصائيات -->
+<div class="row row-cols-1 row-cols-md-3 g-2 mb-3">
+  <div class="col">
+    <div class="sc">
+      <div class="sc-l">أصناف نفدت</div>
+      <div class="sc-v" style="color:var(--re)">{{ outCount() }}</div>
+      <div class="sc-s" style="color:var(--re)">شاشة Samsung</div>
+    </div>
+  </div>
+  <div class="col">
+    <div class="sc">
+      <div class="sc-l">أصناف حرجة (أقل من 3)</div>
+      <div class="sc-v" style="color:var(--am)">{{ criticalCount() }}</div>
+      <div class="sc-s">iPhone 15، مخزن الدمام</div>
+    </div>
+  </div>
+  <div class="col">
+    <div class="sc">
+      <div class="sc-l">أصناف تحتاج مراقبة</div>
+      <div class="sc-v" style="color:var(--bl)">{{ lowCount() }}</div>
+      <div class="sc-s">أقل من 5 وحدات</div>
+    </div>
+  </div>
+</div>
+
+<!-- بطاقات التنبيه -->
+@for (alert of alerts(); track alert.id) {
+  <div [class]="cardClass(alert.severity)">
+    <!-- أيقونة التنبيه -->
+    <div class="alert-icon" [class]="'alert-icon-' + (alert.severity === 'out' ? 're' : alert.severity === 'ok' ? 'gr' : 'am')">
+      @if (alert.severity === 'out') {
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+          <path d="M11 2L2 20h18L11 2z" stroke="#fff" stroke-width="1.6"/>
+          <path d="M11 9v4.5" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/>
+          <circle cx="11" cy="16.5" r="1" fill="#fff"/>
+        </svg>
+      } @else if (alert.severity === 'ok') {
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+          <path d="M5 11l5 5 8-8" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+      } @else {
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+          <circle cx="11" cy="11" r="9" stroke="#fff" stroke-width="1.6"/>
+          <path d="M11 7v5" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/>
+          <circle cx="11" cy="14.5" r="1" fill="#fff"/>
+        </svg>
+      }
+    </div>
+
+    <!-- النص -->
+    <div class="flex-grow-1">
+      <div class="alert-title" [class]="'alert-title-' + (alert.severity === 'out' ? 're' : alert.severity === 'ok' ? 'gr' : 'am')">
+        {{ alert.name }}
+        @if (alert.severity === 'out')      { — نفدت من المخزون }
+        @else if (alert.severity === 'ok')  { — {{ alert.currentStock }} وحدات (كافية) }
+        @else                               { — {{ alert.currentStock }} {{ alert.currentStock === 1 ? 'وحدة فقط متبقية' : 'وحدات فقط' }} }
+      </div>
+      <div class="alert-sub" [class]="'alert-sub-' + (alert.severity === 'out' ? 're' : alert.severity === 'ok' ? 'gr' : 'am')">
+        {{ alert.warehouseInfo }}
+        @if (alert.supplierName) { — المورد: {{ alert.supplierName }} }
+      </div>
+    </div>
+
+    <!-- إجراءات -->
+    <div class="d-flex gap-2 flex-shrink-0 flex-wrap">
+      @if (alert.severity === 'ok') {
+        <span class="badge bok" style="font-size:11px;padding:4px 12px">كافي</span>
+      } @else {
+        @if (alert.canTransfer && alert.transferSource) {
+          <button class="btn btn-sm btn-am" (click)="requestTransfer(alert)">
+            تحويل من {{ alert.transferSource }}
+          </button>
+        }
+        @if (alert.severity === 'out') {
+          <button class="btn btn-sm btn-re" (click)="requestOrder(alert)">طلب فوري</button>
+          <button class="btn btn-sm btn-wa" (click)="notifyManager(alert)">📱 تنبيه للمدير</button>
+        } @else {
+          <button class="btn btn-sm btn-am" (click)="requestOrder(alert)">
+            طلب {{ alert.suggestedQty }} وحدة
+          </button>
+        }
+        <a class="btn btn-sm btn-bl" routerLink="/invoices/new">فاتورة جديدة</a>
+      }
+    </div>
+  </div>
+}
