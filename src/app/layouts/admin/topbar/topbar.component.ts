@@ -1,16 +1,15 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  inject,
+  signal,
+} from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../../core/services/auth.service';
 import { LayoutService } from '../../../core/services/layout.service';
-import { UserRole } from '../../../core/models/auth.model';
-
-const ROLE_LABELS: Record<UserRole, string> = {
-  admin:   'مدير عام',
-  manager: 'مدير',
-  cashier: 'محاسب',
-  viewer:  'مشاهد',
-};
+import { DialogService } from '../../../core/services/dialog.service';
+import { roleLabel } from '../../../core/constants/user-roles.const';
 
 @Component({
   selector: 'app-topbar',
@@ -23,20 +22,31 @@ const ROLE_LABELS: Record<UserRole, string> = {
 export class TopbarComponent {
   private readonly authService = inject(AuthService);
   protected readonly layout = inject(LayoutService);
+  protected readonly config = inject(DialogService);
 
-  protected readonly searchQuery  = signal('');
-  protected readonly currentUser  = this.authService.currentUser;
+  protected readonly searchQuery = signal('');
+  protected readonly currentUser = this.authService.currentUser;
 
   onSearch(): void {
     // TODO: global search
   }
 
   logout(): void {
-    this.authService.logout();
+    this.config
+      .confirm({
+        title: 'تسجيل الخروج',
+        message: 'هل أنت متأكد أنك تريد تسجيل الخروج؟',
+        type: 'warning',
+      })
+      .then((confirmed) => {
+        if (confirmed) {
+          this.authService.logout();
+          this.layout.closeMobile();
+        }
+      });
   }
 
   getRoleLabel(): string {
-    const role = this.currentUser()?.role;
-    return role ? ROLE_LABELS[role] : '';
+    return roleLabel(this.currentUser()?.role);
   }
 }

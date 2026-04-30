@@ -1,6 +1,6 @@
 export const environment = {
   production: false,
-  apiUrl: 'http://localhost:3000/api/v1',
+  apiUrl: 'https://amantheone.runasp.net/api/',
   appName: 'تقسيط برو',
   appVersion: '2.0.0',
   tokenKey: 'taqseet_access_token',

@@ -96,8 +96,8 @@
 
 <!-- نموذج إضافة / تعديل -->
 @if (showForm()) {
-  <div class="modal-bg" (click)="closeForm()"></div>
-  <div class="modal" style="max-width:420px">
+  <div class="app-modal-backdrop" (click)="closeForm()"></div>
+  <div class="app-modal" style="max-width:420px">
     <div class="chdr mb-3">
       <div class="ct">{{ editingId() ? 'تعديل مندوب' : 'إضافة مندوب جديد' }}</div>
       <button class="btn btn-sm" (click)="closeForm()">✕</button>

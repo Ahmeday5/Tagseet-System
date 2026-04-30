@@ -1,10 +1,12 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
+import { guestGuard } from './core/guards/guest.guard';
 
 export const routes: Routes = [
-  // Auth Layout
+  // Auth area — only reachable when NOT signed in
   {
     path: 'auth',
+    canActivate: [guestGuard],
     loadComponent: () =>
       import('./layouts/auth/auth-layout.component').then(
         (m) => m.AuthLayoutComponent,
@@ -21,14 +23,15 @@ export const routes: Routes = [
     ],
   },
 
-  // Admin Layout (محمي بـ Guard)
+  // Authenticated app shell
   {
     path: '',
+    canActivate: [authGuard],
+    canActivateChild: [authGuard],
     loadComponent: () =>
       import('./layouts/admin/admin-layout.component').then(
         (m) => m.AdminLayoutComponent,
       ),
-    canActivateChild: [authGuard],
     children: [
       {
         path: 'dashboard',
@@ -118,6 +121,6 @@ export const routes: Routes = [
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
     ],
   },
-
+  
   { path: '**', redirectTo: '/dashboard' },
 ];

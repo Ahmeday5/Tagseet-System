@@ -103,11 +103,11 @@
 
 <!-- Quick-add modal -->
 @if (showForm()) {
-  <div class="modal-bg on" (click)="showForm.set(false)">
-    <div class="modal" (click)="$event.stopPropagation()">
-      <div class="modal-t">
+  <div class="app-modal-backdrop" (click)="showForm.set(false)">
+    <div class="app-modal" (click)="$event.stopPropagation()">
+      <div class="app-modal-title">
         <span>إضافة عميل سريع</span>
-        <button class="modal-close" (click)="showForm.set(false)">×</button>
+        <button class="app-modal-close" (click)="showForm.set(false)">×</button>
       </div>
       <app-customer-form
         (saved)="showForm.set(false); loadCustomers()"

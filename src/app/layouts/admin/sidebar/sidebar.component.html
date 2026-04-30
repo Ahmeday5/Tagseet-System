@@ -16,7 +16,7 @@
   @for (item of section.items; track item.id) {
   <a class="sbi" [routerLink]="item.route" routerLinkActive="on" [title]="layout.collapsed() ? item.label : ''"
     (click)="layout.closeMobile()">
-    <i class="sbi-icon" [class]="item.icon"></i>
+    <app-nav-icon class="sbi-icon" [name]="item.icon" [size]="16"></app-nav-icon>
     <span class="sbi-label">{{ item.label }}</span>
     @if (item.badge) {
     <span [class]="getBadgeClass(item.badgeType)" class="sbb">{{ item.badge }}</span>

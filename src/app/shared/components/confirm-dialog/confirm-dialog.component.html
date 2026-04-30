@@ -1,21 +1,18 @@
-@if (dialog.state().isOpen) {
-  <div class="modal-bg on" (click)="close()">
-    <div class="modal" (click)="$event.stopPropagation()">
-      <div class="modal-t">
-        <span [style]="getTitleStyle()">{{ dialog.state().config.title }}</span>
-        <button class="modal-close" (click)="close()">×</button>
-      </div>
-      <p class="mb-4" style="font-size: 13px; color: var(--txt2); line-height: 1.6">
-        {{ dialog.state().config.message }}
-      </p>
-      <div class="d-flex gap-2 justify-content-end">
-        <button class="btn" (click)="close()">
-          {{ dialog.state().config.cancelText }}
-        </button>
-        <button [class]="getConfirmBtnClass()" (click)="confirm()">
-          {{ dialog.state().config.confirmText }}
-        </button>
-      </div>
-    </div>
-  </div>
-}
+<app-modal
+  [open]="isOpen()"
+  [title]="config().title"
+  size="sm"
+  [titleColorClass]="titleClass()"
+  (closed)="cancel()"
+>
+  <p class="cd-message">{{ config().message }}</p>
+
+  <ng-container modal-footer>
+    <button type="button" class="btn" (click)="cancel()">
+      {{ config().cancelText }}
+    </button>
+    <button type="button" [class]="confirmBtnClass()" (click)="confirm()">
+      {{ config().confirmText }}
+    </button>
+  </ng-container>
+</app-modal>

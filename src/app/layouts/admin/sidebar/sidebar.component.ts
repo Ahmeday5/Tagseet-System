@@ -4,12 +4,13 @@ import { LayoutService } from '../../../core/services/layout.service';
 import { BADGE_CLASS_MAP, BadgeType } from '../../../core/constants/badge.constants';
 import { getMappedClass } from '../../../core/utils/class-map.util';
 import { NAV_SECTIONS } from '../../../core/constants/nav.constants';
+import { NavIconComponent, NavIconName } from '../../../shared/components/nav-icon/nav-icon.component';
 
 export interface NavItem {
   id: string;
   label: string;
   route: string;
-  icon: string;
+  icon: NavIconName;
   badge?: string;
   badgeType?: 'red' | 'amber' | 'green' | 'whatsapp';
 }
@@ -23,7 +24,7 @@ export interface NavSection {
   selector: 'app-sidebar',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, RouterLinkActive],
+  imports: [RouterLink, RouterLinkActive, NavIconComponent],
   templateUrl: './sidebar.component.html',
   styleUrl: './sidebar.component.scss',
 })

@@ -1,14 +1,24 @@
 import { Injectable } from '@angular/core';
 import { Observable, of, throwError } from 'rxjs';
-import { delay, map } from 'rxjs/operators';
+import { delay } from 'rxjs/operators';
 import {
   Customer, CustomerFormData,
   InstallmentRow, PaymentRecord, PaymentContractOption,
   RescheduleRequest, CreditRatingItem,
 } from '../models/customer.model';
-import { PaginatedResponse, QueryParams } from '../../../core/services/api.service';
 import { generateUUID } from '../../../shared/utils/uuid.util';
 // import { ApiService } from '../../../core/services/api.service'; // فعّل عند ربط API
+
+// Local pagination shape used by the mock — keep until this feature is wired
+// to the real backend, then migrate to `PaginatedResponse<T>` from api-response.model.
+export type QueryParams = Record<string, string | number | boolean | null | undefined>;
+export interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
 
 @Injectable({ providedIn: 'root' })
 export class CustomersService {

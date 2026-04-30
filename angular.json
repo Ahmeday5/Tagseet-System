@@ -34,25 +34,27 @@
             ],
             "styles": [
               "node_modules/bootstrap/dist/css/bootstrap.rtl.min.css",
-              "node_modules/@fortawesome/fontawesome-free/css/all.min.css",
               "src/styles.scss"
             ],
-            "scripts": [
-              "node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"
-            ]
+            "scripts": [],
+            "optimization": {
+              "scripts": true,
+              "styles": { "minify": true, "inlineCritical": true },
+              "fonts": { "inline": true }
+            }
           },
           "configurations": {
             "production": {
               "budgets": [
                 {
                   "type": "initial",
-                  "maximumWarning": "500kB",
+                  "maximumWarning": "650kB",
                   "maximumError": "1MB"
                 },
                 {
                   "type": "anyComponentStyle",
-                  "maximumWarning": "6kB",
-                  "maximumError": "10kB"
+                  "maximumWarning": "8kB",
+                  "maximumError": "14kB"
                 }
               ],
               "outputHashing": "all"
@@ -95,12 +97,9 @@
             ],
             "styles": [
               "node_modules/bootstrap/dist/css/bootstrap.rtl.min.css",
-              "node_modules/@fortawesome/fontawesome-free/css/all.min.css",
               "src/styles.scss"
             ],
-            "scripts": [
-              "node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"
-            ],
+            "scripts": [],
             "karmaConfig": "karma.conf.js"
           }
         }

@@ -36,17 +36,23 @@ export class StatementComponent implements OnInit {
   });
 
   constructor() {
-    effect(() => {
-      const id = this.statementCustomerId();
-      if (id) {
-        this.svc.getInstallments(id).subscribe({
-          next:  rows => this.statementInstallments.set(rows),
-          error: ()   => this.toast.error('فشل تحميل كشف الحساب'),
-        });
-      } else {
-        this.statementInstallments.set([]);
-      }
-    });
+    // Input-driven side effect: when the selected customer changes, fetch
+    // their installments. The synchronous reset path writes a signal —
+    // intentional, hence `allowSignalWrites`.
+    effect(
+      () => {
+        const id = this.statementCustomerId();
+        if (id) {
+          this.svc.getInstallments(id).subscribe({
+            next: (rows) => this.statementInstallments.set(rows),
+            error: () => this.toast.error('فشل تحميل كشف الحساب'),
+          });
+        } else {
+          this.statementInstallments.set([]);
+        }
+      },
+      { allowSignalWrites: true },
+    );
   }
 
   ngOnInit(): void {
