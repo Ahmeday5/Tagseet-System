@@ -1,17 +1,90 @@
-import { Injectable } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import { Observable, of } from 'rxjs';
 import { delay } from 'rxjs/operators';
-import { InventoryAlert, WarehouseDetailItem, WarehouseItem, WarehouseLocation } from '../models/warehouse.model';
+import {
+  CreateWarehousePayload,
+  InventoryAlert,
+  UpdateWarehousePayload,
+  Warehouse,
+  WarehouseDetailItem,
+  WarehouseItem,
+  WarehouseLocation,
+} from '../models/warehouse.model';
+import { ApiService } from '../../../core/services/api.service';
+import { API_ENDPOINTS } from '../../../core/constants/api-endpoints.const';
+import {
+  withCache,
+  withCacheBypass,
+  withCacheInvalidate,
+  withInlineHandling,
+} from '../../../core/http/http-context.tokens';
+
+const WAREHOUSE_CACHE_KEY = 'warehouse';
+const WAREHOUSE_TTL_MS = 15 * 60 * 1000; // 15 minutes
 
 @Injectable({ providedIn: 'root' })
 export class WarehouseService {
+  private readonly api = inject(ApiService);
+
+  // ─────────────────────────────────────────────────────────────────
+  //  Live API — /dashboard/warehouses
+  // ─────────────────────────────────────────────────────────────────
+
+  list(): Observable<Warehouse[]> {
+    return this.api.get<Warehouse[]>(API_ENDPOINTS.warehouses.base, {
+      context: withCache({ ttlMs: WAREHOUSE_TTL_MS }),
+    });
+  }
+
+  /** Force-refresh the list, bypassing any cached entry. */
+  refreshList(): Observable<Warehouse[]> {
+    return this.api.get<Warehouse[]>(API_ENDPOINTS.warehouses.base, {
+      context: withCacheBypass(withCache({ ttlMs: WAREHOUSE_TTL_MS })),
+    });
+  }
+
+  getById(id: number): Observable<Warehouse> {
+    return this.api.get<Warehouse>(API_ENDPOINTS.warehouses.byId(id), {
+      context: withCache({ ttlMs: WAREHOUSE_TTL_MS }),
+    });
+  }
+
+  create(payload: CreateWarehousePayload): Observable<Warehouse> {
+    return this.api.post<Warehouse>(API_ENDPOINTS.warehouses.base, payload, {
+      context: withInlineHandling(withCacheInvalidate([WAREHOUSE_CACHE_KEY])),
+    });
+  }
+
+  update(id: number, payload: UpdateWarehousePayload): Observable<Warehouse> {
+    return this.api.put<Warehouse>(
+      API_ENDPOINTS.warehouses.byId(id),
+      payload,
+      {
+        context: withInlineHandling(withCacheInvalidate([WAREHOUSE_CACHE_KEY])),
+      },
+    );
+  }
+
+  delete(id: number): Observable<{ message: string }> {
+    return this.api.delete<{ message: string }>(
+      API_ENDPOINTS.warehouses.byId(id),
+      {
+        context: withCacheInvalidate([WAREHOUSE_CACHE_KEY]),
+      },
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────────
+  //  Mock data — kept in place until dedicated endpoints land.
+  //  Used by the inventory / location / detail tables on the page.
+  // ─────────────────────────────────────────────────────────────────
 
   getAll(): Observable<WarehouseItem[]> {
     return of([...MOCK_ITEMS]).pipe(delay(200));
   }
 
   getAlerts(): Observable<WarehouseItem[]> {
-    return of(MOCK_ITEMS.filter(i => i.alertLevel !== 'ok')).pipe(delay(200));
+    return of(MOCK_ITEMS.filter((i) => i.alertLevel !== 'ok')).pipe(delay(200));
   }
 
   getLocations(): Observable<WarehouseLocation[]> {
@@ -19,7 +92,9 @@ export class WarehouseService {
   }
 
   getDetailItems(warehouseId: string): Observable<WarehouseDetailItem[]> {
-    return of(MOCK_DETAIL_ITEMS.filter(i => i.warehouseId === warehouseId)).pipe(delay(200));
+    return of(
+      MOCK_DETAIL_ITEMS.filter((i) => i.warehouseId === warehouseId),
+    ).pipe(delay(200));
   }
 
   getInventoryAlerts(): Observable<InventoryAlert[]> {

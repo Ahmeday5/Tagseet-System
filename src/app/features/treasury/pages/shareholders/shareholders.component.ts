@@ -11,7 +11,7 @@ import { Shareholder } from '../../models/treasury.model';
   templateUrl: './shareholders.component.html',
   styleUrl: './shareholders.component.scss',
 })
-export class ShareholdersComponent implements OnInit {
+export class ShareholdersComponent {
   private readonly svc = inject(TreasuryService);
 
   protected readonly shareholders = signal<Shareholder[]>([]);
@@ -20,9 +20,6 @@ export class ShareholdersComponent implements OnInit {
   protected readonly totalDebit   = computed(() => this.shareholders().reduce((s, sh) => s + sh.debitAmount,  0));
   protected readonly totalNet     = computed(() => this.totalCredit() - this.totalDebit());
 
-  ngOnInit(): void {
-    this.svc.getShareholders().subscribe(list => this.shareholders.set(list));
-  }
 
   protected netBalance(sh: Shareholder): number {
     return sh.creditAmount - sh.debitAmount;

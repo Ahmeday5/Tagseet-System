@@ -1,118 +1,161 @@
 <div class="pgh">
   <div>
     <div class="pgt">المخازن</div>
-    <div class="pgs">إدارة المخزون والأرقام التسلسلية</div>
+    <div class="pgs">إدارة المخزون والتتبع بالأرقام التسلسلية</div>
   </div>
-  <div class="d-flex gap-2">
-    <button class="btn btn-sm btn-am" routerLink="/warehouse/alerts">
-      ⚠ تنبيهات المخزون ({{ criticalCount() }})
-    </button>
-    <button class="btn btn-sm btn-bl">+ صنف جديد</button>
+  <div style="display:flex;gap:7px">
+    <button class="btn btn-sm btn-bl" routerLink="/warehouse/alerts">تنبيهات المخزون</button>
+    <button class="btn btn-sm">تصدير Excel</button>
+    <button class="btn btn-sm btn-bl" (click)="openCreate()">+ مخزن جديد</button>
   </div>
 </div>
 
-<!-- بطاقات المخازن -->
-<div class="row row-cols-1 row-cols-md-3 g-3 mb-3">
-  @for (loc of locations(); track loc.id) {
-    <div class="col">
-      <div
-        class="wh-card"
-        [class.selected]="selectedLocId() === loc.id"
-        [style.--wh-color]="'var(' + loc.colorVar + ')'"
-        (click)="selectLocation(loc.id)"
-      >
-        <div class="wh-card-header">
-          <div class="wh-card-name">{{ loc.name }}</div>
-          <div class="wh-card-city">{{ loc.city }}</div>
-        </div>
 
-        <div class="row g-2 mb-2">
-          <div class="col-6">
-            <div class="wh-stat-label">مشتريات</div>
-            <div class="wh-stat-val">{{ loc.purchased }}</div>
-          </div>
-          <div class="col-6">
-            <div class="wh-stat-label">مبيعات</div>
-            <div class="wh-stat-val">{{ loc.sold }}</div>
-          </div>
-          <div class="col-6">
-            <div class="wh-stat-label">متاح</div>
-            <div class="wh-stat-val" style="color:var(--wh-color)">{{ loc.available }}</div>
-          </div>
-          <div class="col-6">
-            <div class="wh-stat-label">الربح</div>
-            <div class="wh-stat-val" style="color:var(--gr)">{{ loc.profit | currencyAr }}</div>
-          </div>
-        </div>
-
-        <div class="wh-stat-label mb-1">
-          قيمة المخزون · {{ loc.totalValue | currencyAr }}
-        </div>
-
-        <!-- شريط الاستخدام -->
-        <div class="progress" style="height:6px;border-radius:3px;background:var(--brd)">
-          <div
-            class="progress-bar"
-            [style.width]="utilizationPct(loc) + '%'"
-            [style.background]="utilizationColor(utilizationPct(loc))"
-          ></div>
-        </div>
-        <div style="font-size:9px;color:var(--txt3);margin-top:3px">
-          {{ loc.available }}/{{ loc.capacity }} وحدة متاحة ({{ utilizationPct(loc) }}%)
-        </div>
+<!-- بطاقات المخازن (LIVE — كروت ديناميكية بنفس ديزين البروتوتايب) -->
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:11px;margin-bottom:12px">
+  @for (w of warehouses(); track w.id; let i = $index) {
+    <div
+      class="wh-card-stat"
+      [style.background]="'var(--bg2)'"
+      [style.border]="'1px solid var(--brd)'"
+      [style.borderRadius]="'var(--rl)'"
+      [style.padding]="'13px'"
+      [style.borderTop]="'3px solid ' + colorVar(i)"
+    >
+      <div class="wh-row" style="margin-bottom:9px">
+        <div style="font-size:13px;font-weight:700" [style.color]="colorVar(i)">{{ w.name }}</div>
+        @if (w.isActive) {
+          <span class="badge" [class]="'badge ' + badgeClass(i)">نشط</span>
+        } @else {
+          <span class="badge bbad">موقوف</span>
+        }
       </div>
+
+      <div class="sr"><span style="color:var(--txt2)">المشتراة</span><span>{{ stats(i).purchased }} وحدة</span></div>
+      <div class="sr"><span style="color:var(--txt2)">المباعة</span><span style="color:var(--bl)">{{ stats(i).sold }} وحدة</span></div>
+      <div class="sr"><span style="color:var(--txt2)">المتاحة</span><span [style.color]="stats(i).pct >= 85 ? 'var(--am)' : 'var(--gr)'" style="font-weight:700">{{ stats(i).available }} وحدة</span></div>
+      <div class="sr"><span style="color:var(--txt2)">قيمة الشراء</span><span>{{ stats(i).buyValue | currencyAr }}</span></div>
+      <div class="sr"><span style="color:var(--txt2)">إجمالي الربح</span><span style="color:var(--gr)">{{ stats(i).profit | currencyAr }}</span></div>
+
+      <div class="prog-bg">
+        <div class="prog-f" [style.width]="stats(i).pct + '%'" [style.background]="colorVar(i)"></div>
+      </div>
+
+      @if (stats(i).warning; as warn) {
+        <div style="font-size:10px;margin-top:3px;font-weight:600" [style.color]="'var(--am)'">{{ warn }}</div>
+      } @else {
+        <div style="font-size:10px;color:var(--txt3);margin-top:3px">{{ stats(i).pct }}% مباع</div>
+      }
+
+      <!-- إجراءات الكارت — بسيطة وغير ملفتة -->
+      <div class="wh-card-actions">
+        <button type="button" class="link-btn" (click)="openEdit(w)">تعديل</button>
+        <span class="sep">·</span>
+        <button
+          type="button"
+          class="link-btn link-danger"
+          [disabled]="deletingId() === w.id"
+          (click)="confirmDelete(w)"
+        >
+          @if (deletingId() === w.id) {
+            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+          }
+          حذف
+        </button>
+      </div>
+    </div>
+  } @empty {
+    <div style="grid-column:1/-1;background:var(--bg2);border:1px solid var(--brd);border-radius:var(--rl);padding:18px;text-align:center;color:var(--txt3);font-size:12px">
+      @if (loading()) {
+        جاري تحميل المخازن...
+      } @else {
+        لا توجد مخازن مسجلة بعد — استخدم زر "+ مخزن جديد" لإضافة أول مخزن.
+      }
     </div>
   }
 </div>
 
-<!-- جدول تفاصيل المخزن المحدد -->
-@if (selectedLoc()) {
-  <div class="card">
-    <div class="chdr">
-      <div class="ct">تفاصيل {{ selectedLoc()!.name }}</div>
-      <span style="font-size:11px;color:var(--txt2)">{{ detailItems().length }} صنف</span>
-    </div>
-    <div class="tw">
-      <table class="table">
-        <thead>
-          <tr>
-            <th>المنتج</th>
-            <th>الفئة</th>
-            <th>الأرقام التسلسلية</th>
-            <th>الكمية</th>
-            <th>تكلفة الوحدة</th>
-            <th>سعر البيع</th>
-            <th>هامش الربح</th>
-            <th>إجمالي القيمة</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (item of detailItems(); track item.id) {
-            <tr>
-              <td>
-                <div class="fw-semibold">{{ item.name }}</div>
-                <div style="font-size:10px;color:var(--txt3)">{{ item.sku }}</div>
-              </td>
-              <td style="font-size:11px">{{ item.category }}</td>
-              <td style="font-size:10px;color:var(--txt2);direction:ltr">
-                {{ item.serialStart }} → {{ item.serialEnd }}
-              </td>
-              <td class="fw-bold">{{ item.qty }}</td>
-              <td>{{ item.unitCost | currencyAr }}</td>
-              <td>{{ item.unitPrice | currencyAr }}</td>
-              <td style="color:var(--gr)">{{ margin(item) | currencyAr }}</td>
-              <td class="fw-semibold" style="color:var(--bl)">{{ item.qty * item.unitCost | currencyAr }}</td>
-            </tr>
-          }
-          @empty {
-            <tr>
-              <td colspan="8" class="text-center py-3" style="color:var(--txt3);font-size:11px">
-                لا توجد أصناف في هذا المخزن
-              </td>
-            </tr>
-          }
-        </tbody>
-      </table>
-    </div>
+
+<!-- جدول تفاصيل المخزون (Static — هيتربط لاحقًا) -->
+<div class="card">
+  <div class="chdr">
+    <div class="ct">تفاصيل المخزون مع الأرقام التسلسلية</div>
+    <select style="padding:5px 9px;border-radius:var(--r);border:1px solid var(--brd2);font-size:11px;font-family:inherit">
+      <option>مخزن الرياض</option>
+      <option>مخزن جدة</option>
+      <option>مخزن الدمام</option>
+    </select>
   </div>
-}
+  <div class="tw" style="margin-bottom:0">
+    <table class="w-100">
+      <thead>
+        <tr>
+          <th style="width:15%">البضاعة</th>
+          <th style="width:9%">المشتراة</th>
+          <th style="width:9%">المباعة</th>
+          <th style="width:9%">المتاحة</th>
+          <th style="width:11%">سعر الشراء</th>
+          <th style="width:11%">سعر البيع</th>
+          <th style="width:9%">الهامش%</th>
+          <th style="width:14%">الأرقام التسلسلية</th>
+          <th style="width:13%">إجمالي الربح</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="font-weight:600">Samsung S25</td>
+          <td>20</td>
+          <td>15</td>
+          <td style="color:var(--gr)">5</td>
+          <td>800 ر.س</td>
+          <td>1,200 ر.س</td>
+          <td style="color:var(--gr)">50%</td>
+          <td style="font-size:10px;color:var(--txt3)">SS25-001~020</td>
+          <td style="color:var(--gr)">6,000 ر.س</td>
+        </tr>
+        <tr>
+          <td style="font-weight:600">iPhone 15</td>
+          <td>15</td>
+          <td>14</td>
+          <td style="color:var(--am)">1</td>
+          <td>1,800 ر.س</td>
+          <td>2,800 ر.س</td>
+          <td style="color:var(--gr)">56%</td>
+          <td style="font-size:10px;color:var(--txt3)">IP15-001~015</td>
+          <td style="color:var(--gr)">14,000 ر.س</td>
+        </tr>
+        <tr>
+          <td style="font-weight:600">Dell XPS</td>
+          <td>10</td>
+          <td>8</td>
+          <td style="color:var(--gr)">2</td>
+          <td>2,500 ر.س</td>
+          <td>3,500 ر.س</td>
+          <td style="color:var(--gr)">40%</td>
+          <td style="font-size:10px;color:var(--txt3)">DX15-001~010</td>
+          <td style="color:var(--gr)">8,000 ر.س</td>
+        </tr>
+        <tr>
+          <td style="font-weight:600">ثلاجة LG</td>
+          <td>8</td>
+          <td>6</td>
+          <td style="color:var(--gr)">2</td>
+          <td>900 ر.س</td>
+          <td>1,350 ر.س</td>
+          <td style="color:var(--gr)">50%</td>
+          <td style="font-size:10px;color:var(--txt3)">LG-F01~F08</td>
+          <td style="color:var(--gr)">2,700 ر.س</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+
+<app-warehouse-form-modal
+  [open]="modalOpen()"
+  [mode]="modalMode()"
+  [warehouse]="modalWarehouse()"
+  (closed)="closeModal()"
+  (saved)="onSaved($event)"
+/>

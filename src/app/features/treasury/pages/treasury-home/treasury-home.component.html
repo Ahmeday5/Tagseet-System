@@ -6,28 +6,113 @@
 </div>
 
 
-<!-- ملخص الخزينة -->
-<div class="trs-hero" style="background:var(--te);color:#fff;border-radius:var(--rl);padding:16px;margin-bottom:12px">
-  <div style="font-size:11px;opacity:.8;margin-bottom:3px">الخزينة الرئيسية — مجموع كل الخزائن</div>
-  <div style="font-size:30px;font-weight:700">89,200 ر.س</div>
-  <div style="display:flex;gap:18px;margin-top:10px">
-    <div>
-      <div style="font-size:10px;opacity:.7">الرصيد المركزي</div>
-      <div style="font-size:16px;font-weight:700">68,200 ر.س</div>
+<!-- ملخص الخزينة (LIVE) -->
+<div class="trs-hero d-flex justify-content-between align-items-center"
+  style="background:var(--te);color:#fff;border-radius:var(--rl);padding:16px;margin-bottom:12px">
+  <div class="flex-grow-1">
+    <div style="font-size:11px;opacity:.8;margin-bottom:3px">الخزينة الرئيسية — مجموع كل الخزائن</div>
+    <div style="font-size:30px;font-weight:700">{{ totalBalance() | currencyAr: true }}</div>
+
+    <div style="display:flex;flex-wrap:wrap;gap:18px;margin-top:10px">
+      <div>
+        <div style="font-size:10px;opacity:.7">الرصيد المركزي</div>
+        <div style="font-size:16px;font-weight:700">{{ mainBalance() | currencyAr: true }}</div>
+      </div>
+
+      @for (t of treasuries(); track t.id) {
+      <div>
+        <div style="font-size:10px;opacity:.7">{{ t.name }}</div>
+        <div style="font-size:16px;font-weight:700">{{ t.currentBalance | currencyAr: true }}</div>
+      </div>
+      }
+
+      @if (loading() && !hasTreasuries()) {
+      <div class="d-inline-flex align-items-center gap-2" style="opacity:.85">
+        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+        <span style="font-size:11px">جاري التحميل...</span>
+      </div>
+      }
     </div>
-    <div>
-      <div style="font-size:10px;opacity:.7">خزينة أحمد سالم</div>
-      <div style="font-size:16px;font-weight:700">12,400 ر.س</div>
-    </div>
-    <div>
-      <div style="font-size:10px;opacity:.7">خزينة محمد عبدالله</div>
-      <div style="font-size:16px;font-weight:700">8,600 ر.س</div>
-    </div>
+  </div>
+
+  <div class="actions">
+    <button class="btn btn-bl btn-sm" (click)="openCreate()">
+      + إضافة خزينة جديدة
+    </button>
   </div>
 </div>
 
+
+
+
+
 <div class="sg sg2">
   <div class="row g-2">
+    <div class="col-md-6">
+      <!-- إدارة الخزائن (CRUD) -->
+      <div class="card mb-2">
+        <div class="chdr">
+          <div class="ct">إدارة الخزائن</div>
+          @if (loading()) {
+          <span class="spinner-border spinner-border-sm text-secondary" role="status" aria-hidden="true"></span>
+          }
+        </div>
+
+        <div class="tw" style="margin-bottom:0">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>الاسم</th>
+                <th>النوع</th>
+                <th>الرصيد الحالي</th>
+                <th>الحالة</th>
+                <th class="text-center">إجراءات</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (t of treasuries(); track t.id) {
+              <tr>
+                <td style="font-weight:600">{{ t.name }}</td>
+                <td>
+                  <app-badge [text]="typeLabel(t.type)" [type]="typeBadge(t.type)" />
+                </td>
+                <td style="color:var(--te);font-weight:700">{{ t.currentBalance | currencyAr: true }}</td>
+                <td>
+                  @if (t.isActive) {
+                  <app-badge text="فعّالة" type="ok" />
+                  } @else {
+                  <app-badge text="موقوفة" type="bad" />
+                  }
+                </td>
+                <td class="text-center">
+                  <div class="d-flex gap-1 justify-content-center">
+                    <button class="btn btn-sm btn-bl" (click)="openEdit(t)" title="تعديل">تعديل</button>
+                    <button class="btn btn-sm btn-re d-inline-flex align-items-center gap-1"
+                      [disabled]="deletingId() === t.id" (click)="confirmDelete(t)" title="حذف">
+                      @if (deletingId() === t.id) {
+                      <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                      }
+                      <span>حذف</span>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+              } @empty {
+              <tr>
+                <td colspan="5" class="text-center py-4" style="color: var(--txt3); font-size: 12px">
+                  @if (loading()) {
+                  جاري التحميل...
+                  } @else {
+                  لا توجد خزائن مسجلة بعد
+                  }
+                </td>
+              </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
     <div class="col-md-6">
       <div class="card">
         <div class="ct" style="margin-bottom:9px">آخر العمليات مع الرصيد بعد كل عملية</div>
@@ -184,5 +269,8 @@
       </div>
     </div>
   </div>
-
 </div>
+
+
+<app-treasury-form-model [open]="modalOpen()" [mode]="modalMode()" [treasury]="modalTreasury()" (closed)="closeModal()"
+  (saved)="onSaved($event)" />

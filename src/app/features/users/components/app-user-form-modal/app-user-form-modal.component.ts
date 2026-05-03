@@ -28,19 +28,6 @@ import { UserRole } from '../../../../core/models/auth.model';
 import { ApiError } from '../../../../core/models/api-response.model';
 import { ToastService } from '../../../../core/services/toast.service';
 
-/**
- * Single form modal that supports `create | edit | view`.
- *
- * Lifecycle
- * ─────────
- *   - Opens / re-opens are detected by an `effect` watching the `open` signal
- *     input. On every transition to "open" we reset the form, apply mode-
- *     specific rules (disabled in view, validators in create/edit), then
- *     ensure the roles dropdown is populated before the user can interact.
- *   - The effect uses `allowSignalWrites: true` because input-driven side
- *     effects legitimately update local UI state (server error banner,
- *     submitting flag, roles cache).
- */
 @Component({
   selector: 'app-app-user-form-modal',
   standalone: true,
@@ -96,9 +83,6 @@ export class AppUserFormModalComponent {
   });
 
   constructor() {
-    // Input-driven side effect: every time the modal transitions to "open",
-    // refresh local UI state. Writes to local signals are intentional, hence
-    // `allowSignalWrites`.
     effect(
       () => {
         if (!this.open()) return;
@@ -164,13 +148,6 @@ export class AppUserFormModalComponent {
 
   // ─────────────── internals ───────────────
 
-  /**
-   * Loads the role catalogue (cached in the service after the first call),
-   * then resets the form to the input values. Order matters: when the
-   * dropdown options exist before the form value is set, the native <select>
-   * renders the correct selected option immediately — no flash of "اختر الدور"
-   * in edit / view mode.
-   */
   private ensureRolesThenReset(): void {
     if (this.roles().length > 0) {
       this.resetFormToInputs();
@@ -209,13 +186,7 @@ export class AppUserFormModalComponent {
     }
   }
 
-  /**
-   * Mode-specific rules:
-   *   - view   → every control disabled
-   *   - create → password is required (min 6)
-   *   - edit   → password is OPTIONAL; only `minLength(6)` validates if the
-   *              user typed something. Empty means "keep the existing one".
-   */
+
   private applyModeRules(): void {
     if (this.mode() === 'view') {
       this.form.disable({ emitEvent: false });
@@ -249,11 +220,6 @@ export class AppUserFormModalComponent {
     };
   }
 
-  /**
-   * Build a PUT payload. The password field is omitted entirely when the
-   * user left it blank — the backend treats a missing key as "keep the
-   * existing password".
-   */
   private toUpdatePayload(raw: {
     email: string;
     phoneNumber: string;

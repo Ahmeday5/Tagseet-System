@@ -8,6 +8,7 @@ export type NavIconName =
   | 'truck'
   | 'file-invoice'
   | 'warehouse'
+  | 'products'
   | 'warning'
   | 'wallet'
   | 'hand-coin'
@@ -69,6 +70,12 @@ export type NavIconName =
           <path d="M3 10l9-5 9 5v11H3z" />
           <path d="M7 21v-7h10v7" />
           <path d="M7 17h10" />
+        }
+        @case ('products') {
+          <path d="M20.5 7.5L13 3.5a2 2 0 0 0-2 0L3.5 7.5a1 1 0 0 0-.5.9v7.2a1 1 0 0 0 .5.9L11 20.5a2 2 0 0 0 2 0l7.5-4a1 1 0 0 0 .5-.9V8.4a1 1 0 0 0-.5-.9z" />
+          <path d="M3.3 8L12 12.5 20.7 8" />
+          <path d="M12 12.5V21" />
+          <path d="M7.5 5.7l9 4.8" />
         }
         @case ('warning') {
           <path d="M12 3l10 17H2L12 3z" />

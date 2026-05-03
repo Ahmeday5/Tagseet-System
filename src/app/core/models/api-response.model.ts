@@ -4,7 +4,7 @@
  * normalizes both shapes into `<T>`.
  */
 export interface ApiResponse<T = unknown> {
-  success: boolean;
+  success?: boolean;
   message?: string;
   data?: T;
   errors?: ApiFieldErrors;

@@ -1,3 +1,76 @@
+/* ── Header row inside each warehouse card (title + status badge) ── */
+.wh-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* ── Progress bar (matches the prototype's `.prog-bg / .prog-f`) ── */
+.prog-bg {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--brd);
+  overflow: hidden;
+  margin-top: 4px;
+}
+.prog-f {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.25s ease;
+}
+
+/* ── Per-card actions row (تعديل · حذف) ── */
+.wh-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--brd);
+
+  .sep {
+    color: var(--txt3);
+    font-size: 11px;
+  }
+}
+
+/* ── Inline text-link buttons (subtle, don't compete with the card visuals) ── */
+.link-btn {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  font-size: 11px;
+  color: var(--bl);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: color 0.15s;
+
+  &:hover:not(:disabled) {
+    color: var(--bl-d);
+    text-decoration: underline;
+  }
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+
+  &.link-danger {
+    color: var(--re);
+    &:hover:not(:disabled) { color: var(--re); }
+  }
+
+  .spinner-border-sm {
+    width: 0.75rem;
+    height: 0.75rem;
+    border-width: 0.12em;
+  }
+}
+
+/* ── Keep the legacy wh-card stylings in case any other view re-uses them ── */
 .wh-card {
   background: var(--bg);
   border: 1.5px solid var(--brd);

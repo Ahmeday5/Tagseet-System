@@ -1,4 +1,11 @@
-import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  input,
+  signal,
+} from '@angular/core';
 import { AbstractControl } from '@angular/forms';
 import { firstError } from '../../utils/form-validation.util';
 
@@ -9,6 +16,13 @@ import { firstError } from '../../utils/form-validation.util';
  *
  * Returns nothing while the control is pristine + untouched, so the form
  * doesn't shout at the user before they've interacted.
+ *
+ * ── Why the manual `tick` signal? ──────────────────────────────────────
+ * `AbstractControl.errors / touched / dirty` are plain mutable properties
+ * — NOT signals — so a `computed()` over `this.control()` would never
+ * re-run when the user types or blurs. We subscribe to the control's
+ * `events` stream (Angular 18+) and bump a counter signal on each event,
+ * which gives the `message` computed the reactive dependency it needs.
  */
 @Component({
   selector: 'app-form-error',
@@ -41,7 +55,26 @@ export class FormErrorComponent {
    */
   readonly forceShow = input<boolean>(false);
 
+  /** Bumped on every status/value/touched/dirty change of the bound control. */
+  private readonly tick = signal(0);
+
+  constructor() {
+    effect(
+      (onCleanup) => {
+        const ctrl = this.control();
+        if (!ctrl) return;
+
+        const sub = ctrl.events.subscribe(() => {
+          this.tick.update((v) => v + 1);
+        });
+        onCleanup(() => sub.unsubscribe());
+      },
+      { allowSignalWrites: true },
+    );
+  }
+
   protected readonly message = computed(() => {
+    this.tick(); // reactive dependency — forces re-evaluation on control events
     const ctrl = this.control();
     if (!ctrl) return null;
     if (this.forceShow()) {

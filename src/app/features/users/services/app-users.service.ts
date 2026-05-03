@@ -16,25 +16,11 @@ import {
   withInlineHandling,
 } from '../../../core/http/http-context.tokens';
 
-/** All cached URLs containing this token are dropped on any users mutation. */
 const APP_USERS_CACHE_KEY = 'app-users';
 
-/** Roles practically never change inside a session. */
 const ROLES_TTL_MS = 60 * 60 * 1000; // 1 hour
 const USERS_TTL_MS = 15 * 60 * 1000; // 15 minutes
 
-/**
- * App-users CRUD + role catalogue.
- *
- * Caching strategy
- * ────────────────
- *   - Reads (`list`, `getById`, `getRoles`) opt into the HTTP cache via
- *     `withCache()`. The interceptor handles persistence + cross-tab sync.
- *   - Mutations (`create`, `update`, `delete`) flag `app-users` for
- *     invalidation. The interceptor drops the list URL AND any per-id URL
- *     that contains that segment, on success only.
- *   - `refresh*()` helpers force-bypass the cache for explicit refresh buttons.
- */
 @Injectable({ providedIn: 'root' })
 export class AppUsersService {
   private readonly api = inject(ApiService);
