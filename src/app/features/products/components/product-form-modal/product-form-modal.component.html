@@ -33,16 +33,21 @@
         </div>
 
         @if (!isView()) {
+          <input
+            #fileInput
+            type="file"
+            [accept]="imageAccept"
+            (change)="onFilePicked($event)"
+            class="pf-image-file"
+          />
           <div class="pf-image-actions">
-            <label class="btn btn-sm btn-bl pf-pick">
-              <input
-                type="file"
-                [accept]="imageAccept"
-                (change)="onFilePicked($event)"
-                hidden
-              />
+            <button
+              type="button"
+              class="btn btn-sm btn-bl pf-pick"
+              (click)="fileInput.click()"
+            >
               {{ pickedImage() || product()?.imageUrl ? 'تغيير الصورة' : 'اختيار صورة' }}
-            </label>
+            </button>
 
             @if (pickedImage()) {
               <button type="button" class="btn btn-sm" (click)="clearPickedImage()">
@@ -124,6 +129,26 @@
               <span class="input-group-text">ر.س</span>
             </div>
             <app-form-error [control]="form.controls.sellingPrice" label="سعر البيع" />
+          </div>
+
+          <div class="col-12 col-sm-6">
+            <label class="form-label">الفئة</label>
+            <select
+              class="form-select"
+              formControlName="categoryId"
+              [class.is-invalid]="isInvalid('categoryId')"
+            >
+              <option [ngValue]="null">— بدون فئة —</option>
+              @for (c of categories(); track c.id) {
+                <option [ngValue]="c.id">{{ c.name }}</option>
+              }
+            </select>
+            @if (loadingCategories()) {
+              <div class="pf-image-hint d-inline-flex align-items-center gap-1 mt-1">
+                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                <span>جاري تحميل الفئات...</span>
+              </div>
+            }
           </div>
 
           <div class="col-12 col-sm-6 d-flex align-items-end">

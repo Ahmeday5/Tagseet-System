@@ -11,7 +11,6 @@ import {
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';
 import { FormErrorComponent } from '../../../../shared/components/form-error/form-error.component';
-import { CurrencyArPipe } from '../../../../shared/pipes/currency-ar.pipe';
 import {
   FormMode,
   formModeSubmitLabel,
@@ -26,6 +25,8 @@ import {
   PRODUCT_IMAGE_ACCEPT,
   validateProductImage,
 } from '../../utils/product-image.util';
+import { Category } from '../../../categories/models/category.model';
+import { CategoriesService } from '../../../categories/services/categories.service';
 
 @Component({
   selector: 'app-product-form-modal',
@@ -48,18 +49,23 @@ export class ProductFormModalComponent {
   // ── deps ──
   private readonly fb = inject(FormBuilder);
   private readonly service = inject(ProductsService);
+  private readonly categoriesService = inject(CategoriesService);
   private readonly toast = inject(ToastService);
 
   // ── reactive state ──
   protected readonly submitting = signal(false);
   protected readonly serverError = signal<string | null>(null);
 
+  /** Categories for the dropdown — lazy-loaded on first open. */
+  protected readonly categories = signal<Category[]>([]);
+  protected readonly loadingCategories = signal(false);
+
   /** The picked file, if any. Service serializes this as the `Image` field. */
   protected readonly pickedImage = signal<File | null>(null);
   /** Local error from client-side image validation (size / MIME type). */
   protected readonly imageError = signal<string | null>(null);
-  /** Object URL for the picked file's preview. Revoked when replaced. */
-  protected readonly previewObjectUrl = signal<string | null>(null);
+  /** Data URL for the picked file's preview. */
+  protected readonly previewDataUrl = signal<string | null>(null);
 
   protected readonly imageAccept = PRODUCT_IMAGE_ACCEPT;
 
@@ -78,7 +84,7 @@ export class ProductFormModalComponent {
    *   3. null → render the empty placeholder
    */
   protected readonly previewSrc = computed<string | null>(() => {
-    const fromPick = this.previewObjectUrl();
+    const fromPick = this.previewDataUrl();
     if (fromPick) return fromPick;
     return buildImageUrl(this.product()?.imageUrl);
   });
@@ -90,6 +96,7 @@ export class ProductFormModalComponent {
     purchasePrice: [0, [Validators.required, Validators.min(0)]],
     sellingPrice: [0, [Validators.required, Validators.min(0)]],
     isActive: [true, [Validators.required]],
+    categoryId: this.fb.nonNullable.control<number | null>(null),
   });
 
   constructor() {
@@ -108,6 +115,7 @@ export class ProductFormModalComponent {
         this.pickedImage.set(null);
         this.applyModeRules();
         this.resetFormToInputs();
+        this.loadCategoriesIfNeeded();
       },
       { allowSignalWrites: true },
     );
@@ -133,6 +141,7 @@ export class ProductFormModalComponent {
       purchasePrice: Number(raw.purchasePrice) || 0,
       sellingPrice: Number(raw.sellingPrice) || 0,
       isActive: raw.isActive,
+      categoryId: raw.categoryId ? Number(raw.categoryId) : null,
       image: this.pickedImage(),
     };
 
@@ -183,8 +192,17 @@ export class ProductFormModalComponent {
 
     this.imageError.set(null);
     this.releasePreview();
-    this.previewObjectUrl.set(URL.createObjectURL(file));
     this.pickedImage.set(file);
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      // Guard against late-arriving reads after the modal closed
+      // or the user cleared / replaced the picked file.
+      if (this.pickedImage() !== file) return;
+      this.previewDataUrl.set(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+
     // Allow re-picking the same file later (`change` only fires on new value).
     input.value = '';
   }
@@ -214,6 +232,7 @@ export class ProductFormModalComponent {
         purchasePrice: p.purchasePrice,
         sellingPrice: p.sellingPrice,
         isActive: p.isActive,
+        categoryId: p.categoryId ?? null,
       });
       return;
     }
@@ -223,12 +242,32 @@ export class ProductFormModalComponent {
       purchasePrice: 0,
       sellingPrice: 0,
       isActive: true,
+      categoryId: null,
+    });
+  }
+
+  /**
+   * Lazy-load categories on first modal open. Re-uses the cached entry
+   * on subsequent opens so the dropdown is instant. Cache invalidation
+   * (handled by CategoriesService on create/edit/delete) refreshes it
+   * naturally next time.
+   */
+  private loadCategoriesIfNeeded(): void {
+    if (this.categories().length > 0) return;
+    this.loadingCategories.set(true);
+    this.categoriesService.listAll().subscribe({
+      next: (list) => {
+        this.categories.set(list);
+        this.loadingCategories.set(false);
+      },
+      error: () => {
+        this.categories.set([]);
+        this.loadingCategories.set(false);
+      },
     });
   }
 
   private releasePreview(): void {
-    const url = this.previewObjectUrl();
-    if (url) URL.revokeObjectURL(url);
-    this.previewObjectUrl.set(null);
+    this.previewDataUrl.set(null);
   }
 }

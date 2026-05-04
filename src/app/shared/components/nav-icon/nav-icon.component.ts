@@ -16,7 +16,8 @@ export type NavIconName =
   | 'user-cog'
   | 'clipboard'
   | 'chart'
-  | 'file-pdf';
+  | 'file-pdf'
+  | 'tag';
 
 @Component({
   selector: 'app-nav-icon',
@@ -118,6 +119,10 @@ export type NavIconName =
           <path d="M8.5 17v-4h1.2a1.4 1.4 0 1 1 0 2.8H8.5" />
           <path d="M13 17v-4h1.6a2 2 0 0 1 2 2v0a2 2 0 0 1-2 2H13z" />
           <path d="M18 13h2M18 15h2" />
+        }
+        @case ('tag') {
+          <path d="M20.59 13.41 13.42 20.58a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
+          <circle cx="7.2" cy="7.2" r="1.2" fill="currentColor" stroke="none" />
         }
       }
     </svg>

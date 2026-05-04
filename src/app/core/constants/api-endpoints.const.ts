@@ -28,7 +28,28 @@ export const API_ENDPOINTS = {
     base: 'dashboard/products',
     byId: (id: number) => `dashboard/products/${id}`,
   },
+  categories: {
+    base: 'dashboard/categories',
+    byId: (id: number) => `dashboard/categories/${id}`,
+  },
+  suppliers: {
+    base: 'dashboard/suppliers',
+    byId: (id: number) => `dashboard/suppliers/${id}`,
+  },
+  purchaseInvoices: {
+    base: 'dashboard/supplier-purchase-invoices',
+    byId: (id: number) => `dashboard/supplier-purchase-invoices/${id}`,
+    summary: 'dashboard/supplier-purchase-invoices/summary',
+    confirm: (id: number) =>
+      `dashboard/supplier-purchase-invoices/${id}/confirm`,
+  },
   dashboard: {
     summary: 'dashboard/summary',
+  },
+  clientOrders: {
+    base: 'dashboard/client-orders',
+    reject: (id: number) => `dashboard/client-orders/${id}/reject`,
+    convertToContract: (id: number) =>
+      `dashboard/client-orders/${id}/convert-to-contract`,
   },
 } as const;

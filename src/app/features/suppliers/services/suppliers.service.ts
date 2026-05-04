@@ -1,41 +1,125 @@
-import { Injectable } from '@angular/core';
-import { Observable, of, throwError } from 'rxjs';
-import { delay } from 'rxjs/operators';
-import { Supplier } from '../models/supplier.model';
-import { generateUUID } from '../../../shared/utils/uuid.util';
-// import { ApiService } from '../../../core/services/api.service'; // فعّل عند ربط API
+import { inject, Injectable } from '@angular/core';
+import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
+import { ApiService } from '../../../core/services/api.service';
+import { API_ENDPOINTS } from '../../../core/constants/api-endpoints.const';
+import { PagedQuery } from '../../../core/models/api-response.model';
+import {
+  withCache,
+  withCacheBypass,
+  withCacheInvalidate,
+  withInlineHandling,
+} from '../../../core/http/http-context.tokens';
+import {
+  CreateSupplierPayload,
+  Supplier,
+  SuppliersListResponse,
+  UpdateSupplierPayload,
+} from '../models/supplier.model';
+
+const SUPPLIERS_CACHE_KEY = 'suppliers';
+const SUPPLIERS_TTL_MS = 5 * 60 * 1000; // 5 min — list churns whenever a supplier is added/edited
+/**
+ * Page size used by callers that want a flat list (e.g. dropdowns inside
+ * the invoice form). Large enough to cover all realistic catalogs without
+ * an autocomplete; switch to server-side search if it ever overshoots.
+ */
+const FLAT_LIST_PAGE_SIZE = 500;
 
 @Injectable({ providedIn: 'root' })
 export class SuppliersService {
-  // private readonly api = inject(ApiService);
+  private readonly api = inject(ApiService);
 
-  getAll(): Observable<Supplier[]> {
-    // استبدل بـ: return this.api.get<Supplier[]>('suppliers');
-    return of([...MOCK_SUPPLIERS]).pipe(delay(200));
+  // ─────────── reads ───────────
+
+  /**
+   * Server-paginated list with summary aggregates.
+   *
+   *   data: { summary: { totalPurchases, totalPaid, totalRemaining },
+   *           items:   { pageIndex, pageSize, count, totalPages, data: Supplier[] } }
+   */
+  list(query: PagedQuery = {}): Observable<SuppliersListResponse> {
+    return this.api.get<SuppliersListResponse>(API_ENDPOINTS.suppliers.base, {
+      params: this.toParams(query),
+      context: withCache({ ttlMs: SUPPLIERS_TTL_MS }),
+    });
   }
 
-  getById(id: string): Observable<Supplier> {
-    const found = MOCK_SUPPLIERS.find((s) => s.id === id);
-    return found
-      ? of(found).pipe(delay(150))
-      : throwError(() => new Error('المورد غير موجود'));
+  refreshList(query: PagedQuery = {}): Observable<SuppliersListResponse> {
+    return this.api.get<SuppliersListResponse>(API_ENDPOINTS.suppliers.base, {
+      params: this.toParams(query),
+      context: withCacheBypass(withCache({ ttlMs: SUPPLIERS_TTL_MS })),
+    });
   }
 
-  create(data: Omit<Supplier, 'id'>): Observable<Supplier> {
-    const newSupplier: Supplier = { ...data, id: generateUUID() };
-    MOCK_SUPPLIERS.unshift(newSupplier);
-    return of(newSupplier).pipe(delay(400));
+  /**
+   * Flat list for dropdowns. Wraps `list()` with a high `pageSize` and
+   * unwraps the paged envelope so the caller gets `Supplier[]` directly.
+   */
+  listAll(): Observable<Supplier[]> {
+    return this.list({ pageIndex: 1, pageSize: FLAT_LIST_PAGE_SIZE }).pipe(
+      map((res) => Array.isArray(res?.items?.data) ? res.items.data : []),
+    );
   }
 
-  delete(id: string): Observable<void> {
-    const idx = MOCK_SUPPLIERS.findIndex((s) => s.id === id);
-    if (idx !== -1) MOCK_SUPPLIERS.splice(idx, 1);
-    return of(undefined).pipe(delay(300));
+  getById(id: number): Observable<Supplier> {
+    return this.api.get<Supplier>(API_ENDPOINTS.suppliers.byId(id), {
+      context: withCache({ ttlMs: SUPPLIERS_TTL_MS }),
+    });
+  }
+
+  // ─────────── writes ───────────
+
+  create(payload: CreateSupplierPayload): Observable<Supplier> {
+    return this.api.post<Supplier>(
+      API_ENDPOINTS.suppliers.base,
+      this.normalize(payload),
+      {
+        context: withInlineHandling(
+          withCacheInvalidate([SUPPLIERS_CACHE_KEY]),
+        ),
+      },
+    );
+  }
+
+  update(id: number, payload: UpdateSupplierPayload): Observable<Supplier> {
+    return this.api.put<Supplier>(
+      API_ENDPOINTS.suppliers.byId(id),
+      this.normalize(payload),
+      {
+        context: withInlineHandling(
+          withCacheInvalidate([SUPPLIERS_CACHE_KEY]),
+        ),
+      },
+    );
+  }
+
+  delete(id: number): Observable<{ message: string }> {
+    return this.api.delete<{ message: string }>(
+      API_ENDPOINTS.suppliers.byId(id),
+      {
+        context: withInlineHandling(
+          withCacheInvalidate([SUPPLIERS_CACHE_KEY]),
+        ),
+      },
+    );
+  }
+
+  // ─────────── helpers ───────────
+
+  private toParams(query: PagedQuery): Record<string, unknown> {
+    return {
+      PageIndex: query.pageIndex ?? 1,
+      PageSize: query.pageSize ?? 10,
+      search: query.search ?? '',
+    };
+  }
+
+  private normalize(payload: CreateSupplierPayload): CreateSupplierPayload {
+    return {
+      fullName: payload.fullName.trim(),
+      address: payload.address.trim(),
+      phoneNumber: payload.phoneNumber.trim(),
+    };
   }
 }
-
-let MOCK_SUPPLIERS: Supplier[] = [
-  { id: '1', name: 'شركة التقنية المتقدمة',    contactName: 'أحمد محمد', phone: '0112345678', email: 'tech@adv.sa',     city: 'الرياض', totalPurchases: 145000, balance: 12000, status: 'active',   lastOrderDate: '2025-03-15' },
-  { id: '2', name: 'مؤسسة الإلكترونيات الحديثة', contactName: 'سعد العلي', phone: '0129876543', email: 'modern@elec.sa', city: 'جدة',    totalPurchases: 89000,  balance: 0,     status: 'active',   lastOrderDate: '2025-04-01' },
-  { id: '3', name: 'مستودع الأجهزة المنزلية',  contactName: 'فيصل حمد', phone: '0133344556', email: 'home@app.sa',    city: 'الدمام', totalPurchases: 67000,  balance: 5500,  status: 'inactive', lastOrderDate: '2024-12-10' },
-];

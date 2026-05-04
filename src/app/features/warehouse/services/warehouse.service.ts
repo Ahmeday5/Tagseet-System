@@ -18,6 +18,7 @@ import {
   withCacheInvalidate,
   withInlineHandling,
 } from '../../../core/http/http-context.tokens';
+import { toList } from '../../../core/utils/api-list.util';
 
 const WAREHOUSE_CACHE_KEY = 'warehouse';
 const WAREHOUSE_TTL_MS = 15 * 60 * 1000; // 15 minutes
@@ -31,16 +32,20 @@ export class WarehouseService {
   // ─────────────────────────────────────────────────────────────────
 
   list(): Observable<Warehouse[]> {
-    return this.api.get<Warehouse[]>(API_ENDPOINTS.warehouses.base, {
-      context: withCache({ ttlMs: WAREHOUSE_TTL_MS }),
-    });
+    return this.api
+      .get<unknown>(API_ENDPOINTS.warehouses.base, {
+        context: withCache({ ttlMs: WAREHOUSE_TTL_MS }),
+      })
+      .pipe(toList<Warehouse>());
   }
 
   /** Force-refresh the list, bypassing any cached entry. */
   refreshList(): Observable<Warehouse[]> {
-    return this.api.get<Warehouse[]>(API_ENDPOINTS.warehouses.base, {
-      context: withCacheBypass(withCache({ ttlMs: WAREHOUSE_TTL_MS })),
-    });
+    return this.api
+      .get<unknown>(API_ENDPOINTS.warehouses.base, {
+        context: withCacheBypass(withCache({ ttlMs: WAREHOUSE_TTL_MS })),
+      })
+      .pipe(toList<Warehouse>());
   }
 
   getById(id: number): Observable<Warehouse> {

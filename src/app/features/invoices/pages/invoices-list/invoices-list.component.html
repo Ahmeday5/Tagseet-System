@@ -1,103 +1,144 @@
-<!-- إحصائيات سريعة -->
-<div class="row row-cols-2 row-cols-md-4 g-2 mb-3">
-  <div class="col">
-    <div class="sc">
-      <div class="sc-l">إجمالي الفواتير</div>
-      <div class="sc-v">{{ allInvoices().length }}</div>
+<!-- ── SUMMARY CARDS ── -->
+<div class="iv-stats">
+  <div class="sc">
+    <div class="sc-l">إجمالي المشتريات</div>
+    <div class="sc-v">{{ summary()?.totalPurchases ?? 0 | currencyAr: true }}</div>
+  </div>
+  <div class="sc">
+    <div class="sc-l">المدفوع</div>
+    <div class="sc-v iv-stat-pos">
+      {{ summary()?.totalPaid ?? 0 | currencyAr: true }}
     </div>
   </div>
-  <div class="col">
-    <div class="sc">
-      <div class="sc-l">إجمالي المبلغ</div>
-      <div class="sc-v">{{ totalAmount() | currencyAr }}</div>
+  <div class="sc">
+    <div class="sc-l">الباقي للموردين</div>
+    <div class="sc-v iv-stat-neg">
+      {{ summary()?.totalOutstanding ?? 0 | currencyAr: true }}
     </div>
   </div>
-  <div class="col">
-    <div class="sc">
-      <div class="sc-l">المدفوع</div>
-      <div class="sc-v" style="color:var(--gr)">{{ totalPaid() | currencyAr }}</div>
-    </div>
-  </div>
-  <div class="col">
-    <div class="sc">
-      <div class="sc-l">المتبقي</div>
-      <div class="sc-v" style="color:var(--re)">{{ totalRemaining() | currencyAr }}</div>
+  <div class="sc">
+    <div class="sc-l">فواتير هذا الشهر</div>
+    <div class="sc-v iv-stat-info">
+      {{ summary()?.invoicesThisMonth ?? 0 }}
     </div>
   </div>
 </div>
 
-<!-- بحث وفلتر -->
-<div class="d-flex gap-2 mb-3 flex-wrap">
+<!-- ── FILTERS ROW ── -->
+<div class="iv-filters">
   <input
-    class="form-control form-control-sm"
-    style="max-width:220px"
+    class="iv-search"
     placeholder="بحث برقم الفاتورة أو المورد..."
-    [value]="searchQuery()"
-    (input)="searchQuery.set($any($event.target).value)"
+    [value]="searchTerm()"
+    (input)="onSearch($any($event.target).value)"
   />
+
   <select
-    class="form-select form-select-sm"
-    style="max-width:160px"
+    class="iv-select"
     [value]="statusFilter()"
-    (change)="statusFilter.set($any($event.target).value)"
+    (change)="onStatusChange($any($event.target).value)"
   >
-    <option value="">كل الحالات</option>
-    <option value="paid">مدفوع</option>
-    <option value="partial">جزئي</option>
-    <option value="unpaid">غير مدفوع</option>
+    @for (opt of statusOptions; track opt.value) {
+      <option [value]="opt.value">{{ opt.label }}</option>
+    }
   </select>
+
+  <select
+    class="iv-select"
+    [value]="supplierFilter()"
+    (change)="onSupplierChange($any($event.target).value)"
+  >
+    <option value="">كل الموردين</option>
+    @for (s of suppliers(); track s.id) {
+      <option [value]="s.id">{{ s.fullName }}</option>
+    }
+  </select>
+
+  <button
+    type="button"
+    class="btn btn-sm d-inline-flex align-items-center gap-1"
+    [disabled]="loading()"
+    (click)="refresh()"
+  >
+    @if (loading()) {
+      <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+    }
+    <span>تحديث</span>
+  </button>
+
+  <button class="btn btn-sm btn-bl" (click)="goToNew()">+ فاتورة جديدة</button>
 </div>
 
-<!-- الجدول -->
+<!-- ── TABLE ── -->
 <div class="tw">
-  <table class="table">
+  <table>
     <thead>
       <tr>
-        <th>رقم الفاتورة</th>
-        <th>المورد</th>
-        <th>المخزن</th>
-        <th>الأصناف</th>
-        <th>الإجمالي</th>
-        <th>المدفوع</th>
-        <th>المتبقي</th>
-        <th>تاريخ الفاتورة</th>
-        <th>الاستحقاق</th>
-        <th>الحالة</th>
-        <th class="text-center">إجراءات</th>
+        <th class="iv-w-10">الفاتورة</th>
+        <th class="iv-w-14">المورد</th>
+        <th class="iv-w-22">الأصناف</th>
+        <th class="iv-w-7">الكمية</th>
+        <th class="iv-w-9">الإجمالي</th>
+        <th class="iv-w-9">المدفوع</th>
+        <th class="iv-w-9">الباقي</th>
+        <th class="iv-w-9">التاريخ</th>
+        <th class="iv-w-9">الحالة</th>
+        <th class="iv-w-12">إجراء</th>
       </tr>
     </thead>
     <tbody>
       @for (inv of invoices(); track inv.id) {
         <tr>
-          <td class="fw-semibold" style="color:var(--bl)">{{ inv.invoiceNumber }}</td>
+          <td class="iv-num" (click)="viewInvoice(inv)">{{ inv.invoiceNumber }}</td>
           <td>{{ inv.supplierName }}</td>
-          <td style="font-size:10px;color:var(--txt2)">{{ inv.warehouseName ?? '—' }}</td>
-          <td>{{ inv.itemsCount }}</td>
-          <td>{{ inv.total | currencyAr }}</td>
-          <td style="color:var(--gr)">{{ inv.paid | currencyAr }}</td>
-          <td style="color:var(--re)">{{ inv.remaining | currencyAr }}</td>
-          <td style="font-size:11px">{{ inv.date | dateAr }}</td>
-          <td style="font-size:11px">{{ inv.dueDate ? (inv.dueDate | dateAr) : '—' }}</td>
-          <td>
-            <app-badge [text]="getStatusLabel(inv.status)" [type]="getStatusBadge(inv.status)" />
+          <td class="iv-items" [title]="inv.itemsSummary">{{ inv.itemsSummary }}</td>
+          <td>{{ inv.quantity }}</td>
+          <td>{{ inv.totalAmount | currencyAr: true }}</td>
+          <td class="iv-paid">{{ inv.paidAmount | currencyAr: true }}</td>
+          <td [class]="inv.remainingAmount > 0 ? 'iv-rem' : 'iv-paid'">
+            {{ inv.remainingAmount | currencyAr: true }}
           </td>
-          <td class="text-center">
+          <td class="fs-10">{{ formatDate(inv.invoiceDate) }}</td>
+          <td>
+            <span class="b" [class]="'b-' + statusView(inv.status).variant">
+              {{ statusView(inv.status).label }}
+            </span>
+          </td>
+          <td>
             <div class="d-flex gap-1 justify-content-center">
-              <button class="btn btn-sm btn-bl">تفاصيل</button>
-              @if (inv.status !== 'paid') {
-                <button class="btn btn-sm btn-gr">دفع</button>
+              <button
+                type="button"
+                class="btn btn-sm"
+                (click)="viewInvoice(inv)"
+              >تفاصيل</button>
+              @if (isDraft(inv)) {
+                <button
+                  type="button"
+                  class="btn btn-sm btn-gr"
+                  (click)="openConfirm(inv)"
+                >تأكيد</button>
               }
             </div>
           </td>
         </tr>
-      }
-      @empty {
+      } @empty {
         <tr>
-          <td colspan="11" class="text-center py-3" style="color:var(--txt3);font-size:11px">
-            لا توجد فواتير مطابقة
+          <td colspan="10" class="text-center fs-11 text-muted py-3">
+            @if (loading()) {
+              جاري تحميل الفواتير...
+            } @else {
+              لا توجد فواتير مطابقة
+            }
           </td>
         </tr>
       }
     </tbody>
   </table>
 </div>
+
+<app-confirm-invoice-modal
+  [open]="confirmOpen()"
+  [invoice]="confirmTarget()"
+  (closed)="closeConfirm()"
+  (confirmed)="onConfirmed($event)"
+/>

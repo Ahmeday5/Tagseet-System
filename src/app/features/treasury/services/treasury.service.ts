@@ -13,6 +13,7 @@ import {
   withCacheInvalidate,
   withInlineHandling,
 } from '../../../core/http/http-context.tokens';
+import { toList } from '../../../core/utils/api-list.util';
 
 const TREASURY_CACHE_KEY = 'treasury';
 const TREASURY_TTL_MS = 15 * 60 * 1000;
@@ -22,16 +23,20 @@ export class TreasuryService {
   private readonly api = inject(ApiService);
 
   list(): Observable<Treasury[]> {
-    return this.api.get<Treasury[]>(API_ENDPOINTS.treasuries.base, {
-      context: withCache({ ttlMs: TREASURY_TTL_MS }),
-    });
+    return this.api
+      .get<unknown>(API_ENDPOINTS.treasuries.base, {
+        context: withCache({ ttlMs: TREASURY_TTL_MS }),
+      })
+      .pipe(toList<Treasury>());
   }
 
   /** Force-refresh the list, bypassing any cached entry. */
   refreshList(): Observable<Treasury[]> {
-    return this.api.get<Treasury[]>(API_ENDPOINTS.treasuries.base, {
-      context: withCacheBypass(withCache({ ttlMs: TREASURY_TTL_MS })),
-    });
+    return this.api
+      .get<unknown>(API_ENDPOINTS.treasuries.base, {
+        context: withCacheBypass(withCache({ ttlMs: TREASURY_TTL_MS })),
+      })
+      .pipe(toList<Treasury>());
   }
 
   getById(id: number): Observable<Treasury> {

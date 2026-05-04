@@ -85,8 +85,24 @@ export class TreasuryHomeComponent implements OnInit {
   // ─────────────── data loading ───────────────
 
   protected loadTreasuries(): void {
+    this.fetch(false);
+  }
+
+  /**
+   * Force-refresh from the server, bypassing the cache. Used after
+   * any mutation so the local list — and the cached entry that survives
+   * F5 — both reflect the canonical server state.
+   */
+  protected refresh(): void {
+    this.fetch(true);
+  }
+
+  private fetch(force: boolean): void {
     this.loading.set(true);
-    this.treasuryService.list().subscribe({
+    const stream$ = force
+      ? this.treasuryService.refreshList()
+      : this.treasuryService.list();
+    stream$.subscribe({
       next: (list) => {
         this.treasuries.set(list ?? []);
         this.loading.set(false);
@@ -113,14 +129,13 @@ export class TreasuryHomeComponent implements OnInit {
     this.modalOpen.set(false);
   }
 
-  protected onSaved(saved: Treasury): void {
-    const wasCreate = this.modalMode() === 'create';
-    this.treasuries.update((list) =>
-      wasCreate
-        ? [saved, ...list]
-        : list.map((t) => (t.id === saved.id ? saved : t)),
-    );
+  protected onSaved(_saved: Treasury): void {
     this.modalOpen.set(false);
+    // Always re-fetch from server (bypassing cache) instead of an
+    // optimistic local insert. The cached entry — which survives F5
+    // via localStorage — gets replaced with the fresh list, so the
+    // newly-saved treasury stays visible on hard refresh.
+    this.refresh();
   }
 
   // ─────────────── delete ───────────────
@@ -137,10 +152,12 @@ export class TreasuryHomeComponent implements OnInit {
 
     this.deletingId.set(treasury.id);
     this.treasuryService.delete(treasury.id).subscribe({
-      next: (res) => {
-        this.treasuries.update((list) => list.filter((t) => t.id !== treasury.id));
+      next: () => {
         this.deletingId.set(null);
         this.toast.success('تم حذف الخزينة بنجاح');
+        // Re-fetch from server (bypassing cache) so subsequent reads
+        // — including hard-refreshes — see the canonical list.
+        this.refresh();
       },
       error: (_err: ApiError) => this.deletingId.set(null),
     });

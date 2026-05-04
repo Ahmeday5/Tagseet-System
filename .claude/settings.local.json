@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(npx ng:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "PowerShell(npx tsc --noEmit 2>&1)"
     ]
   }
 }

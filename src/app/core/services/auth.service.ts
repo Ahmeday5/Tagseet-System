@@ -30,7 +30,16 @@ const USER_KEY = 'taqseet_user';
 const REFRESH_BUFFER_MS = 60 * 1000;
 /** Lower bound for the proactive refresh timer to avoid timer storms on edge cases. */
 const MIN_REFRESH_DELAY_MS = 5_000;
+/** Backoff window after a transient (network/5xx) refresh failure. */
+const REFRESH_RETRY_DELAY_MS = 30_000;
 const BROADCAST_CHANNEL_NAME = 'taqseet-auth';
+
+/**
+ * Statuses that prove the refresh token itself is invalid — anything else
+ * (network, CORS, 5xx) is treated as transient and triggers a backoff
+ * retry instead of a forced logout.
+ */
+const AUTH_FATAL_STATUSES: ReadonlySet<number> = new Set([400, 401, 403]);
 
 type CrossTabMessage =
   | { type: 'session-updated' }
@@ -164,8 +173,18 @@ export class AuthService {
             this.scheduleProactiveRefresh();
             return of(recovered);
           }
-          // Genuinely fatal — refresh token is dead. End the session.
-          this.scheduleSessionExpiredLogout();
+
+          // Distinguish auth-fatal (server rejected the refresh token)
+          // from transient (network blip, CORS, 5xx, runasp.net cold-
+          // start). Only the former proves the session is dead — for
+          // anything else we re-arm and let the user keep their session
+          // until the server actually disowns the token.
+          if (this.isAuthFatal(err)) {
+            this.scheduleSessionExpiredLogout();
+            return throwError(() => err);
+          }
+
+          this.scheduleRefreshRetry();
           return throwError(() => err);
         }),
         finalize(() => {
@@ -364,6 +383,36 @@ export class AuthService {
       clearTimeout(this.refreshTimerId);
       this.refreshTimerId = null;
     }
+  }
+
+  /**
+   * Re-arm the refresh after a transient failure (network blip, 5xx,
+   * cold-starting backend). Short delay so we recover quickly when the
+   * server comes back; the next user-driven request will also retry on
+   * its own 401, so this is mostly a belt-and-suspenders measure.
+   */
+  private scheduleRefreshRetry(): void {
+    this.cancelScheduledRefresh();
+    this.zone.runOutsideAngular(() => {
+      this.refreshTimerId = setTimeout(() => {
+        this.zone.run(() => {
+          if (!this.isLoggedIn()) return;
+          this.refreshToken().subscribe({
+            error: () => {/* recursive retry handled inside refreshToken */},
+          });
+        });
+      }, REFRESH_RETRY_DELAY_MS);
+    });
+  }
+
+  /**
+   * True only when the failure status proves the refresh token is dead.
+   * Status 0 (network/CORS) and 5xx (server fault) are transient — the
+   * server never said "your token is bad," it just couldn't be reached.
+   */
+  private isAuthFatal(err: unknown): boolean {
+    const status = (err as { status?: number } | null)?.status ?? 0;
+    return AUTH_FATAL_STATUSES.has(status);
   }
 
   // ────────────────────── visibility / sleep recovery ──────────────────────

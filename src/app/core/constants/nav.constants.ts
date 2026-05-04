@@ -72,6 +72,12 @@ export const NAV_SECTIONS: NavSection[] = [
         icon: 'products',
       },
       {
+        id: 'categories',
+        label: 'فئات المنتجات',
+        route: '/categories',
+        icon: 'tag',
+      },
+      {
         id: 'inv-alerts',
         label: 'تنبيهات المخزون',
         route: '/warehouse/alerts',

@@ -1,118 +1,198 @@
 <div class="pgh">
   <div>
     <div class="pgt">الكتالوج والطلبيات</div>
-    <div class="pgs">اختر المنتجات وأنشئ طلبية قسط أو حوّل الطلبيات الواردة إلى عقود</div>
+    <div class="pgs">إضافة طلبية يدوياً — أو مراجعة الطلبيات القادمة من تطبيق العميل</div>
   </div>
 </div>
 
-<!-- بانر تدفق الطلبيات -->
-<div class="order-banner mb-3">
-  <div class="order-step">
-    <div class="step-icon">📱</div>
-    <div class="step-label">طلب من التطبيق</div>
+<!-- ORDER FLOW BANNER -->
+<div class="ord-banner">
+  <div class="ord-banner-icon" aria-hidden="true">
+    <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+      <rect width="36" height="36" rx="10" fill="rgba(255,255,255,.15)"></rect>
+      <rect x="8" y="8" width="8" height="8" rx="2" fill="rgba(255,255,255,.9)"></rect>
+      <rect x="20" y="8" width="8" height="8" rx="2" fill="rgba(255,255,255,.5)"></rect>
+      <rect x="8" y="20" width="8" height="8" rx="2" fill="rgba(255,255,255,.5)"></rect>
+      <rect x="20" y="20" width="8" height="8" rx="2" fill="rgba(255,255,255,.9)"></rect>
+    </svg>
   </div>
-  <div class="step-arrow">←</div>
-  <div class="order-step">
-    <div class="step-icon">🔍</div>
-    <div class="step-label">مراجعة الطلب</div>
+  <div class="ord-banner-body">
+    <div class="ord-banner-title">كيف تصل طلبية العميل للداشبورد؟</div>
+    <div class="ord-banner-steps">
+      <div class="ord-banner-pill">📱 العميل يطلب من التطبيق</div>
+      <svg width="14" height="14" fill="none" viewBox="0 0 14 14">
+        <path d="M3 7h8M8 4l3 3-3 3" stroke="rgba(255,255,255,.7)" stroke-width="1.4" stroke-linecap="round"></path>
+      </svg>
+      <div class="ord-banner-pill">⏳ تظهر هنا "طلبات معلقة"</div>
+      <svg width="14" height="14" fill="none" viewBox="0 0 14 14">
+        <path d="M3 7h8M8 4l3 3-3 3" stroke="rgba(255,255,255,.7)" stroke-width="1.4" stroke-linecap="round"></path>
+      </svg>
+      <div class="ord-banner-pill">✅ تحويلها لعقد في "عملاء الأقساط"</div>
+    </div>
   </div>
-  <div class="step-arrow">←</div>
-  <div class="order-step active">
-    <div class="step-icon">📋</div>
-    <div class="step-label">تحويل لعقد</div>
-  </div>
-  <div class="step-arrow">←</div>
-  <div class="order-step">
-    <div class="step-icon">✅</div>
-    <div class="step-label">تفعيل الأقساط</div>
+  <div class="ord-banner-counter">
+    <div class="ord-banner-counter-num">{{ pendingOrders().length }}</div>
+    <div class="ord-banner-counter-lbl">طلبات معلقة</div>
   </div>
 </div>
 
-<!-- طلبيات معلقة من التطبيق -->
-@if (pendingOrders().length > 0) {
-  <div class="card mb-3">
-    <div class="chdr">
-      <div class="ct">طلبيات معلقة من التطبيق</div>
-      <span class="badge bbad">{{ pendingOrders().length }}</span>
-    </div>
-    <div class="tw">
-      <table class="table">
-        <thead>
-          <tr>
-            <th>العميل</th>
-            <th>الجوال</th>
-            <th>المنتج</th>
-            <th>الكمية</th>
-            <th>تاريخ الطلب</th>
-            <th class="text-center">إجراءات</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (order of pendingOrders(); track order.id) {
-            <tr>
-              <td class="fw-semibold">{{ order.customerName }}</td>
-              <td style="font-size:11px;direction:ltr">{{ order.phone }}</td>
-              <td>{{ order.productName }}</td>
-              <td>{{ order.qty }}</td>
-              <td style="font-size:11px">{{ order.requestDate }}</td>
-              <td class="text-center">
-                <div class="d-flex gap-1 justify-content-center">
-                  <button class="btn btn-sm btn-gr" (click)="convertOrder(order)">تحويل لعقد</button>
-                  <button class="btn btn-sm btn-re" (click)="rejectOrder(order)">رفض</button>
-                </div>
-              </td>
-            </tr>
-          }
-        </tbody>
-      </table>
-    </div>
-  </div>
-}
+
 
 <div class="row g-3">
-  <!-- قائمة المنتجات -->
-  <div class="col-12 col-lg-7">
-    <div class="card">
-      <div class="chdr"><div class="ct">قائمة المنتجات</div></div>
-      <div class="tw">
-        <table class="table">
+  <div class="col-12">
+    <!-- PENDING ORDERS FROM APP -->
+    <div class="card mb-3">
+      <div class="chdr">
+        <div class="ct ord-pending-title">
+          <span>📱 طلبات واردة من تطبيق العملاء</span>
+          <span class="ord-pending-badge">{{ pendingOrders().length }} معلقة</span>
+          <span class="ord-total-badge">{{ clientOrders().length }} إجمالي</span>
+        </div>
+        <button
+          type="button"
+          class="btn btn-sm d-inline-flex align-items-center gap-1"
+          [disabled]="loadingOrders()"
+          (click)="loadClientOrders(true)"
+        >
+          @if (loadingOrders()) {
+            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+          }
+          <span>تحديث</span>
+        </button>
+      </div>
+      <div class="tw mb-0">
+        <table class="w-100">
           <thead>
             <tr>
-              <th>المنتج</th>
-              <th>المخزن</th>
-              <th>الأرقام التسلسلية</th>
-              <th>السعر</th>
-              <th>هامش الربح</th>
-              <th>المخزون</th>
-              <th class="text-center">إضافة</th>
+              <th class="w-12">العميل</th>
+              <th class="w-10">الهاتف</th>
+              <th class="w-18">الأصناف المطلوبة</th>
+              <th class="w-9">الإجمالي</th>
+              <th class="w-10">المقدم</th>
+              <th class="w-9">القسط</th>
+              <th class="w-10">عدد الأقساط</th>
+              <th class="w-10">تاريخ الطلب</th>
+              <th class="w-12">إجراء</th>
             </tr>
           </thead>
           <tbody>
-            @for (p of products(); track p.id) {
-              <tr>
-                <td>
-                  <div class="fw-semibold">{{ p.name }}</div>
-                  <div style="font-size:10px;color:var(--txt3)">{{ p.category }} · {{ p.sku }}</div>
-                </td>
-                <td style="font-size:11px;color:var(--txt2)">{{ p.warehouseName ?? '—' }}</td>
-                <td style="font-size:10px;color:var(--txt3);direction:ltr">
-                  {{ p.serialStart ?? '—' }} → {{ p.serialEnd ?? '—' }}
-                </td>
-                <td>{{ p.price | currencyAr }}</td>
-                <td style="color:var(--gr);font-size:11px">{{ margin(p) | currencyAr }}</td>
-                <td>
-                  <span [class]="p.stock <= p.minStock ? 'badge bbad' : 'badge bok'">
-                    {{ p.stock }}
-                  </span>
-                </td>
-                <td class="text-center">
-                  <button
-                    class="btn btn-sm btn-bl"
-                    [disabled]="p.stock === 0"
-                    (click)="addToCart(p)"
-                  >+</button>
-                </td>
-              </tr>
+            @for (order of clientOrders(); track order.id) {
+            <tr [class]="orderRowClass(order)">
+              <td class="fw-600">{{ order.clientName }}</td>
+              <td class="cv-ltr">{{ order.clientPhone }}</td>
+              <td>{{ itemsLabel(order.items) }}</td>
+              <td class="ord-amount">{{ order.totalAmount | currencyAr: true }}</td>
+              <td>{{ order.downPayment | currencyAr: true }}</td>
+              <td>{{ order.installmentAmount | currencyAr: true }}</td>
+              <td>
+                @if (order.paymentMethod === 'Installments' && order.installmentsCount > 0) {
+                  {{ order.installmentsCount }} شهري
+                } @else {
+                  كاش
+                }
+              </td>
+              <td class="fs-10">{{ formatOrderDate(order.orderDate) }}</td>
+              <td>
+                @switch (order.status) {
+                  @case ('Pending') {
+                    <div class="d-flex gap-1 justify-content-center">
+                      <button
+                        type="button"
+                        class="btn btn-sm btn-bl"
+                        [disabled]="rejectingId() === order.id"
+                        (click)="openConvertModal(order)"
+                      >تحويل لعقد</button>
+                      <button
+                        type="button"
+                        class="btn btn-sm btn-soft-re d-inline-flex align-items-center gap-1"
+                        [disabled]="rejectingId() === order.id"
+                        (click)="confirmReject(order)"
+                      >
+                        @if (rejectingId() === order.id) {
+                          <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                        }
+                        <span>رفض</span>
+                      </button>
+                    </div>
+                  }
+                  @case ('Rejected') {
+                    <span class="ord-status ord-status-re">✕ تم الرفض</span>
+                  }
+                  @case ('Converted') {
+                    <span class="ord-status ord-status-gr">✓ تم التحويل للعقود</span>
+                  }
+                  @case ('Approved') {
+                    <span class="ord-status ord-status-bl">✓ معتمد</span>
+                  }
+                  @case ('Cancelled') {
+                    <span class="ord-status ord-status-am">⊘ ملغي</span>
+                  }
+                  @default {
+                    <span class="ord-status ord-status-am">{{ order.status }}</span>
+                  }
+                }
+              </td>
+            </tr>
+            } @empty {
+            <tr>
+              <td colspan="9" class="text-center fs-11 text-muted">
+                @if (loadingOrders()) {
+                  جاري تحميل الطلبات...
+                } @else {
+                  لا توجد طلبات حالياً
+                }
+              </td>
+            </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <!-- LEFT: AVAILABLE STOCK -->
+  <div class="col-lg-6">
+    <div class="card">
+      <div class="chdr">
+        <div class="ct">الأصناف المتاحة في المخزون</div>
+        <input class="ord-search" placeholder="بحث..." [value]="searchTerm()"
+          (input)="onSearch($any($event.target).value)" />
+      </div>
+      <div class="tw mb-0">
+        <table>
+          <thead>
+            <tr>
+              <th class="w-20">الصنف</th>
+              <th class="w-11">المخزن</th>
+              <th class="w-11">المتاح</th>
+              <th class="w-12">سعر الشراء</th>
+              <th class="w-12">سعر البيع</th>
+              <th class="w-10">الهامش</th>
+              <th class="w-12">رقم تسلسلي</th>
+              <th class="w-12">إضافة</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (p of filteredProducts(); track p.id) {
+            <tr>
+              <td class="fw-600">{{ p.name }}</td>
+              <td>{{ p.warehouseName ?? '—' }}</td>
+              <td>
+                <span class="b" [class.bok]="p.stock > p.minStock" [class.bwarn]="p.stock <= p.minStock">
+                  {{ p.stock }}
+                </span>
+              </td>
+              <td>{{ p.costPrice | currencyAr: true }}</td>
+              <td>{{ p.price | currencyAr: true }}</td>
+              <td class="ord-margin">{{ margin(p) }}%</td>
+              <td class="fs-10 text-muted">{{ p.serialLabel ?? '—' }}</td>
+              <td>
+                <button class="btn btn-sm btn-bl" [disabled]="p.stock === 0" (click)="addToCart(p)">+ أضف</button>
+              </td>
+            </tr>
+            } @empty {
+            <tr>
+              <td colspan="8" class="text-center fs-11 text-muted">لا توجد أصناف مطابقة</td>
+            </tr>
             }
           </tbody>
         </table>
@@ -120,107 +200,106 @@
     </div>
   </div>
 
-  <!-- السلة + حاسبة الأقساط -->
-  <div class="col-12 col-lg-5">
-
-    <!-- السلة -->
-    <div class="card mb-3">
+  <!-- RIGHT: ORDER BASKET -->
+  <div class="col-lg-6">
+    <div class="card">
       <div class="chdr">
-        <div class="ct">السلة</div>
-        <button class="btn btn-sm btn-re" (click)="clearCart()">مسح الكل</button>
+        <div class="ct">سلة الطلبية</div>
+        <button class="btn btn-sm btn-soft-re" (click)="clearCart()">مسح الكل</button>
       </div>
 
-      @if (cart().length === 0) {
-        <div class="text-center p-3" style="font-size:11px;color:var(--txt3)">
-          لا توجد أصناف — أضف من الجدول
-        </div>
-      } @else {
+      <div class="ord-cart">
+        @if (cart().length === 0) {
+        <div class="ord-cart-empty">لا توجد أصناف — أضف من الجدول</div>
+        } @else {
         @for (item of cart(); track item.product.id; let i = $index) {
-          <div class="d-flex align-items-center gap-2 py-2 border-bottom px-2">
-            <div class="flex-grow-1">
-              <div class="fw-semibold" style="font-size:12px">{{ item.product.name }}</div>
-              <div style="font-size:10px;color:var(--txt2)">
-                {{ item.product.price | currencyAr }} × {{ item.qty }}
-                = {{ item.product.price * item.qty | currencyAr }}
-              </div>
+        <div class="ord-cart-row">
+          <div class="ord-cart-info">
+            <div class="ord-cart-name">{{ item.product.name }}</div>
+            <div class="ord-cart-sub">
+              {{ item.product.price | currencyAr: true }} × {{ item.qty }}
+              = {{ item.product.price * item.qty | currencyAr: true }}
             </div>
-            <div class="d-flex align-items-center gap-1">
-              <button class="btn btn-sm" (click)="changeQty(i, -1)">−</button>
-              <span class="fw-semibold text-center" style="font-size:11px;min-width:20px">{{ item.qty }}</span>
-              <button class="btn btn-sm" (click)="changeQty(i, 1)">+</button>
-            </div>
-            <button class="btn btn-sm btn-re" (click)="removeItem(i)">×</button>
           </div>
+          <div class="ord-cart-qty">
+            <button class="btn btn-sm" (click)="changeQty(i, -1)">−</button>
+            <span class="ord-cart-qty-val">{{ item.qty }}</span>
+            <button class="btn btn-sm" (click)="changeQty(i, 1)">+</button>
+          </div>
+          <button class="btn btn-sm btn-soft-re" (click)="removeItem(i)">×</button>
+        </div>
         }
-      }
-    </div>
+        }
+      </div>
 
-    <!-- بيانات العميل + حاسبة الأقساط -->
-    <div class="card">
-      <div class="chdr"><div class="ct">بيانات العميل والأقساط</div></div>
-      <div class="row g-2 mb-2">
-        <div class="col-12 col-sm-6">
-          <label class="form-label">اسم العميل</label>
-          <input class="form-control form-control-sm"
-                 placeholder="أدخل الاسم"
-                 [value]="customerName()"
-                 (input)="customerName.set($any($event.target).value)" />
+      <div class="divider"></div>
+
+      <div class="fg2">
+        <div class="fl">
+          <label>اسم العميل</label>
+          <input placeholder="الاسم الكامل" [value]="customerName()"
+            (input)="customerName.set($any($event.target).value)" />
         </div>
-        <div class="col-12 col-sm-6">
-          <label class="form-label">رقم الجوال</label>
-          <input class="form-control form-control-sm" type="tel" dir="ltr"
-                 placeholder="05xxxxxxxx"
-                 [value]="customerPhone()"
-                 (input)="customerPhone.set($any($event.target).value)" />
+        <div class="fl">
+          <label>رقم الهاتف (WhatsApp)</label>
+          <input placeholder="05xxxxxxxx" [value]="customerPhone()"
+            (input)="customerPhone.set($any($event.target).value)" />
         </div>
-        <div class="col-12 col-sm-6">
-          <label class="form-label">الدفعة الأولى</label>
-          <input class="form-control form-control-sm" type="number"
-                 [value]="downPayment()"
-                 (input)="downPayment.set(+$any($event.target).value || 0)" />
+        <div class="fl">
+          <label>المقدم (ر.س)</label>
+          <input type="number" placeholder="0" [value]="downPayment()"
+            (input)="downPayment.set(+$any($event.target).value || 0)" />
         </div>
-        <div class="col-12 col-sm-6">
-          <label class="form-label">نسبة الربح %</label>
-          <input class="form-control form-control-sm" type="number"
-                 [value]="profitRate()"
-                 (input)="profitRate.set(+$any($event.target).value || 0)" />
+        <div class="fl">
+          <label>نسبة الربح %</label>
+          <input type="number" [value]="profitRate()" (input)="profitRate.set(+$any($event.target).value || 0)" />
         </div>
-        <div class="col-12 col-sm-6">
-          <label class="form-label">عدد الأقساط</label>
-          <input class="form-control form-control-sm" type="number"
-                 [value]="installCount()"
-                 (input)="installCount.set(+$any($event.target).value || 1)" />
-        </div>
-        <div class="col-12 col-sm-6">
-          <label class="form-label">نوع القسط</label>
-          <select class="form-select form-select-sm"
-                  [value]="period()"
-                  (change)="period.set($any($event.target).value)">
+        <div class="fl">
+          <label>نوع القسط</label>
+          <select [value]="period()" (change)="period.set($any($event.target).value)">
             <option>شهري</option>
             <option>أسبوعي</option>
             <option>ربع سنوي</option>
             <option>نصف سنوي</option>
           </select>
         </div>
+        <div class="fl">
+          <label>عدد الأقساط</label>
+          <input type="number" [value]="installCount()" (input)="installCount.set(+$any($event.target).value || 1)" />
+        </div>
       </div>
 
-      <div class="cr"><span>إجمالي السلة</span><span>{{ totalCart() | currencyAr }}</span></div>
-      <div class="cr"><span>الدفعة الأولى</span><span>{{ downPayment() | currencyAr }}</span></div>
-      <div class="cr"><span>بعد الدفعة</span><span>{{ afterDown() | currencyAr }}</span></div>
-      <div class="cr"><span>مبلغ الربح</span><span style="color:var(--gr)">{{ profitAmount() | currencyAr }}</span></div>
-      <div class="ct2"><span>الإجمالي</span><span>{{ grandTotal() | currencyAr }}</span></div>
-      <div class="ci">
-        <span>القسط {{ period() }} × {{ installCount() }}</span>
-        <span>{{ installmentAmount() | currencyAr }}</span>
+      <div class="ord-summary">
+        <div class="cr"><span>إجمالي الأصناف (كاش)</span><span>{{ cashTotal() | currencyAr: true }}</span></div>
+        <div class="cr"><span>المقدم</span><span>{{ downPayment() | currencyAr: true }}</span></div>
+        <div class="cr"><span>مبلغ الربح</span><span>{{ profitAmount() | currencyAr: true }}</span></div>
+        <div class="ct2"><span>إجمالي البيع بالأقساط</span><span>{{ grandTotal() | currencyAr: true }}</span></div>
+        <div class="ci"><span>{{ installmentLabel() }}</span><span>{{ installmentAmount() | currencyAr: true }}</span>
+        </div>
       </div>
 
-      <button
-        class="btn btn-bl w-100 mt-3"
-        [disabled]="cart().length === 0"
-        (click)="createOrder()"
-      >
-        إنشاء طلبية قسط
-      </button>
+      @if (schedule().length > 0) {
+      <div class="ord-schedule">
+        @for (row of schedule(); track row.index) {
+        <div class="ord-schedule-row">
+          <span>القسط رقم {{ row.index }}</span>
+          <span>{{ row.amount | currencyAr: true }}</span>
+        </div>
+        }
+      </div>
+      }
+
+      <div class="ord-actions">
+        <button class="btn btn-bl ord-btn-grow-2" (click)="createContract()">إنشاء العقد وطباعته PDF</button>
+        <button class="btn btn-wa ord-btn-grow-1" (click)="sendWhatsapp()">📱 WhatsApp</button>
+      </div>
     </div>
   </div>
 </div>
+
+<app-convert-to-contract-modal
+  [open]="convertModalOpen()"
+  [order]="convertOrderRef()"
+  (closed)="closeConvertModal()"
+  (converted)="onConverted($event)"
+/>

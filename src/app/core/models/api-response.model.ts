@@ -43,3 +43,23 @@ export interface PaginationQuery {
   sortDir?: 'asc' | 'desc';
   search?: string;
 }
+
+/**
+ * Server-paginated list shape returned by `/dashboard/*` endpoints whose
+ * `data` field is itself a paged envelope. Distinct from `PaginatedResponse<T>`
+ * — that one normalizes to `{ items, pagination }` after a translation
+ * layer; this is the wire format directly.
+ */
+export interface PagedResponse<T> {
+  pageIndex: number;
+  pageSize: number;
+  count: number;
+  totalPages: number;
+  data: T[];
+}
+
+export interface PagedQuery {
+  pageIndex?: number;
+  pageSize?: number;
+  search?: string;
+}

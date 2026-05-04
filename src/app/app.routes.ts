@@ -83,6 +83,13 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'categories',
+        loadChildren: () =>
+          import('./features/categories/categories.routes').then(
+            (m) => m.categoriesRoutes,
+          ),
+      },
+      {
         path: 'treasury',
         loadChildren: () =>
           import('./features/treasury/treasury.routes').then(

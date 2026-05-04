@@ -1,72 +1,110 @@
-import { Injectable } from '@angular/core';
-import { Observable, of, throwError } from 'rxjs';
-import { delay } from 'rxjs/operators';
-import { Invoice, InvoiceSupplier, InvoiceWarehouse } from '../models/invoice.model';
-import { generateUUID } from '../../../shared/utils/uuid.util';
+import { inject, Injectable } from '@angular/core';
+import { Observable } from 'rxjs';
+import { ApiService } from '../../../core/services/api.service';
+import { API_ENDPOINTS } from '../../../core/constants/api-endpoints.const';
+import {
+  withCache,
+  withCacheBypass,
+  withCacheInvalidate,
+  withInlineHandling,
+} from '../../../core/http/http-context.tokens';
+import { toList } from '../../../core/utils/api-list.util';
+import {
+  ConfirmPurchaseInvoicePayload,
+  CreatePurchaseInvoicePayload,
+  PurchaseInvoice,
+  PurchaseInvoiceFilters,
+  PurchaseInvoiceListItem,
+  PurchaseInvoiceSummary,
+} from '../models/invoice.model';
 
+const INVOICES_CACHE_KEY = 'supplier-purchase-invoices';
+const INVOICES_TTL_MS = 60 * 1000; // 1 min — list/summary churn with each save
+
+/**
+ * Supplier-purchase-invoices facade.
+ *
+ *   - reads (list / summary / byId) hit the real API and use the shared
+ *     short cache so quick navigation between the list and a detail
+ *     pane doesn't refetch
+ *   - writes (create / confirm) invalidate the entire cache key so the
+ *     next list / summary read sees the fresh state
+ *   - the supplier dropdown is fed by SuppliersService.listAll() — this
+ *     service intentionally does NOT proxy that, so suppliers stays the
+ *     single owner of supplier reads
+ */
 @Injectable({ providedIn: 'root' })
 export class InvoicesService {
+  private readonly api = inject(ApiService);
 
-  getAll(): Observable<Invoice[]> {
-    return of([...MOCK_INVOICES]).pipe(delay(250));
+  // ─────────── reads ───────────
+
+  list(filters: PurchaseInvoiceFilters = {}): Observable<PurchaseInvoiceListItem[]> {
+    return this.api
+      .get<unknown>(API_ENDPOINTS.purchaseInvoices.base, {
+        params: {
+          search: filters.search ?? '',
+          status: filters.status ?? '',
+          supplierId: filters.supplierId ?? '',
+        },
+        context: withCache({ ttlMs: INVOICES_TTL_MS }),
+      })
+      .pipe(toList<PurchaseInvoiceListItem>());
   }
 
-  getById(id: string): Observable<Invoice> {
-    const found = MOCK_INVOICES.find((i) => i.id === id);
-    return found
-      ? of(found).pipe(delay(150))
-      : throwError(() => new Error('الفاتورة غير موجودة'));
+  refreshList(filters: PurchaseInvoiceFilters = {}): Observable<PurchaseInvoiceListItem[]> {
+    return this.api
+      .get<unknown>(API_ENDPOINTS.purchaseInvoices.base, {
+        params: {
+          search: filters.search ?? '',
+          status: filters.status ?? '',
+          supplierId: filters.supplierId ?? '',
+        },
+        context: withCacheBypass(withCache({ ttlMs: INVOICES_TTL_MS })),
+      })
+      .pipe(toList<PurchaseInvoiceListItem>());
   }
 
-  create(invoice: Omit<Invoice, 'id'>): Observable<Invoice> {
-    const newInvoice: Invoice = { ...invoice, id: generateUUID() };
-    MOCK_INVOICES.unshift(newInvoice);
-    return of(newInvoice).pipe(delay(400));
+  getSummary(): Observable<PurchaseInvoiceSummary> {
+    return this.api.get<PurchaseInvoiceSummary>(
+      API_ENDPOINTS.purchaseInvoices.summary,
+      { context: withCache({ ttlMs: INVOICES_TTL_MS }) },
+    );
   }
 
-  getSuppliers(): Observable<InvoiceSupplier[]> {
-    return of(MOCK_SUPPLIERS).pipe(delay(100));
+  getById(id: number): Observable<PurchaseInvoice> {
+    return this.api.get<PurchaseInvoice>(
+      API_ENDPOINTS.purchaseInvoices.byId(id),
+      { context: withCache({ ttlMs: INVOICES_TTL_MS }) },
+    );
   }
 
-  getWarehouses(): Observable<InvoiceWarehouse[]> {
-    return of(MOCK_WAREHOUSES).pipe(delay(100));
+  // ─────────── writes ───────────
+
+  create(payload: CreatePurchaseInvoicePayload): Observable<PurchaseInvoice> {
+    return this.api.post<PurchaseInvoice>(
+      API_ENDPOINTS.purchaseInvoices.base,
+      payload,
+      {
+        context: withInlineHandling(
+          withCacheInvalidate([INVOICES_CACHE_KEY]),
+        ),
+      },
+    );
+  }
+
+  confirm(
+    id: number,
+    payload: ConfirmPurchaseInvoicePayload,
+  ): Observable<PurchaseInvoice> {
+    return this.api.post<PurchaseInvoice>(
+      API_ENDPOINTS.purchaseInvoices.confirm(id),
+      payload,
+      {
+        context: withInlineHandling(
+          withCacheInvalidate([INVOICES_CACHE_KEY]),
+        ),
+      },
+    );
   }
 }
-
-let MOCK_INVOICES: Invoice[] = [
-  {
-    id: '1', invoiceNumber: 'INV-2025-001', supplierName: 'شركة التقنية المتقدمة',
-    date: '2025-03-15', dueDate: '2025-04-15', warehouseName: 'الرياض',
-    paymentMethod: 'تحويل', itemsCount: 24,
-    lines: [], subtotal: 12000, discountAmount: 600, vatAmount: 1710,
-    total: 13110, paid: 13110, remaining: 0, status: 'paid',
-  },
-  {
-    id: '2', invoiceNumber: 'INV-2025-002', supplierName: 'مؤسسة الإلكترونيات',
-    date: '2025-04-01', dueDate: '2025-05-01', warehouseName: 'جدة',
-    paymentMethod: 'آجل', itemsCount: 10,
-    lines: [], subtotal: 8500, discountAmount: 0, vatAmount: 1275,
-    total: 9775, paid: 5000, remaining: 4775, status: 'partial',
-  },
-  {
-    id: '3', invoiceNumber: 'INV-2025-003', supplierName: 'مستودع الأجهزة',
-    date: '2025-04-05', dueDate: '2025-05-05', warehouseName: 'الدمام',
-    paymentMethod: 'آجل', itemsCount: 6,
-    lines: [], subtotal: 4200, discountAmount: 200, vatAmount: 600,
-    total: 4600, paid: 0, remaining: 4600, status: 'unpaid',
-  },
-];
-
-const MOCK_SUPPLIERS: InvoiceSupplier[] = [
-  { id: '1', name: 'شركة التقنية المتقدمة' },
-  { id: '2', name: 'مؤسسة الإلكترونيات' },
-  { id: '3', name: 'مستودع الأجهزة' },
-  { id: '4', name: 'موزع سامسونج' },
-  { id: '5', name: 'وكالة أبل الرسمية' },
-];
-
-const MOCK_WAREHOUSES: InvoiceWarehouse[] = [
-  { id: '1', name: 'الرياض' },
-  { id: '2', name: 'جدة' },
-  { id: '3', name: 'الدمام' },
-];

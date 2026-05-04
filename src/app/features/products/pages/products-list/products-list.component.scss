@@ -1,3 +1,59 @@
+/* ── Toolbar (search + category filter + refresh) ── */
+.pl-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 11px;
+  flex-wrap: wrap;
+}
+
+.pl-search {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex: 1;
+  max-width: 360px;
+  min-width: 200px;
+
+  svg {
+    position: absolute;
+    inset-inline-start: 10px;
+    color: var(--txt3);
+    pointer-events: none;
+  }
+
+  input {
+    width: 100%;
+    font-family: inherit;
+    font-size: 11px;
+    padding: 7px 12px 7px 32px;
+    border-radius: var(--r);
+    border: 1px solid var(--brd2);
+    background: var(--bg2);
+    color: var(--txt);
+
+    &:focus {
+      outline: none;
+      border-color: var(--bl);
+      box-shadow: 0 0 0 3px rgba(27, 95, 168, 0.12);
+    }
+  }
+}
+
+.pl-select {
+  font-family: inherit;
+  font-size: 11px;
+  padding: 7px 10px;
+  border-radius: var(--r);
+  border: 1px solid var(--brd2);
+  background: var(--bg2);
+  color: var(--txt);
+  min-width: 160px;
+
+  &:focus { outline: none; border-color: var(--bl); }
+}
+
+
 /* ── Hero summary card ── */
 .pl-hero {
   background: linear-gradient(135deg, var(--te) 0%, #094c3b 100%);
@@ -129,6 +185,24 @@
     color: var(--re);
     border-color: rgba(163, 45, 45, 0.25);
   }
+}
+
+.pl-card-category {
+  position: absolute;
+  top: 8px;
+  inset-inline-start: 8px;
+  z-index: 2;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 20px;
+  background: var(--pu-l);
+  color: var(--pu);
+  border: 1px solid rgba(83, 74, 183, 0.22);
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 
