@@ -9,7 +9,8 @@ import {
 } from '@angular/core';
 import { Router } from '@angular/router';
 import { CurrencyArPipe } from '../../../../shared/pipes/currency-ar.pipe';
-import { ToastService } from '../../../../core/services/toast.service';
+import { HttpCacheService } from '../../../../core/services/http-cache.service';
+import { onInvalidate } from '../../../../core/utils/auto-refresh.util';
 import { ApiError } from '../../../../core/models/api-response.model';
 import { InvoicesService } from '../../services/invoices.service';
 import {
@@ -49,7 +50,7 @@ export class InvoicesListComponent implements OnInit {
   private readonly svc              = inject(InvoicesService);
   private readonly suppliersService = inject(SuppliersService);
   private readonly router           = inject(Router);
-  private readonly toast            = inject(ToastService);
+  private readonly cache            = inject(HttpCacheService);
 
   // ── data ──
   protected readonly invoices  = signal<PurchaseInvoiceListItem[]>([]);
@@ -89,6 +90,13 @@ export class InvoicesListComponent implements OnInit {
       const payload = this.filterPayload();
       if (this.debounceTimer) clearTimeout(this.debounceTimer);
       this.debounceTimer = setTimeout(() => this.fetchList(payload), 250);
+    });
+
+    // Auto-refresh whenever any invoice mutation lands (this tab or
+    // another). Also refresh the summary cards so totals stay accurate.
+    onInvalidate(this.cache, 'supplier-purchase-invoices', () => {
+      this.fetchList(this.filterPayload(), true);
+      this.fetchSummary();
     });
   }
 
@@ -158,6 +166,10 @@ export class InvoicesListComponent implements OnInit {
     this.router.navigate(['/invoices/new']);
   }
 
+  protected viewInvoice(inv: PurchaseInvoiceListItem): void {
+    this.router.navigate(['/invoices', inv.id]);
+  }
+
   // ─────────── confirm modal ───────────
 
   protected openConfirm(inv: PurchaseInvoiceListItem): void {
@@ -212,7 +224,4 @@ export class InvoicesListComponent implements OnInit {
     });
   }
 
-  protected viewInvoice(inv: PurchaseInvoiceListItem): void {
-    this.toast.info(`عرض تفاصيل الفاتورة ${inv.invoiceNumber} — قيد التطوير`);
-  }
 }

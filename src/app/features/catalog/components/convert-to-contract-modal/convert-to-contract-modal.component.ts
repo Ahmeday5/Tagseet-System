@@ -124,8 +124,8 @@ export class ConvertToContractModalComponent {
     const payload: ConvertToContractPayload = {
       warehouseId: Number(raw.warehouseId),
       treasuryId: Number(raw.treasuryId),
-      purchaseDate: this.toIso(raw.purchaseDate),
-      firstInstallmentDate: this.toIso(raw.firstInstallmentDate),
+      purchaseDate: raw.purchaseDate,
+      firstInstallmentDate: raw.firstInstallmentDate,
       notes: raw.notes?.trim() ?? '',
     };
 
@@ -137,9 +137,7 @@ export class ConvertToContractModalComponent {
       .subscribe({
         next: () => {
           this.submitting.set(false);
-          this.toast.success(
-            `تم تحويل طلب ${order.clientName} إلى عقد بنجاح`,
-          );
+          this.toast.success(`تم تحويل طلب ${order.clientName} إلى عقد بنجاح`);
           this.converted.emit(order);
         },
         error: (err: ApiError) => {
@@ -164,8 +162,8 @@ export class ConvertToContractModalComponent {
   // ─────────────── internals ───────────────
 
   private resetFormDefaults(): void {
-    const today = this.toLocalDateTimeInput(new Date());
-    const inOneMonth = this.toLocalDateTimeInput(this.addMonths(new Date(), 1));
+    const today = this.toDateInput(new Date());
+    const inOneMonth = this.toDateInput(this.addMonths(new Date(), 1));
     this.form.reset({
       warehouseId: 0,
       treasuryId: 0,
@@ -195,24 +193,9 @@ export class ConvertToContractModalComponent {
     });
   }
 
-  /** Converts an `<input type="datetime-local">` value to an ISO string. */
-  private toIso(value: string): string {
-    if (!value) return new Date().toISOString();
-    // datetime-local strings are local-time without TZ — `new Date(...)`
-    // interprets them as local, then `.toISOString()` converts to UTC.
-    const d = new Date(value);
-    return Number.isNaN(d.getTime())
-      ? new Date().toISOString()
-      : d.toISOString();
-  }
-
-  /** Formats a Date as `YYYY-MM-DDTHH:mm` for `datetime-local` inputs. */
-  private toLocalDateTimeInput(d: Date): string {
+  private toDateInput(d: Date): string {
     const pad = (n: number) => String(n).padStart(2, '0');
-    return (
-      `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` +
-      `T${pad(d.getHours())}:${pad(d.getMinutes())}`
-    );
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   }
 
   private addMonths(d: Date, months: number): Date {

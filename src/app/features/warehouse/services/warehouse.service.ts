@@ -7,11 +7,15 @@ import {
   UpdateWarehousePayload,
   Warehouse,
   WarehouseDetailItem,
+  WarehouseInventoryItem,
+  WarehouseInventoryQuery,
   WarehouseItem,
   WarehouseLocation,
+  WarehouseSummary,
 } from '../models/warehouse.model';
 import { ApiService } from '../../../core/services/api.service';
 import { API_ENDPOINTS } from '../../../core/constants/api-endpoints.const';
+import { PagedResponse } from '../../../core/models/api-response.model';
 import {
   withCache,
   withCacheBypass,
@@ -77,6 +81,65 @@ export class WarehouseService {
         context: withCacheInvalidate([WAREHOUSE_CACHE_KEY]),
       },
     );
+  }
+
+  // ─────────────────────────────────────────────────────────────────
+  //  Live API — /dashboard/warehouses/summary
+  //  Each row is a warehouse plus aggregate stock + value stats.
+  // ─────────────────────────────────────────────────────────────────
+
+  summary(): Observable<WarehouseSummary[]> {
+    return this.api
+      .get<unknown>(API_ENDPOINTS.warehouses.summary, {
+        context: withCache({ ttlMs: WAREHOUSE_TTL_MS }),
+      })
+      .pipe(toList<WarehouseSummary>());
+  }
+
+  refreshSummary(): Observable<WarehouseSummary[]> {
+    return this.api
+      .get<unknown>(API_ENDPOINTS.warehouses.summary, {
+        context: withCacheBypass(withCache({ ttlMs: WAREHOUSE_TTL_MS })),
+      })
+      .pipe(toList<WarehouseSummary>());
+  }
+
+  // ─────────────────────────────────────────────────────────────────
+  //  Live API — /dashboard/warehouses/inventory
+  //  Per-warehouse paginated inventory rows (with name search).
+  // ─────────────────────────────────────────────────────────────────
+
+  inventory(
+    query: WarehouseInventoryQuery,
+  ): Observable<PagedResponse<WarehouseInventoryItem>> {
+    return this.api.get<PagedResponse<WarehouseInventoryItem>>(
+      API_ENDPOINTS.warehouses.inventory,
+      {
+        params: this.toInventoryParams(query),
+        context: withCache({ ttlMs: WAREHOUSE_TTL_MS }),
+      },
+    );
+  }
+
+  refreshInventory(
+    query: WarehouseInventoryQuery,
+  ): Observable<PagedResponse<WarehouseInventoryItem>> {
+    return this.api.get<PagedResponse<WarehouseInventoryItem>>(
+      API_ENDPOINTS.warehouses.inventory,
+      {
+        params: this.toInventoryParams(query),
+        context: withCacheBypass(withCache({ ttlMs: WAREHOUSE_TTL_MS })),
+      },
+    );
+  }
+
+  private toInventoryParams(query: WarehouseInventoryQuery): Record<string, unknown> {
+    return {
+      warehouseId: query.warehouseId,
+      PageIndex: query.pageIndex ?? 1,
+      PageSize: query.pageSize ?? 10,
+      search: query.search ?? '',
+    };
   }
 
   // ─────────────────────────────────────────────────────────────────

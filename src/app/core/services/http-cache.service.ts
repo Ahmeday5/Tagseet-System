@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 import { StorageService } from './storage.service';
 
 /**
@@ -41,11 +41,41 @@ type CrossTabMessage =
  * to drop stale slices — e.g. `invalidate('app-users')` after creating a user
  * removes both the list URL and any per-id URL containing that segment.
  */
+/**
+ * Most-recent invalidation event surfaced as a signal so list pages can
+ * `effect()` on it and refetch automatically when their data changes
+ * elsewhere — including from another tab via BroadcastChannel.
+ *
+ *   - `pattern` — the substring that was invalidated (e.g. `'treasury'`)
+ *   - `ts`      — wall-clock timestamp; useful as the dependency tick
+ *                 even when the same pattern is invalidated repeatedly
+ *
+ * Initial value uses `pattern: ''` so the first effect run is a no-op
+ * (substring `.includes('')` would match every page, causing a needless
+ * fetch on app boot).
+ */
+export interface InvalidationEvent {
+  pattern: string;
+  ts: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class HttpCacheService {
   private readonly storage = inject(StorageService);
   private readonly mem = new Map<string, CacheEntry>();
   private channel: BroadcastChannel | null = null;
+
+  private readonly invalidationSignal = signal<InvalidationEvent>({
+    pattern: '',
+    ts: 0,
+  });
+  /**
+   * Bumps every time a cache key is invalidated (locally OR from
+   * another tab). Pages effect on this to auto-refetch when their
+   * pattern matches — see `WarehouseHomeComponent`, `SuppliersListComponent`
+   * etc. for the consumption pattern.
+   */
+  readonly invalidations = this.invalidationSignal.asReadonly();
 
   constructor() {
     this.hydrateFromStorage();
@@ -84,6 +114,7 @@ export class HttpCacheService {
       if (key.includes(pattern)) this.evict(key);
     }
     this.broadcast({ type: 'invalidate', pattern });
+    this.invalidationSignal.set({ pattern, ts: Date.now() });
   }
 
   /** Drop multiple patterns in one shot. */
@@ -210,6 +241,8 @@ export class HttpCacheService {
           this.storage.remove(STORAGE_PREFIX + key);
         }
       }
+      // Mirror locally so subscribed pages refetch on the cross-tab event.
+      this.invalidationSignal.set({ pattern: msg.pattern, ts: Date.now() });
       return;
     }
 

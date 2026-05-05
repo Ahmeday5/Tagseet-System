@@ -23,6 +23,8 @@ export const API_ENDPOINTS = {
   warehouses: {
     base: 'dashboard/warehouses',
     byId: (id: number) => `dashboard/warehouses/${id}`,
+    summary: 'dashboard/warehouses/summary',
+    inventory: 'dashboard/warehouses/inventory',
   },
   products: {
     base: 'dashboard/products',

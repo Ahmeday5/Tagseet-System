@@ -14,6 +14,8 @@ import { PaginationComponent } from '../../../../shared/components/pagination/pa
 import { FormMode } from '../../../../shared/models/form-mode.model';
 import { DialogService } from '../../../../core/services/dialog.service';
 import { ToastService } from '../../../../core/services/toast.service';
+import { HttpCacheService } from '../../../../core/services/http-cache.service';
+import { onInvalidate } from '../../../../core/utils/auto-refresh.util';
 import { ApiError } from '../../../../core/models/api-response.model';
 
 const DEFAULT_PAGE_SIZE = 10;
@@ -30,6 +32,7 @@ export class CategoriesListComponent implements OnInit {
   private readonly service = inject(CategoriesService);
   private readonly dialog  = inject(DialogService);
   private readonly toast   = inject(ToastService);
+  private readonly cache   = inject(HttpCacheService);
 
   // ── data ──
   protected readonly categories = signal<Category[]>([]);
@@ -68,6 +71,8 @@ export class CategoriesListComponent implements OnInit {
       if (this.debounceTimer) clearTimeout(this.debounceTimer);
       this.debounceTimer = setTimeout(() => this.fetch(trigger), 300);
     });
+
+    onInvalidate(this.cache, 'categor', () => this.refresh());
   }
 
   ngOnInit(): void {

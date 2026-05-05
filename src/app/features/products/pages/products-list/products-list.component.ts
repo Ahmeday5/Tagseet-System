@@ -15,6 +15,8 @@ import { CurrencyArPipe } from '../../../../shared/pipes/currency-ar.pipe';
 import { FormMode } from '../../../../shared/models/form-mode.model';
 import { DialogService } from '../../../../core/services/dialog.service';
 import { ToastService } from '../../../../core/services/toast.service';
+import { HttpCacheService } from '../../../../core/services/http-cache.service';
+import { onInvalidate } from '../../../../core/utils/auto-refresh.util';
 import { ApiError } from '../../../../core/models/api-response.model';
 import { buildImageUrl } from '../../utils/product-image.util';
 import { Category } from '../../../categories/models/category.model';
@@ -46,6 +48,7 @@ export class ProductsListComponent implements OnInit {
   private readonly categoriesService = inject(CategoriesService);
   private readonly dialog            = inject(DialogService);
   private readonly toast             = inject(ToastService);
+  private readonly cache             = inject(HttpCacheService);
 
   // ── data ──
   protected readonly products   = signal<Product[]>([]);
@@ -102,6 +105,12 @@ export class ProductsListComponent implements OnInit {
       if (this.debounceTimer) clearTimeout(this.debounceTimer);
       this.debounceTimer = setTimeout(() => this.fetch(trigger), 300);
     });
+
+    // Auto-refresh on `product` invalidations (own mutations + invoice
+    // mutations that touch product stock) AND on `categor` invalidations
+    // (since the table embeds categoryName).
+    onInvalidate(this.cache, 'product', () => this.refresh());
+    onInvalidate(this.cache, 'categor', () => this.loadCategories());
   }
 
   ngOnInit(): void {

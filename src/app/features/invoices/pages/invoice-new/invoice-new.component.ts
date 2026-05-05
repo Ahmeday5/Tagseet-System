@@ -6,6 +6,7 @@ import {
   OnInit,
   signal,
 } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import {
   FormArray,
   FormBuilder,
@@ -102,6 +103,26 @@ export class InvoiceNewComponent implements OnInit {
     return this.form.controls.items;
   }
 
+  /**
+   * Form-control values exposed as signals so the summary computeds
+   * have a real reactive dependency on them. A naive
+   * `computed(() => this.grandTotal() - this.form.controls.paidAmount.value)`
+   * looks right but fails: signal dependency tracking only sees
+   * `grandTotal`, which doesn't change when `paidAmount` changes, so
+   * the dependent computed is never re-evaluated. `toSignal` turns the
+   * control's `valueChanges` stream into a signal the computeds can
+   * subscribe to — and Angular threads it onto the input's actual
+   * change event, so OnPush picks up the update on the same tick.
+   */
+  protected readonly paidAmountSig = toSignal(
+    this.form.controls.paidAmount.valueChanges,
+    { initialValue: this.form.controls.paidAmount.value },
+  );
+  protected readonly taxRateSig = toSignal(
+    this.form.controls.taxRatePercent.valueChanges,
+    { initialValue: this.form.controls.taxRatePercent.value },
+  );
+
   // ── computed summary ──
   protected readonly subtotal = computed(() => {
     this.linesTick(); // dependency
@@ -125,7 +146,7 @@ export class InvoiceNewComponent implements OnInit {
   );
 
   protected readonly taxAmount = computed(() => {
-    const rate = Number(this.form.controls.taxRatePercent.value) || 0;
+    const rate = Number(this.taxRateSig()) || 0;
     return this.afterDiscount() * (rate / 100);
   });
 
@@ -134,7 +155,7 @@ export class InvoiceNewComponent implements OnInit {
   );
 
   protected readonly remaining = computed(() =>
-    Math.max(0, this.grandTotal() - (Number(this.form.controls.paidAmount.value) || 0)),
+    Math.max(0, this.grandTotal() - (Number(this.paidAmountSig()) || 0)),
   );
 
   protected readonly canSubmit = computed(() =>
@@ -174,16 +195,10 @@ export class InvoiceNewComponent implements OnInit {
       },
     });
 
-    // Reactive recompute: form-level changes (taxRate / paid) feed the
-    // summary computeds via signals; the FormArray's per-line controls
-    // bump `linesTick` from updateLine() since FormArray itself isn't
-    // signal-aware.
-    this.form.controls.taxRatePercent.valueChanges.subscribe(() =>
-      this.linesTick.update((v) => v + 1),
-    );
-    this.form.controls.paidAmount.valueChanges.subscribe(() =>
-      this.linesTick.update((v) => v + 1),
-    );
+    // `paidAmount` and `taxRatePercent` flow into the summary via the
+    // `paidAmountSig` / `taxRateSig` signals at the top of the class —
+    // no manual subscription needed. `linesTick` covers the FormArray
+    // (which has no signal equivalent) via `onLineFieldChange`.
 
     // Start with one blank row.
     this.addLine();

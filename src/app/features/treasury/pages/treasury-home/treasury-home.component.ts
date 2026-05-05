@@ -14,6 +14,8 @@ import { CurrencyArPipe } from '../../../../shared/pipes/currency-ar.pipe';
 import { FormMode } from '../../../../shared/models/form-mode.model';
 import { DialogService } from '../../../../core/services/dialog.service';
 import { ToastService } from '../../../../core/services/toast.service';
+import { HttpCacheService } from '../../../../core/services/http-cache.service';
+import { onInvalidate } from '../../../../core/utils/auto-refresh.util';
 import { ApiError } from '../../../../core/models/api-response.model';
 import { TreasuryType } from '../../enums/treasury-type.enum';
 import {
@@ -50,6 +52,14 @@ export class TreasuryHomeComponent implements OnInit {
   private readonly treasuryService = inject(TreasuryService);
   private readonly dialog = inject(DialogService);
   private readonly toast = inject(ToastService);
+  private readonly cache = inject(HttpCacheService);
+
+  constructor() {
+    // Auto-refresh whenever a treasury-related cache key is invalidated
+    // anywhere (this tab or another via BroadcastChannel) — e.g. after
+    // an invoice confirmation that drew from this treasury.
+    onInvalidate(this.cache, 'treasur', () => this.refresh());
+  }
 
   // ── data ──
   protected readonly treasuries = signal<Treasury[]>([]);

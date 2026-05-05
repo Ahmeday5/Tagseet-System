@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 
 export const invoicesRoutes: Routes = [
+  // Tabbed shell hosts the list + new-invoice tabs.
   {
     path: '',
     loadComponent: () =>
@@ -24,5 +25,15 @@ export const invoicesRoutes: Routes = [
           ),
       },
     ],
+  },
+
+  // Standalone details / preview page — sibling of the shell so the print
+  // view doesn't carry the list/new chrome.
+  {
+    path: ':id',
+    loadComponent: () =>
+      import('./pages/invoice-details/invoice-details.component').then(
+        (m) => m.InvoiceDetailsComponent,
+      ),
   },
 ];

@@ -87,3 +87,53 @@ export interface WarehouseDetailItem {
   unitCost: number;
   unitPrice: number;
 }
+
+// ─────────────────────────────────────────────────────────────────
+//  Live API: GET /dashboard/warehouses/summary
+//  Returns the warehouse list enriched with aggregated stock + value.
+// ─────────────────────────────────────────────────────────────────
+
+export interface WarehouseSummary {
+  id: number;
+  name: string;
+  location: string;
+  isActive: boolean;
+  /** Backend-provided localized status label (e.g. "نشط" / "متوقف"). */
+  status: string;
+  purchasedQuantity: number;
+  soldQuantity: number;
+  availableQuantity: number;
+  /** Total cost of items currently held (purchase price × quantity). */
+  purchaseValue: number;
+  totalProfit: number;
+  /** 0 → 100. */
+  soldPercent: number;
+  needsRestock: boolean;
+}
+
+// ─────────────────────────────────────────────────────────────────
+//  Live API: GET /dashboard/warehouses/inventory?warehouseId=…
+//  Per-warehouse, per-product inventory rows (paginated + searchable).
+// ─────────────────────────────────────────────────────────────────
+
+export interface WarehouseInventoryItem {
+  productId: number;
+  productName: string;
+  warehouseId: number;
+  warehouseName: string;
+  purchasedQuantity: number;
+  soldQuantity: number;
+  availableQuantity: number;
+  purchasePrice: number;
+  sellingPrice: number;
+  marginPercent: number;
+  /** Comma-separated string or `null` when not tracked. */
+  totalProfit: number;
+}
+
+export interface WarehouseInventoryQuery {
+  warehouseId: number;
+  pageIndex?: number;
+  pageSize?: number;
+  search?: string;
+}
