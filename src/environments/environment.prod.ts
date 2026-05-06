@@ -7,5 +7,5 @@ export const environment = {
   refreshTokenKey: 'taqseet_refresh_token',
   defaultLang: 'ar',
   vatRate: 0.15,
-  currency: 'ر.س',
+  currency: 'ج.م',
 };

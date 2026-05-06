@@ -24,7 +24,7 @@
             [ngModel]="payDate()" (ngModelChange)="payDate.set($event)" />
         </div>
         <div class="col-12 col-sm-6">
-          <label class="form-label">المبلغ المدفوع الآن (ر.س)</label>
+          <label class="form-label">المبلغ المدفوع الآن (ج.م)</label>
           <input type="number" class="form-control" placeholder="0"
             [ngModel]="payAmount()" (ngModelChange)="payAmount.set(+$event)" />
         </div>

@@ -22,14 +22,14 @@
   </div>
   <div class="col">
     <app-stat-card label="المستحقات الكلية" [value]="data()!.stats.totalReceivables | currencyAr"
-      [sub]="'ر.س على ' + stats()?.totalCustomers + ' عميل'" />
+      [sub]="'ج.م على ' + stats()?.totalCustomers + ' عميل'" />
   </div>
   <div class="col">
     <app-stat-card label="المحصّل الشهر" [value]="data()!.stats.collectedThisMonth | currencyAr" sub="↑ 8.4%"
       valueColor="var(--gr)" subColor="var(--gr)" />
   </div>
   <div class="col">
-    <app-stat-card label="الخزينة الرئيسية" [value]="data()!.stats.mainTreasury | currencyAr" sub="ر.س لحظي"
+    <app-stat-card label="الخزينة الرئيسية" [value]="data()!.stats.mainTreasury | currencyAr" sub="ج.م لحظي"
       valueColor="var(--te)" />
   </div>
   <div class="col">
@@ -57,7 +57,7 @@
       valueColor="var(--am)" />
   </div>
   <div class="col">
-    <app-stat-card label="ضريبة مستحقة" [value]="data()!.stats.vatDue | currencyAr" sub="ر.س للربع الحالي"
+    <app-stat-card label="ضريبة مستحقة" [value]="data()!.stats.vatDue | currencyAr" sub="ج.م للربع الحالي"
       valueColor="var(--pu)" />
   </div>
 </div>
@@ -80,7 +80,7 @@
   <div class="col">
     <div class="card">
       <div class="chdr">
-        <div class="ct">أرباح آخر 6 أشهر (ر.س)</div>
+        <div class="ct">أرباح آخر 6 أشهر (ج.م)</div>
       </div>
       <div class="bar-wrap">
         @for (entry of data()!.profitChart; track entry.month) {

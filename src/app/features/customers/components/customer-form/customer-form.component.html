@@ -33,7 +33,7 @@
 
     <!-- السعر النقدي -->
     <div class="col-12 col-sm-6">
-      <label class="form-label">السعر النقدي (ر.س) <span class="text-danger">*</span></label>
+      <label class="form-label">السعر النقدي (ج.م) <span class="text-danger">*</span></label>
       <input formControlName="cashPrice" type="number" class="form-control"
         [class.is-invalid]="isInvalid('cashPrice')" min="1" />
       @if (isInvalid('cashPrice')) {
@@ -43,7 +43,7 @@
 
     <!-- الدفعة الأولى -->
     <div class="col-12 col-sm-6">
-      <label class="form-label">الدفعة الأولى (ر.س)</label>
+      <label class="form-label">الدفعة الأولى (ج.م)</label>
       <input formControlName="downPayment" type="number" class="form-control" min="0" />
     </div>
 
@@ -81,11 +81,11 @@
   <div class="calc-summary mt-3">
     <div class="cr">
       <span>إجمالي التقسيط</span>
-      <span>{{ remainingAmount | number:'1.0-0' }} ر.س</span>
+      <span>{{ remainingAmount | number:'1.0-0' }} ج.م</span>
     </div>
     <div class="ct2">
       <span>القسط {{ form.value.installmentPeriod }} × {{ form.value.installmentsCount }}</span>
-      <span>{{ installmentAmount | number:'1.0-0' }} ر.س</span>
+      <span>{{ installmentAmount | number:'1.0-0' }} ج.م</span>
     </div>
   </div>
 

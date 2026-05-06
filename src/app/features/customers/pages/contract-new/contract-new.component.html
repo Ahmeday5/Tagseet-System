@@ -52,17 +52,17 @@
             <input formControlName="purchaseDate" type="date" class="form-control" />
           </div>
           <div class="col-12 col-sm-6">
-            <label class="form-label">سعر الشراء (ر.س)</label>
+            <label class="form-label">سعر الشراء (ج.م)</label>
             <input formControlName="costPrice" type="number" class="form-control" placeholder="0" min="0" />
           </div>
           <div class="col-12 col-sm-6">
-            <label class="form-label">سعر البيع كاش (ر.س) <span class="text-danger">*</span></label>
+            <label class="form-label">سعر البيع كاش (ج.م) <span class="text-danger">*</span></label>
             <input formControlName="cashPrice" type="number" class="form-control"
               [class.is-invalid]="isInvalid('cashPrice')" placeholder="0" min="1" />
             @if (isInvalid('cashPrice')) { <div class="invalid-feedback">أدخل سعراً صحيحاً</div> }
           </div>
           <div class="col-12 col-sm-6">
-            <label class="form-label">المقدم (ر.س)</label>
+            <label class="form-label">المقدم (ج.م)</label>
             <input formControlName="downPayment" type="number" class="form-control" placeholder="0" min="0" />
           </div>
           <div class="col-12 col-sm-6">

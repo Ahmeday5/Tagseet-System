@@ -38,7 +38,7 @@ export class AuditService {
 
 let MOCK_AUDIT: AuditEntry[] = [
   { id: '1', timestamp: '2025-04-08T09:30:00', userId: '1', userName: 'محمد الفاتح',   userRole: 'admin',   action: 'login',   entity: 'auth',      entityId: null, description: 'تسجيل دخول ناجح',                             ipAddress: '192.168.1.1' },
-  { id: '2', timestamp: '2025-04-08T09:35:00', userId: '1', userName: 'محمد الفاتح',   userRole: 'admin',   action: 'payment', entity: 'customers', entityId: '1',  description: 'تسجيل دفعة قسط — عبدالله العمري — 700 ر.س', ipAddress: '192.168.1.1' },
+  { id: '2', timestamp: '2025-04-08T09:35:00', userId: '1', userName: 'محمد الفاتح',   userRole: 'admin',   action: 'payment', entity: 'customers', entityId: '1',  description: 'تسجيل دفعة قسط — عبدالله العمري — 700 ج.م', ipAddress: '192.168.1.1' },
   { id: '3', timestamp: '2025-04-08T10:00:00', userId: '2', userName: 'سلمى المنصور',  userRole: 'manager', action: 'create',  entity: 'customers', entityId: '6',  description: 'إضافة عميل جديد — أحمد السعدي',              ipAddress: '192.168.1.5' },
   { id: '4', timestamp: '2025-04-08T10:30:00', userId: '1', userName: 'محمد الفاتح',   userRole: 'admin',   action: 'delete',  entity: 'suppliers', entityId: '3',  description: 'حذف مورد — مستودع قديم',                      ipAddress: '192.168.1.1' },
   { id: '5', timestamp: '2025-04-08T11:00:00', userId: '3', userName: 'يعقوب الحارثي', userRole: 'cashier', action: 'export',  entity: 'reports',   entityId: null, description: 'تصدير تقرير التحصيل الشهري',                  ipAddress: '192.168.1.8' },

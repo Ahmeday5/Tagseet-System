@@ -226,10 +226,10 @@ const MOCK_PAYMENTS: PaymentRecord[] = [
 
 // ── Payment contract options ───────────────────────────────────
 const MOCK_PAYMENT_OPTIONS: PaymentContractOption[] = [
-  { id: '1', label: 'خالد العمري — Samsung (4/12) — مستحق 800 ر.س',    due: 800, prevPaid: 400, totalDue: 1200 },
-  { id: '2', label: 'سارة الغامدي — ثلاجة (متأخر) — مستحق 900 ر.س',   due: 900, prevPaid: 0,   totalDue: 1350 },
-  { id: '3', label: 'فيصل الدوسري — Dell (8/18) — مستحق 600 ر.س',      due: 600, prevPaid: 0,   totalDue: 600  },
-  { id: '5', label: 'أحمد القحطاني — أثاث (12/36) — مستحق 300 ر.س',   due: 300, prevPaid: 0,   totalDue: 300  },
+  { id: '1', label: 'خالد العمري — Samsung (4/12) — مستحق 800 ج.م',    due: 800, prevPaid: 400, totalDue: 1200 },
+  { id: '2', label: 'سارة الغامدي — ثلاجة (متأخر) — مستحق 900 ج.م',   due: 900, prevPaid: 0,   totalDue: 1350 },
+  { id: '3', label: 'فيصل الدوسري — Dell (8/18) — مستحق 600 ج.م',      due: 600, prevPaid: 0,   totalDue: 600  },
+  { id: '5', label: 'أحمد القحطاني — أثاث (12/36) — مستحق 300 ج.م',   due: 300, prevPaid: 0,   totalDue: 300  },
 ];
 
 // ── Reschedule requests ────────────────────────────────────────
