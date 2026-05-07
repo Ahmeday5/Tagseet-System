@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { Observable, of, throwError } from 'rxjs';
 import { delay } from 'rxjs/operators';
 import {
@@ -6,8 +6,19 @@ import {
   InstallmentRow, PaymentRecord, PaymentContractOption,
   RescheduleRequest, CreditRatingItem,
 } from '../models/customer.model';
+import {
+  DashboardClientsQuery,
+  DashboardClientsResponse,
+} from '../models/dashboard-client.model';
+import { ApiService } from '../../../core/services/api.service';
+import { API_ENDPOINTS } from '../../../core/constants/api-endpoints.const';
+import {
+  withCache,
+  withCacheBypass,
+} from '../../../core/http/http-context.tokens';
 import { generateUUID } from '../../../shared/utils/uuid.util';
-// import { ApiService } from '../../../core/services/api.service'; // فعّل عند ربط API
+
+const CLIENTS_TTL_MS = 2 * 60 * 1000; // 2 min — list churns whenever a payment is recorded
 
 // Local pagination shape used by the mock — keep until this feature is wired
 // to the real backend, then migrate to `PaginatedResponse<T>` from api-response.model.
@@ -22,8 +33,48 @@ export interface PaginatedResponse<T> {
 
 @Injectable({ providedIn: 'root' })
 export class CustomersService {
+  private readonly api = inject(ApiService);
 
-  // ── CRUD ─────────────────────────────────────────────────────────────────
+  // ── Dashboard clients (real API) ─────────────────────────────────────────
+
+  /**
+   * Server-paginated installments client list.
+   *
+   *   GET /dashboard/clients
+   *     ?PageIndex=&PageSize=&search=&onlyOverdue=
+   *
+   * Returns `{ overdueClientsCount, clients: PagedResponse<DashboardClient> }`.
+   * Cached briefly so quick filter toggles don't re-hit the network.
+   */
+  listDashboard(
+    query: DashboardClientsQuery = {},
+  ): Observable<DashboardClientsResponse> {
+    return this.api.get<DashboardClientsResponse>(API_ENDPOINTS.clients.base, {
+      params: this.toClientsParams(query),
+      context: withCache({ ttlMs: CLIENTS_TTL_MS }),
+    });
+  }
+
+  /** User-driven refresh — bypasses the in-memory cache. */
+  refreshDashboard(
+    query: DashboardClientsQuery = {},
+  ): Observable<DashboardClientsResponse> {
+    return this.api.get<DashboardClientsResponse>(API_ENDPOINTS.clients.base, {
+      params: this.toClientsParams(query),
+      context: withCacheBypass(withCache({ ttlMs: CLIENTS_TTL_MS })),
+    });
+  }
+
+  private toClientsParams(query: DashboardClientsQuery): Record<string, unknown> {
+    return {
+      PageIndex: query.pageIndex ?? 1,
+      PageSize: query.pageSize ?? 10,
+      search: query.search?.trim() || undefined,
+      onlyOverdue: query.onlyOverdue ? true : undefined,
+    };
+  }
+
+  // ── Legacy mock CRUD ─────────────────────────────────────────────────────
 
   getAll(params?: QueryParams): Observable<PaginatedResponse<Customer>> {
     let filtered = [...MOCK_CUSTOMERS];

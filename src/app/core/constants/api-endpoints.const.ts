@@ -54,4 +54,8 @@ export const API_ENDPOINTS = {
     convertToContract: (id: number) =>
       `dashboard/client-orders/${id}/convert-to-contract`,
   },
+  clients: {
+    base: 'dashboard/clients',
+    byId: (id: number) => `dashboard/clients/${id}`,
+  },
 } as const;

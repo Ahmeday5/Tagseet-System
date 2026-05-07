@@ -1,105 +1,227 @@
-<!-- Toolbar -->
-<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
-  <div class="d-flex gap-2 flex-wrap">
-    <input class="form-control form-control-sm" placeholder="بحث بالاسم أو الهاتف..." style="width:200px"
-      [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event); onSearch()" />
-    <select class="form-select form-select-sm" style="width:110px"
-      [ngModel]="statusFilter()" (ngModelChange)="statusFilter.set($event); loadCustomers()">
-      <option value="">كل الحالات</option>
-      <option value="current">منتظم</option>
-      <option value="late">متأخر</option>
-      <option value="defaulted">متعثر</option>
-      <option value="new">جديد</option>
-    </select>
-    <select class="form-select form-select-sm" style="width:110px"
-      [ngModel]="scoreFilter()" (ngModelChange)="scoreFilter.set($event); loadCustomers()">
-      <option value="">كل التقييمات</option>
-      <option value="A">ممتاز (A)</option>
-      <option value="B">جيد (B)</option>
-      <option value="C">متوسط (C)</option>
-      <option value="D">ضعيف (D)</option>
-    </select>
+<!-- ── HERO ── -->
+<div class="cl-hero">
+  <div class="cl-hero-main">
+    <div class="cl-hero-label">عملاء الأقساط</div>
+    <div class="cl-hero-value">{{ count() }} عميل</div>
+
+    <div class="cl-hero-stats">
+      <div>
+        <div class="cl-hero-stat-label">عملاء متأخرون</div>
+        <div class="cl-hero-stat-val cl-hero-overdue">{{ overdueClientsCount() }}</div>
+      </div>
+      <div>
+        <div class="cl-hero-stat-label">الصفحة الحالية</div>
+        <div class="cl-hero-stat-val">{{ pageIndex() }} / {{ totalPages() || 1 }}</div>
+      </div>
+      <div>
+        <div class="cl-hero-stat-label">صفوف لكل صفحة</div>
+        <div class="cl-hero-stat-val">{{ pageSize() }}</div>
+      </div>
+
+      @if (loading()) {
+        <div class="d-inline-flex align-items-center gap-2" style="opacity:.85">
+          <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+          <span style="font-size:11px">جاري التحميل...</span>
+        </div>
+      }
+    </div>
   </div>
-  <button class="btn btn-sm btn-bl" (click)="showForm.set(true)">+ عقد جديد سريع</button>
 </div>
 
-<!-- Table -->
-<div class="tw">
-  <table class="table">
-    <thead>
-      <tr>
-        <th>الاسم</th>
-        <th>الهاتف</th>
-        <th>العنوان</th>
-        <th>البضاعة</th>
-        <th>القسط</th>
-        <th>مبلغ القسط</th>
-        <th>نوع الدفع</th>
-        <th>الإجمالي</th>
-        <th>الباقي</th>
-        <th>التقييم</th>
-        <th>الحالة</th>
-        <th>إجراءات</th>
-      </tr>
-    </thead>
-    <tbody>
-      @if (isLoading()) {
-        <tr><td colspan="12" class="text-center p-4" style="color:var(--txt3)">جاري التحميل...</td></tr>
-      } @else if (customers().length === 0) {
-        <tr><td colspan="12" class="text-center p-4" style="color:var(--txt3)">لا توجد نتائج</td></tr>
-      } @else {
-        @for (c of customers(); track c.id) {
+<!-- ── TOOLBAR ── -->
+<div class="cl-toolbar">
+  <div class="cl-search">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+         stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <circle cx="11" cy="11" r="7" />
+      <path d="m21 21-4.3-4.3" />
+    </svg>
+    <input
+      type="text"
+      placeholder="بحث بالاسم أو الهاتف أو العنوان..."
+      [value]="searchTerm()"
+      (input)="onSearch($any($event.target).value)"
+    />
+    @if (searchTerm()) {
+      <button
+        type="button"
+        class="cl-search-clear"
+        aria-label="مسح البحث"
+        (click)="clearSearch()"
+      >×</button>
+    }
+  </div>
+
+  <label class="cl-toggle" [class.cl-toggle-active]="onlyOverdue()">
+    <input
+      type="checkbox"
+      [checked]="onlyOverdue()"
+      (change)="toggleOnlyOverdue($any($event.target).checked)"
+    />
+    <span class="cl-toggle-track" aria-hidden="true">
+      <span class="cl-toggle-thumb"></span>
+    </span>
+    <span class="cl-toggle-label">المتأخرون فقط</span>
+  </label>
+
+  <button
+    type="button"
+    class="btn btn-sm d-inline-flex align-items-center gap-1"
+    [disabled]="loading()"
+    (click)="refresh()"
+  >
+    @if (loading()) {
+      <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+    }
+    <span>تحديث</span>
+  </button>
+
+  <button class="btn btn-sm btn-bl ms-auto" (click)="showForm.set(true)">+ عقد جديد سريع</button>
+</div>
+
+<!-- ── TABLE ── -->
+<div class="card cl-card">
+  <div class="tw mb-0">
+    <table>
+      <thead>
+        <tr>
+          <th class="cl-w-id">#</th>
+          <th class="cl-w-name">العميل</th>
+          <th class="cl-w-phone">الهاتف</th>
+          <th class="cl-w-goods">البضاعة</th>
+          <th class="cl-w-progress">القسط</th>
+          <th class="cl-w-amount">مبلغ القسط</th>
+          <th class="cl-w-freq">نوع الدفع</th>
+          <th class="cl-w-amount">الإجمالي</th>
+          <th class="cl-w-amount">الباقي</th>
+          <th class="cl-w-rating">التقييم</th>
+          <th class="cl-w-status">الحالة</th>
+          <th class="cl-w-actions text-center">الإجراءات</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (c of clients(); track c.id) {
           <tr>
-            <td class="fw-semibold" style="text-align:right">{{ c.name }}</td>
-            <td>{{ c.phone }}</td>
-            <td>{{ c.address }}</td>
-            <td>{{ c.product }}</td>
+            <td class="cl-id">#{{ c.id }}</td>
             <td>
-              {{ c.paidInstallments }}/{{ c.totalInstallments }}
-              <div class="progress mt-1" style="height:4px;min-width:50px">
-                <div class="progress-bar"
-                  [style.width.%]="getProgress(c)"
-                  [style.background]="getProgressColor(c)">
+              <div class="cl-row-name">
+                <div class="cl-avatar" aria-hidden="true">
+                  {{ c.fullName.charAt(0).toUpperCase() }}
+                </div>
+                <div class="cl-row-name-text">
+                  <span class="fw-600">{{ c.fullName }}</span>
+                  <span class="cl-row-addr">{{ c.address }}</span>
                 </div>
               </div>
             </td>
-            <td>{{ c.installmentAmount | currencyAr }}</td>
-            <td>{{ c.installmentPeriod }}</td>
-            <td>{{ c.totalAmount | currencyAr }}</td>
-            <td [style.color]="c.remainingAmount > 0 ? 'var(--re)' : 'var(--gr)'">
-              {{ c.remainingAmount | currencyAr }}
+            <td class="cv-ltr">{{ c.phoneNumber }}</td>
+            <td>
+              @if (c.goods) {
+                <span class="cl-goods" [title]="c.goods">{{ c.goods }}</span>
+              } @else {
+                <span class="text-muted">—</span>
+              }
             </td>
             <td>
-              <div [class]="'cs-ring cs-' + c.creditScore"
-                style="width:28px;height:28px;font-size:9px;font-weight:700;border-width:2px;margin:auto">
-                {{ c.creditScore }}
-              </div>
+              @if (c.installmentProgress) {
+                <div class="cl-progress-text">{{ c.installmentProgress }}</div>
+                <div class="progress mt-1 cl-progress-bar">
+                  <div class="progress-bar"
+                    [style.width.%]="progressPercent(c.installmentProgress)"
+                    [style.background]="progressColor(c.status)">
+                  </div>
+                </div>
+              } @else {
+                <span class="text-muted">—</span>
+              }
             </td>
             <td>
-              <app-badge [text]="getStatusLabel(c.paymentStatus)" [type]="getStatusBadge(c.paymentStatus)" />
+              @if (c.installmentAmount !== null) {
+                <span class="cl-amount-bl">{{ c.installmentAmount | currencyAr: true }}</span>
+              } @else {
+                <span class="text-muted">—</span>
+              }
+            </td>
+            <td class="fs-10">{{ paymentFrequencyLabel(c.paymentFrequency) }}</td>
+            <td class="cl-amount-bl">{{ c.totalContractAmount | currencyAr: true }}</td>
+            <td [class]="c.remainingAmount > 0 ? 'cl-rem' : 'cl-paid'">
+              {{ c.remainingAmount | currencyAr: true }}
+            </td>
+            <td class="text-center">
+              @if (c.rating) {
+                <div [class]="'cs-ring cs-' + c.rating"
+                     [title]="ratingLabel(c.rating)"
+                     style="width:30px;height:30px;font-size:10px;font-weight:700;border-width:2px;margin:auto">
+                  {{ c.rating }}
+                </div>
+              } @else {
+                <span class="text-muted">—</span>
+              }
+            </td>
+            <td>
+              <app-badge [text]="statusLabel(c.status)" [type]="statusBadge(c.status)" />
             </td>
             <td>
               <div class="d-flex gap-1 justify-content-center">
                 <button class="btn btn-sm btn-bl" [routerLink]="['/customers', c.id]">تفاصيل</button>
-                <button class="btn btn-sm btn-wa">📱</button>
-                <button class="btn btn-sm btn-re" (click)="deleteCustomer(c)">حذف</button>
+                <button class="btn btn-sm btn-wa" title="تواصل WhatsApp">📱</button>
               </div>
             </td>
           </tr>
+        } @empty {
+          <tr>
+            <td colspan="12" class="cl-empty">
+              @if (loading()) {
+                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                <span>جاري تحميل العملاء...</span>
+              } @else if (hasFilters()) {
+                <div class="cl-empty-block">
+                  <div class="cl-empty-icon" aria-hidden="true">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="11" cy="11" r="7" />
+                      <path d="m21 21-4.3-4.3" />
+                    </svg>
+                  </div>
+                  <div class="cl-empty-title">لا توجد نتائج</div>
+                  <div class="cl-empty-sub">جرّب تعديل البحث أو إلغاء فلتر المتأخرين.</div>
+                  <button class="btn btn-sm mt-2" (click)="clearSearch(); toggleOnlyOverdue(false)">مسح الفلاتر</button>
+                </div>
+              } @else {
+                <div class="cl-empty-block">
+                  <div class="cl-empty-icon" aria-hidden="true">
+                    <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                      <circle cx="9" cy="7" r="4" />
+                      <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+                      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                    </svg>
+                  </div>
+                  <div class="cl-empty-title">لا يوجد عملاء بعد</div>
+                  <div class="cl-empty-sub">ابدأ بإضافة أول عقد لتبدأ متابعة الأقساط والتحصيل.</div>
+                  <button class="btn btn-sm btn-bl mt-2" (click)="showForm.set(true)">+ عقد جديد سريع</button>
+                </div>
+              }
+            </td>
+          </tr>
         }
-      }
-    </tbody>
-  </table>
-</div>
-
-<!-- Pagination -->
-@if (totalPages() > 1) {
-  <div class="d-flex gap-2 justify-content-center mt-2">
-    @for (p of pages(); track p) {
-      <button class="btn btn-sm" [class.btn-bl]="p === currentPage()" (click)="goToPage(p)">{{ p }}</button>
-    }
+      </tbody>
+    </table>
   </div>
-}
+
+  @if (count() > 0) {
+    <app-pagination
+      [pageIndex]="pageIndex()"
+      [pageSize]="pageSize()"
+      [count]="count()"
+      [totalPages]="totalPages()"
+      [disabled]="loading()"
+      (pageChange)="onPageChange($event)"
+      (pageSizeChange)="onPageSizeChange($event)"
+    />
+  }
+</div>
 
 <!-- Quick-add modal -->
 @if (showForm()) {
@@ -110,7 +232,7 @@
         <button class="app-modal-close" (click)="showForm.set(false)">×</button>
       </div>
       <app-customer-form
-        (saved)="showForm.set(false); loadCustomers()"
+        (saved)="onSaved()"
         (cancelled)="showForm.set(false)" />
     </div>
   </div>

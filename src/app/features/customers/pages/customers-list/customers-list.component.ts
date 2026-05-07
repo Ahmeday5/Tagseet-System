@@ -1,106 +1,241 @@
 import {
-  ChangeDetectionStrategy, Component, inject, OnInit, signal,
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  signal,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { FormsModule } from '@angular/forms';
 
 import { CustomersService } from '../../services/customers.service';
-import { Customer, CreditScore, PaymentStatus } from '../../models/customer.model';
-import { BadgeComponent, BadgeType } from '../../../../shared/components/badge/badge.component';
-import { CurrencyArPipe } from '../../../../shared/pipes/currency-ar.pipe';
-import { ToastService } from '../../../../core/services/toast.service';
-import { DialogService } from '../../../../core/services/dialog.service';
+import {
+  DashboardClient,
+  DashboardClientRating,
+  DashboardClientStatus,
+} from '../../models/dashboard-client.model';
 import { CustomerFormComponent } from '../../components/customer-form/customer-form.component';
+import { BadgeComponent, BadgeType } from '../../../../shared/components/badge/badge.component';
+import { PaginationComponent } from '../../../../shared/components/pagination/pagination.component';
+import { CurrencyArPipe } from '../../../../shared/pipes/currency-ar.pipe';
+import { ApiError } from '../../../../core/models/api-response.model';
+import { ToastService } from '../../../../core/services/toast.service';
+import { HttpCacheService } from '../../../../core/services/http-cache.service';
+import { onInvalidate } from '../../../../core/utils/auto-refresh.util';
 
+const DEFAULT_PAGE_SIZE = 10;
+const SEARCH_DEBOUNCE_MS = 300;
+
+/**
+ * Installments clients index — server-paginated against
+ * `GET /dashboard/clients`.
+ *
+ *   - debounced search (name / phone / address)
+ *   - "overdue only" toggle (`onlyOverdue=true` query)
+ *   - server-side pagination via `<app-pagination>`
+ *   - quick-create modal stays on top of the legacy mock service for now;
+ *     a successful save triggers a force-refresh of the live list
+ */
 @Component({
   selector: 'app-customers-list',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, FormsModule, BadgeComponent, CurrencyArPipe, CustomerFormComponent],
+  imports: [
+    RouterLink,
+    BadgeComponent,
+    PaginationComponent,
+    CurrencyArPipe,
+    CustomerFormComponent,
+  ],
   templateUrl: './customers-list.component.html',
   styleUrl: './customers-list.component.scss',
 })
-export class CustomersListComponent implements OnInit {
-  private readonly svc    = inject(CustomersService);
-  private readonly toast  = inject(ToastService);
-  private readonly dialog = inject(DialogService);
+export class CustomersListComponent {
+  private readonly service = inject(CustomersService);
+  private readonly toast   = inject(ToastService);
+  private readonly cache   = inject(HttpCacheService);
 
-  protected readonly customers    = signal<Customer[]>([]);
-  protected readonly total        = signal(0);
-  protected readonly totalPages   = signal(1);
-  protected readonly currentPage  = signal(1);
-  protected readonly isLoading    = signal(false);
-  protected readonly showForm     = signal(false);
-  protected readonly searchQuery  = signal('');
-  protected readonly statusFilter = signal('');
-  protected readonly scoreFilter  = signal('');
-  protected readonly pages        = signal<number[]>([]);
+  // ── data ──
+  protected readonly clients             = signal<DashboardClient[]>([]);
+  protected readonly overdueClientsCount = signal(0);
+  protected readonly loading             = signal(false);
 
-  private searchTimer: ReturnType<typeof setTimeout> | null = null;
+  // ── filters ──
+  protected readonly searchTerm  = signal('');
+  protected readonly onlyOverdue = signal(false);
+  protected readonly pageIndex   = signal(1);
+  protected readonly pageSize    = signal(DEFAULT_PAGE_SIZE);
 
-  ngOnInit(): void { this.loadCustomers(); }
+  // ── server pagination meta ──
+  protected readonly count      = signal(0);
+  protected readonly totalPages = signal(0);
 
-  protected loadCustomers(): void {
-    this.isLoading.set(true);
-    this.svc.getAll({
-      page:        this.currentPage(),
-      limit:       10,
-      search:      this.searchQuery()  || undefined,
-      status:      this.statusFilter() || undefined,
-      creditScore: this.scoreFilter()  || undefined,
-    }).subscribe({
+  // ── modal ──
+  protected readonly showForm = signal(false);
+
+  // ── derived ──
+  protected readonly hasFilters = computed(
+    () => this.searchTerm().length > 0 || this.onlyOverdue(),
+  );
+
+  // Single observed tuple; any change triggers a debounced refetch.
+  private readonly fetchTrigger = computed(() => ({
+    search: this.searchTerm().trim(),
+    onlyOverdue: this.onlyOverdue(),
+    pageIndex: this.pageIndex(),
+    pageSize: this.pageSize(),
+  }));
+
+  private debounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+  constructor() {
+    effect(() => {
+      const trigger = this.fetchTrigger();
+      if (this.debounceTimer) clearTimeout(this.debounceTimer);
+      this.debounceTimer = setTimeout(
+        () => this.fetch(trigger),
+        SEARCH_DEBOUNCE_MS,
+      );
+    });
+
+    // Refetch whenever any client-related cache key is invalidated
+    // (e.g. another tab recorded a payment).
+    onInvalidate(this.cache, 'client', () => this.refresh());
+  }
+
+  // ─────────── data loaders ───────────
+
+  private fetch(
+    trigger: {
+      search: string;
+      onlyOverdue: boolean;
+      pageIndex: number;
+      pageSize: number;
+    },
+    force = false,
+  ): void {
+    this.loading.set(true);
+    const stream$ = force
+      ? this.service.refreshDashboard(trigger)
+      : this.service.listDashboard(trigger);
+
+    stream$.subscribe({
       next: (res) => {
-        this.customers.set(res.data);
-        this.total.set(res.total);
-        this.totalPages.set(res.totalPages);
-        this.pages.set(Array.from({ length: res.totalPages }, (_, i) => i + 1));
-        this.isLoading.set(false);
+        const page = res?.clients;
+        this.clients.set(page?.data ?? []);
+        this.count.set(page?.count ?? 0);
+        this.totalPages.set(page?.totalPages ?? 0);
+        this.overdueClientsCount.set(res?.overdueClientsCount ?? 0);
+        this.loading.set(false);
       },
-      error: () => { this.toast.error('فشل تحميل العملاء'); this.isLoading.set(false); },
+      error: (err: ApiError) => {
+        this.clients.set([]);
+        this.count.set(0);
+        this.totalPages.set(0);
+        this.overdueClientsCount.set(0);
+        this.loading.set(false);
+        this.toast.error(err?.message || 'تعذّر تحميل العملاء');
+      },
     });
   }
 
-  protected onSearch(): void {
-    if (this.searchTimer) clearTimeout(this.searchTimer);
-    this.searchTimer = setTimeout(() => { this.currentPage.set(1); this.loadCustomers(); }, 350);
+  protected refresh(): void {
+    this.fetch(this.fetchTrigger(), true);
   }
 
-  protected goToPage(p: number): void { this.currentPage.set(p); this.loadCustomers(); }
+  // ─────────── filter handlers ───────────
 
-  protected async deleteCustomer(c: Customer): Promise<void> {
-    const ok = await this.dialog.confirm({
-      title:   'حذف العميل',
-      message: `هل أنت متأكد من حذف "${c.name}"؟ لا يمكن التراجع عن هذا الإجراء.`,
-      type:    'danger',
-    });
-    if (!ok) return;
-    this.svc.delete(c.id).subscribe({
-      next:  () => { this.toast.success(`تم حذف "${c.name}"`); this.loadCustomers(); },
-      error: () => this.toast.error('فشل الحذف'),
-    });
+  protected onSearch(value: string): void {
+    this.searchTerm.set(value);
+    if (this.pageIndex() !== 1) this.pageIndex.set(1);
   }
 
-  protected getProgress(c: Customer): number {
-    return Math.round((c.paidInstallments / c.totalInstallments) * 100);
+  protected clearSearch(): void {
+    if (!this.searchTerm()) return;
+    this.searchTerm.set('');
+    this.pageIndex.set(1);
   }
 
-  protected getStatusLabel(s: PaymentStatus): string {
-    const map: Record<PaymentStatus, string> = { current: 'منتظم', late: 'متأخر', defaulted: 'متعثر', new: 'جديد' };
-    return map[s];
+  protected toggleOnlyOverdue(value: boolean): void {
+    this.onlyOverdue.set(value);
+    if (this.pageIndex() !== 1) this.pageIndex.set(1);
   }
 
-  protected getStatusBadge(s: PaymentStatus): BadgeType {
-    const map: Record<PaymentStatus, BadgeType> = { current: 'ok', late: 'warn', defaulted: 'bad', new: 'info' };
-    return map[s];
+  protected onPageChange(page: number): void {
+    this.pageIndex.set(page);
   }
 
-  protected getCreditColor(s: CreditScore): string {
-    const map: Record<CreditScore, string> = { A: 'var(--gr)', B: 'var(--bl)', C: 'var(--am)', D: 'var(--re)' };
-    return map[s];
+  protected onPageSizeChange(size: number): void {
+    this.pageSize.set(size);
+    this.pageIndex.set(1);
   }
 
-  protected getProgressColor(c: Customer): string {
-    const map: Record<PaymentStatus, string> = { current: 'var(--gr)', new: 'var(--bl)', late: 'var(--am)', defaulted: 'var(--re)' };
-    return map[c.paymentStatus];
+  // ─────────── modal ───────────
+
+  protected onSaved(): void {
+    this.showForm.set(false);
+    if (this.pageIndex() !== 1) this.pageIndex.set(1);
+    else this.refresh();
+  }
+
+  // ─────────── view helpers ───────────
+
+  protected statusLabel(status: DashboardClientStatus): string {
+    const map: Record<DashboardClientStatus, string> = {
+      New:             'جديد',
+      OnTrack:         'منتظم',
+      OneOverdue:      'متأخر قسط',
+      MultipleOverdue: 'متأخر',
+    };
+    return map[status] ?? status;
+  }
+
+  protected statusBadge(status: DashboardClientStatus): BadgeType {
+    const map: Record<DashboardClientStatus, BadgeType> = {
+      New:             'info',
+      OnTrack:         'ok',
+      OneOverdue:      'warn',
+      MultipleOverdue: 'bad',
+    };
+    return map[status] ?? 'info';
+  }
+
+  protected ratingLabel(rating: DashboardClientRating): string {
+    const map: Record<DashboardClientRating, string> = {
+      A: 'ممتاز', B: 'جيد', C: 'متوسط', D: 'ضعيف',
+    };
+    return map[rating];
+  }
+
+  protected paymentFrequencyLabel(freq: string | null): string {
+    if (!freq) return '—';
+    const map: Record<string, string> = {
+      Monthly:     'شهري',
+      Weekly:      'أسبوعي',
+      Quarterly:   'ربع سنوي',
+      SemiAnnual:  'نصف سنوي',
+      SemiAnnually:'نصف سنوي',
+      Annual:      'سنوي',
+      Annually:    'سنوي',
+    };
+    return map[freq] ?? freq;
+  }
+
+  /** Parse "3/12" → 25 (% complete). Returns 0 when shape is unexpected. */
+  protected progressPercent(progress: string | null): number {
+    if (!progress) return 0;
+    const [paid, total] = progress.split('/').map((n) => Number(n));
+    if (!Number.isFinite(paid) || !Number.isFinite(total) || total <= 0) return 0;
+    return Math.min(100, Math.round((paid / total) * 100));
+  }
+
+  protected progressColor(status: DashboardClientStatus): string {
+    const map: Record<DashboardClientStatus, string> = {
+      New:             'var(--bl)',
+      OnTrack:         'var(--gr)',
+      OneOverdue:      'var(--am)',
+      MultipleOverdue: 'var(--re)',
+    };
+    return map[status] ?? 'var(--bl)';
   }
 }
