@@ -23,21 +23,9 @@ import {
   ConvertToContractPayload,
 } from '../../models/catalog.model';
 import { CatalogService } from '../../services/catalog.service';
+import { RepsService } from '../../../reps/services/reps.service';
+import { Representative } from '../../../reps/models/rep.model';
 
-/**
- * Modal that captures the extra fields needed to convert a client order
- * into a real installment contract.
- *
- *   <app-convert-to-contract-modal
- *     [open]="modalOpen()"
- *     [order]="selectedOrder()"
- *     (closed)="closeModal()"
- *     (converted)="onConverted($event)" />
- *
- * The order itself comes from the parent (already fetched). Warehouses
- * and treasuries are loaded lazily on first open and cached by their
- * own services.
- */
 @Component({
   selector: 'app-convert-to-contract-modal',
   standalone: true,
@@ -66,6 +54,7 @@ export class ConvertToContractModalComponent {
   private readonly warehouseService = inject(WarehouseService);
   private readonly treasuryService = inject(TreasuryService);
   private readonly toast = inject(ToastService);
+  private readonly repService = inject(RepsService);
 
   // ── reactive state ──
   protected readonly submitting = signal(false);
@@ -74,6 +63,8 @@ export class ConvertToContractModalComponent {
   protected readonly warehouses = signal<Warehouse[]>([]);
   protected readonly treasuries = signal<Treasury[]>([]);
   protected readonly loadingRefs = signal(false);
+  // ── data ──
+  protected readonly reps = signal<Representative[]>([]);
 
   protected readonly activeWarehouses = computed(() =>
     this.warehouses().filter((w) => w.isActive),
@@ -88,6 +79,7 @@ export class ConvertToContractModalComponent {
   protected readonly form = this.fb.nonNullable.group({
     warehouseId: [0, [Validators.required, Validators.min(1)]],
     treasuryId: [0, [Validators.required, Validators.min(1)]],
+    representativeId: [0],
     purchaseDate: ['', [Validators.required]],
     firstInstallmentDate: ['', [Validators.required]],
     notes: [''],
@@ -124,6 +116,9 @@ export class ConvertToContractModalComponent {
     const payload: ConvertToContractPayload = {
       warehouseId: Number(raw.warehouseId),
       treasuryId: Number(raw.treasuryId),
+      representativeId: raw.representativeId
+        ? Number(raw.representativeId)
+        : undefined,
       purchaseDate: raw.purchaseDate,
       firstInstallmentDate: raw.firstInstallmentDate,
       notes: raw.notes?.trim() ?? '',
@@ -167,6 +162,7 @@ export class ConvertToContractModalComponent {
     this.form.reset({
       warehouseId: 0,
       treasuryId: 0,
+      representativeId: 0,
       purchaseDate: today,
       firstInstallmentDate: inOneMonth,
       notes: '',
@@ -188,6 +184,16 @@ export class ConvertToContractModalComponent {
       },
       error: () => {
         this.treasuries.set([]);
+        this.loadingRefs.set(false);
+      },
+    });
+    this.repService.list().subscribe({
+      next: (list) => {
+        this.reps.set(list?.data ?? []);
+        this.loadingRefs.set(false);
+      },
+      error: () => {
+        this.reps.set([]);
         this.loadingRefs.set(false);
       },
     });

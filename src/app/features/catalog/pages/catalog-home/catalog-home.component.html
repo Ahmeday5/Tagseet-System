@@ -48,14 +48,10 @@
           <span class="ord-pending-badge">{{ pendingOrders().length }} معلقة</span>
           <span class="ord-total-badge">{{ clientOrders().length }} إجمالي</span>
         </div>
-        <button
-          type="button"
-          class="btn btn-sm d-inline-flex align-items-center gap-1"
-          [disabled]="loadingOrders()"
-          (click)="loadClientOrders(true)"
-        >
+        <button type="button" class="btn btn-sm d-inline-flex align-items-center gap-1" [disabled]="loadingOrders()"
+          (click)="loadClientOrders(true)">
           @if (loadingOrders()) {
-            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+          <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
           }
           <span>تحديث</span>
         </button>
@@ -66,13 +62,12 @@
             <tr>
               <th class="w-12">العميل</th>
               <th class="w-10">الهاتف</th>
-              <th class="w-18">الأصناف المطلوبة</th>
+              <th class="w-15">الأصناف</th>
               <th class="w-9">الإجمالي</th>
-              <th class="w-10">المقدم</th>
-              <th class="w-9">القسط</th>
-              <th class="w-10">عدد الأقساط</th>
-              <th class="w-10">تاريخ الطلب</th>
-              <th class="w-12">إجراء</th>
+              <th class="w-10">النوع</th>
+              <th class="w-10">التاريخ</th>
+              <th class="w-10">الحالة</th>
+              <th class="w-14">إجراء</th>
             </tr>
           </thead>
           <tbody>
@@ -80,66 +75,67 @@
             <tr [class]="orderRowClass(order)">
               <td class="fw-600">{{ order.clientName }}</td>
               <td class="cv-ltr">{{ order.clientPhone }}</td>
-              <td>{{ itemsLabel(order.items) }}</td>
-              <td class="ord-amount">{{ order.totalAmount | currencyAr: true }}</td>
-              <td>{{ order.downPayment | currencyAr: true }}</td>
-              <td>{{ order.installmentAmount | currencyAr: true }}</td>
               <td>
-                @if (order.paymentMethod === 'Installments' && order.installmentsCount > 0) {
-                  {{ order.installmentsCount }} شهري
-                } @else {
-                  كاش
-                }
+                <span class="items-preview" (click)="openDetailsModal(order)" title="انقر لعرض التفاصيل">
+                  {{ itemsLabel(order.items) }}
+                </span>
               </td>
+              <td class="ord-amount">{{ order.totalAmount | currencyAr: true }}</td>
+              <td>{{ getPaymentTypeLabel(order) }}</td>
               <td class="fs-10">{{ formatOrderDate(order.orderDate) }}</td>
               <td>
+                <span [class]="'ord-status ord-status-' + getStatusColor(order.status)">
+                  {{ getStatusLabel(order.status) }}
+                </span>
+              </td>
+              <td class="d-flex justify-content-center align-items-center gap-2">
+                <button type="button" class="btn btn-sm btn-outline-blue" title="عرض التفاصيل"
+                  (click)="openDetailsModal(order)">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                  تفاصيل
+                </button>
                 @switch (order.status) {
-                  @case ('Pending') {
-                    <div class="d-flex gap-1 justify-content-center">
-                      <button
-                        type="button"
-                        class="btn btn-sm btn-bl"
-                        [disabled]="rejectingId() === order.id"
-                        (click)="openConvertModal(order)"
-                      >تحويل لعقد</button>
-                      <button
-                        type="button"
-                        class="btn btn-sm btn-soft-re d-inline-flex align-items-center gap-1"
-                        [disabled]="rejectingId() === order.id"
-                        (click)="confirmReject(order)"
-                      >
-                        @if (rejectingId() === order.id) {
-                          <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                        }
-                        <span>رفض</span>
-                      </button>
-                    </div>
-                  }
-                  @case ('Rejected') {
-                    <span class="ord-status ord-status-re">✕ تم الرفض</span>
-                  }
-                  @case ('Converted') {
-                    <span class="ord-status ord-status-gr">✓ تم التحويل للعقود</span>
-                  }
-                  @case ('Approved') {
-                    <span class="ord-status ord-status-bl">✓ معتمد</span>
-                  }
-                  @case ('Cancelled') {
-                    <span class="ord-status ord-status-am">⊘ ملغي</span>
-                  }
-                  @default {
-                    <span class="ord-status ord-status-am">{{ order.status }}</span>
-                  }
+                @case ('Pending') {
+                <div class="d-flex gap-1 justify-content-center">
+                  <button type="button" class="btn btn-sm btn-bl" [disabled]="rejectingId() === order.id"
+                    (click)="openConvertModal(order)">تحويل لعقد</button>
+                  <button type="button" class="btn btn-sm btn-soft-re d-inline-flex align-items-center gap-1"
+                    [disabled]="rejectingId() === order.id" (click)="confirmReject(order)">
+                    @if (rejectingId() === order.id) {
+                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                    }
+                    <span>رفض</span>
+                  </button>
+                </div>
+                }
+                @case ('Rejected') {
+                <span class="ord-status ord-status-re">✕ تم الرفض</span>
+                }
+                @case ('Converted') {
+                <span class="ord-status ord-status-gr">✓ تم التحويل للعقود</span>
+                }
+                @case ('Approved') {
+                <span class="ord-status ord-status-bl">✓ معتمد</span>
+                }
+                @case ('Cancelled') {
+                <span class="ord-status ord-status-am">⊘ ملغي</span>
+                }
+                @default {
+                <span class="ord-status ord-status-am">{{ order.status }}</span>
+                }
                 }
               </td>
             </tr>
             } @empty {
             <tr>
-              <td colspan="9" class="text-center fs-11 text-muted">
+              <td colspan="8" class="text-center fs-11 text-muted">
                 @if (loadingOrders()) {
-                  جاري تحميل الطلبات...
+                جاري تحميل الطلبات...
                 } @else {
-                  لا توجد طلبات حالياً
+                لا توجد طلبات حالياً
                 }
               </td>
             </tr>
@@ -297,9 +293,7 @@
   </div>
 </div>
 
-<app-convert-to-contract-modal
-  [open]="convertModalOpen()"
-  [order]="convertOrderRef()"
-  (closed)="closeConvertModal()"
-  (converted)="onConverted($event)"
-/>
+<app-convert-to-contract-modal [open]="convertModalOpen()" [order]="convertOrderRef()" (closed)="closeConvertModal()"
+  (converted)="onConverted($event)" />
+
+<app-client-order-details-modal [order]="detailsOrderRef()" (onClose)="closeDetailsModal()" />

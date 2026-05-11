@@ -288,6 +288,8 @@
 .w-10 { width: 10%; }
 .w-11 { width: 11%; }
 .w-12 { width: 12%; }
+.w-14 { width: 14%; }
+.w-15 { width: 15%; }
 .w-18 { width: 18%; }
 .w-20 { width: 20%; }
 
@@ -299,3 +301,91 @@
 .text-muted { color: var(--txt3); }
 .mb-0 { margin-bottom: 0 !important; }
 .mb-3 { margin-bottom: 14px; }
+
+/* ────────────────────────────────────────────────────────────────
+   ENHANCED TABLE STYLING FOR CLIENT ORDERS
+   ──────────────────────────────────────────────────────────────── */
+
+.tw {
+  table {
+    tbody tr {
+      transition: all 0.2s ease;
+
+      &:hover {
+        background: rgba(59, 130, 246, 0.04);
+      }
+
+      &.ord-accepted-row {
+        background: rgba(16, 185, 129, 0.03);
+
+        &:hover {
+          background: rgba(16, 185, 129, 0.08);
+        }
+      }
+    }
+  }
+}
+
+/* ── ITEMS PREVIEW (Clickable Link) ── */
+.items-preview {
+  color: var(--bl);
+  cursor: pointer;
+  font-weight: 500;
+  text-decoration: none;
+  border-bottom: 1px dashed transparent;
+  transition: all 0.2s ease;
+
+  &:hover {
+    border-bottom-color: var(--bl);
+    opacity: 0.85;
+  }
+
+  &:active {
+    transform: scale(0.98);
+  }
+}
+
+/* ── ACTION BUTTONS ROW ── */
+.action-buttons {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.btn-outline-blue {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--bl);
+  background: transparent;
+  border: 1px solid var(--bl-l);
+  border-radius: 4px;
+  padding: 5px 9px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+
+  svg {
+    width: 14px;
+    height: 14px;
+    stroke-width: 2;
+  }
+
+  &:hover:not(:disabled) {
+    background: var(--bl-l);
+    border-color: var(--bl);
+  }
+
+  &:active:not(:disabled) {
+    transform: scale(0.95);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}

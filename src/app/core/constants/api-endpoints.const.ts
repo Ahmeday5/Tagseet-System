@@ -37,6 +37,7 @@ export const API_ENDPOINTS = {
   suppliers: {
     base: 'dashboard/suppliers',
     byId: (id: number) => `dashboard/suppliers/${id}`,
+    statement: (id: number) => `dashboard/suppliers/${id}/statement`,
   },
   purchaseInvoices: {
     base: 'dashboard/supplier-purchase-invoices',
@@ -57,5 +58,18 @@ export const API_ENDPOINTS = {
   clients: {
     base: 'dashboard/clients',
     byId: (id: number) => `dashboard/clients/${id}`,
+  },
+  inventory: {
+    alerts: 'dashboard/inventory/alerts',
+  },
+  financial: {
+    separation: 'dashboard/financial-separation',
+  },
+  representatives: {
+    base: 'dashboard/representatives',
+    byId: (id: number) => `dashboard/representatives/${id}`,
+  },
+  contracts: {
+    base: 'dashboard/contracts',
   },
 } as const;

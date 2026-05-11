@@ -6,11 +6,13 @@ import { ToastService } from '../../../../core/services/toast.service';
 import { ContractsService } from '../../services/contracts.service';
 import { Contract } from '../../models/contract.model';
 
+import { RouterModule } from '@angular/router';
+
 @Component({
   selector: 'app-contracts-home',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CurrencyArPipe],
+  imports: [CurrencyArPipe, RouterModule],
   templateUrl: './contracts-home.component.html',
   styleUrl: './contracts-home.component.scss',
 })

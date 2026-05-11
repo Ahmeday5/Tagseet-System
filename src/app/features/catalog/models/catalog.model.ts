@@ -41,6 +41,7 @@ export type InstallmentPeriod = 'شهري' | 'أسبوعي' | 'ربع سنوي' 
 
 export type ClientOrderStatus =
   | 'Pending'
+  | 'Accepted'
   | 'Approved'
   | 'Rejected'
   | 'Converted'
@@ -49,9 +50,15 @@ export type ClientOrderStatus =
 export type PaymentMethod = 'Cash' | 'Installments';
 
 export interface ClientOrderItem {
+  productId: number;
   productName: string;
   quantity: number;
   price: number;
+  lineTotal: number;
+  paymentMethod: PaymentMethod;
+  installmentMonths: number | null;
+  downPayment: number;
+  monthlyInstallment: number;
 }
 
 /** Exact shape returned by the backend. */
@@ -66,6 +73,9 @@ export interface ClientOrder {
   installmentsCount: number;
   installmentAmount: number;
   status: ClientOrderStatus;
+  notes: string | null;
+  deliveryAddress: string;
+  preferredDeliveryDate: string;
   items: ClientOrderItem[];
 }
 
@@ -73,9 +83,8 @@ export interface ClientOrder {
 export interface ConvertToContractPayload {
   warehouseId: number;
   treasuryId: number;
-  /** ISO 8601 string. */
+  representativeId?: number;
   purchaseDate: string;
-  /** ISO 8601 string. */
   firstInstallmentDate: string;
   notes: string;
 }

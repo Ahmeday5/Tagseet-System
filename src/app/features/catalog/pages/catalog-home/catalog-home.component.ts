@@ -14,6 +14,7 @@ import {
   Product,
 } from '../../models/catalog.model';
 import { ConvertToContractModalComponent } from '../../components/convert-to-contract-modal/convert-to-contract-modal.component';
+import { ClientOrderDetailsModalComponent } from '../../components/client-order-details-modal/client-order-details-modal.component';
 
 interface InstallmentRow {
   index: number;
@@ -24,7 +25,7 @@ interface InstallmentRow {
   selector: 'app-catalog-home',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CurrencyArPipe, ConvertToContractModalComponent],
+  imports: [CurrencyArPipe, ConvertToContractModalComponent, ClientOrderDetailsModalComponent],
   templateUrl: './catalog-home.component.html',
   styleUrl: './catalog-home.component.scss',
 })
@@ -52,6 +53,10 @@ export class CatalogHomeComponent implements OnInit {
   // ── convert modal state ──
   protected readonly convertModalOpen = signal(false);
   protected readonly convertOrderRef  = signal<ClientOrder | null>(null);
+
+  // ── details modal state ──
+  protected readonly detailsModalOpen = signal(false);
+  protected readonly detailsOrderRef  = signal<ClientOrder | null>(null);
 
   // ── derived ──
   protected readonly pendingOrders = computed(() =>
@@ -104,7 +109,6 @@ export class CatalogHomeComponent implements OnInit {
   // ─────────── lifecycle ───────────
 
   ngOnInit(): void {
-    this.svc.getAll().subscribe((p) => this.products.set(p));
     this.loadClientOrders();
   }
 
@@ -134,6 +138,16 @@ export class CatalogHomeComponent implements OnInit {
 
   protected closeConvertModal(): void {
     this.convertModalOpen.set(false);
+  }
+
+  protected openDetailsModal(order: ClientOrder): void {
+    this.detailsOrderRef.set(order);
+    this.detailsModalOpen.set(true);
+  }
+
+  protected closeDetailsModal(): void {
+    this.detailsModalOpen.set(false);
+    this.detailsOrderRef.set(null);
   }
 
   protected onConverted(order: ClientOrder): void {
@@ -182,13 +196,49 @@ export class CatalogHomeComponent implements OnInit {
       case 'Pending':   return 'ord-pending-row';
       case 'Rejected':  return 'ord-rejected-row';
       case 'Converted': return 'ord-converted-row';
+      case 'Accepted':  return 'ord-accepted-row';
       default:          return '';
+    }
+  }
+
+  protected getPaymentTypeLabel(order: ClientOrder): string {
+    if (order.paymentMethod === 'Cash') {
+      return 'كاش';
+    }
+    if (order.installmentsCount && order.installmentsCount > 0) {
+      return `${order.installmentsCount} شهري`;
+    }
+    return '—';
+  }
+
+  protected getStatusColor(status: string): string {
+    switch (status) {
+      case 'Accepted':   return 'gr';
+      case 'Pending':    return 'am';
+      case 'Rejected':   return 're';
+      case 'Converted':  return 'bl';
+      case 'Approved':   return 'bl';
+      case 'Cancelled':  return 'am';
+      default:           return 'am';
+    }
+  }
+
+  protected getStatusLabel(status: string): string {
+    switch (status) {
+      case 'Accepted':   return '✓ مقبول';
+      case 'Pending':    return '⏳ قيد الانتظار';
+      case 'Rejected':   return '✕ مرفوض';
+      case 'Converted':  return '✓ محول لعقد';
+      case 'Approved':   return '✓ معتمد';
+      case 'Cancelled':  return '⊘ ملغي';
+      default:           return status;
     }
   }
 
   protected itemsLabel(items: ClientOrderItem[]): string {
     if (!items || items.length === 0) return '—';
-    return items.map((i) => `${i.productName} × ${i.quantity}`).join(' + ');
+    if (items.length === 1) return items[0].productName;
+    return `${items[0].productName} + ${items.length - 1} آخر`;
   }
 
   /**

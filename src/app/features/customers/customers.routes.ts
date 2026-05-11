@@ -38,20 +38,6 @@ export const customersRoutes: Routes = [
             (m) => m.StatementComponent,
           ),
       },
-      {
-        path: 'reschedule',
-        loadComponent: () =>
-          import('./pages/reschedule/reschedule.component').then(
-            (m) => m.RescheduleComponent,
-          ),
-      },
-      {
-        path: 'credit-rating',
-        loadComponent: () =>
-          import('./pages/credit-rating/credit-rating.component').then(
-            (m) => m.CreditRatingComponent,
-          ),
-      },
     ],
   },
 

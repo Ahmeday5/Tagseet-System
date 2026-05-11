@@ -1,7 +1,10 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 
-interface TabItem { path: string; label: string; }
+interface TabItem {
+  path: string;
+  label: string;
+}
 
 @Component({
   selector: 'app-customers-shell',
@@ -13,11 +16,9 @@ interface TabItem { path: string; label: string; }
 })
 export class CustomersShellComponent {
   protected readonly tabs: TabItem[] = [
-    { path: 'customer-list',  label: 'قائمة العملاء'    },
-    { path: 'contract',       label: 'عقد جديد'          },
-    { path: 'payment',        label: 'تسديد دفعة'        },
-    { path: 'statement',      label: 'كشف الحساب'        },
-    { path: 'reschedule',     label: 'إعادة جدولة'       },
-    { path: 'credit-rating',  label: 'التقييم الائتماني' },
+    { path: 'customer-list', label: 'قائمة العملاء' },
+    { path: 'contract', label: 'عقد جديد' },
+    { path: 'payment', label: 'تسديد دفعة' },
+    { path: 'statement', label: 'كشف الحساب' },
   ];
 }

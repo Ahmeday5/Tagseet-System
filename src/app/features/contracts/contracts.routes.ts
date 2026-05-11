@@ -8,4 +8,11 @@ export const contractsRoutes: Routes = [
         (m) => m.ContractsHomeComponent
       ),
   },
+  {
+    path: 'new',
+    loadComponent: () =>
+      import('./pages/create-contract/create-contract.component').then(
+        (m) => m.CreateContractComponent
+      ),
+  },
 ];

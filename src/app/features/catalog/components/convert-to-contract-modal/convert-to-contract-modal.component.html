@@ -98,6 +98,21 @@
         </div>
 
         <div class="col-12 col-md-6">
+          <label class="form-label">المندوب</label>
+          <select
+            class="form-select"
+            formControlName="representativeId"
+            [class.is-invalid]="isInvalid('representativeId')"
+          >
+            <option [ngValue]="0" disabled>— اختر المندوب —</option>
+            @for (rep of reps(); track rep.id) {
+              <option [ngValue]="rep.id">{{ rep.fullName }}</option>
+            }
+          </select>
+          <app-form-error [control]="form.controls.representativeId" label="المندوب" />
+        </div>
+
+        <div class="col-12 col-md-6">
           <label class="form-label">تاريخ الشراء</label>
           <input
             type="date"

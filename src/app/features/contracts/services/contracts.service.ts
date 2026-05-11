@@ -1,10 +1,81 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { Observable, of } from 'rxjs';
 import { delay } from 'rxjs/operators';
-import { Contract } from '../models/contract.model';
+import { ApiService } from '../../../core/services/api.service';
+import { API_ENDPOINTS } from '../../../core/constants/api-endpoints.const';
+import {
+  withCacheInvalidate,
+  withInlineHandling,
+} from '../../../core/http/http-context.tokens';
+import {
+  Contract,
+  ContractFormState,
+  CreatedContract,
+  CreateContractPayload,
+  buildCreateContractPayload,
+} from '../models/contract.model';
+
+const CONTRACTS_CACHE_KEY = 'contracts';
 
 @Injectable({ providedIn: 'root' })
 export class ContractsService {
+  private readonly api = inject(ApiService);
+
+  // ─────────── live API ───────────
+
+  /**
+   * Direct installment-contract creation.
+   *
+   * Accepts either the form-state object (preferred — `representativeId`
+   * is stripped automatically when not selected) or a fully-formed
+   * payload built by the caller.
+   *
+   * The backend can reject with `400 Insufficient inventory quantity.`
+   * when the requested product isn't fully in stock at the chosen
+   * warehouse — surface that message verbatim to the user.
+   */
+  create(
+    formOrPayload: ContractFormState | CreateContractPayload,
+  ): Observable<CreatedContract> {
+    const body = this.isFormState(formOrPayload)
+      ? buildCreateContractPayload(formOrPayload)
+      : formOrPayload;
+
+    return this.api.post<CreatedContract>(
+      API_ENDPOINTS.contracts.base,
+      body,
+      {
+        context: withInlineHandling(
+          withCacheInvalidate([
+            CONTRACTS_CACHE_KEY,
+            'client',     // contracts affect client receivables
+            'warehous',   // stock is decremented at the warehouse
+            'treasur',    // down payment moves into the treasury
+            'invoice',    // related invoice aggregates change
+            'financial-separation',
+          ]),
+        ),
+      },
+    );
+  }
+
+  /**
+   * Type-guard for `create()`. `ContractFormState` carries a nullable
+   * `representativeId`; `CreateContractPayload` only has it when it's
+   * actually being sent.
+   */
+  private isFormState(
+    value: ContractFormState | CreateContractPayload,
+  ): value is ContractFormState {
+    // ContractFormState always includes representativeId (even if null),
+    // and it doesn't have the 'status' or other fields of CreatedContract
+    // (though CreateContractPayload also doesn't have them).
+    // The key difference is that ContractFormState is intended to be processed
+    // by buildCreateContractPayload.
+    return 'representativeId' in value;
+  }
+
+  // ─────────── legacy mock (kept for the existing contracts UI) ───────────
 
   getAll(): Observable<Contract[]> {
     return of([...MOCK_CONTRACTS]).pipe(delay(250));
@@ -14,7 +85,7 @@ export class ContractsService {
     return of(MOCK_CONTRACTS.find((c) => c.id === id)).pipe(delay(150));
   }
 
-  create(contract: Omit<Contract, 'id'>): Observable<Contract> {
+  createMock(contract: Omit<Contract, 'id'>): Observable<Contract> {
     const newContract: Contract = { ...contract, id: `TQ-${Date.now()}` };
     MOCK_CONTRACTS.unshift(newContract);
     return of(newContract).pipe(delay(400));

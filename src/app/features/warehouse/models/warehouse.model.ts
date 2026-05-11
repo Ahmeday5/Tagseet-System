@@ -48,18 +48,53 @@ export interface WarehouseItem {
   lastUpdated: string;
 }
 
-export interface InventoryAlert {
-  id: string;
-  name: string;
-  severity: AlertSeverity;
-  currentStock: number;
-  minStock: number;
-  warehouseInfo: string;
-  supplierName?: string;
-  lastSaleDate?: string;
-  suggestedQty: number;
-  canTransfer: boolean;
-  transferSource?: string;
+// ─────────────────────────────────────────────────────────────────
+//  Live API: GET /dashboard/inventory/alerts[?level=…]
+//  Per-product stock status with per-warehouse breakdown.
+// ─────────────────────────────────────────────────────────────────
+
+/**
+ * Backend-classified stock levels. Order matches the visual urgency
+ * ladder (red → orange → yellow → green) used across the alerts UI.
+ *
+ *   OutOfStock      — totalQuantity = 0
+ *   Critical        — 1..2  (< 3)
+ *   NeedsMonitoring — 3..4  (< 5)
+ *   Sufficient      — ≥ 5
+ */
+export type InventoryAlertLevel =
+  | 'OutOfStock'
+  | 'Critical'
+  | 'NeedsMonitoring'
+  | 'Sufficient';
+
+export interface InventoryAlertWarehouseBreakdown {
+  warehouseId: number;
+  warehouseName: string;
+  quantity: number;
+}
+
+export interface InventoryAlertItem {
+  productId: number;
+  productName: string;
+  totalQuantity: number;
+  level: InventoryAlertLevel;
+  warehouseBreakdown: InventoryAlertWarehouseBreakdown[];
+}
+
+export interface InventoryAlertSummary {
+  outOfStockCount: number;
+  criticalCount: number;
+  monitoringCount: number;
+}
+
+export interface InventoryAlertsResponse {
+  summary: InventoryAlertSummary;
+  alerts: InventoryAlertItem[];
+}
+
+export interface InventoryAlertsQuery {
+  level?: InventoryAlertLevel;
 }
 
 export interface WarehouseLocation {

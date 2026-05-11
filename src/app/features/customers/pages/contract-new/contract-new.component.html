@@ -1,148 +1,414 @@
+@if (loading()) {
+  <div class="loader-container">
+    <app-loader></app-loader>
+    <p class="mt-2 text-muted">
+      جاري تحميل البيانات...
+    </p>
+  </div>
+} @else {
+
 <form [formGroup]="form" (ngSubmit)="save()" novalidate>
   <div class="row g-3">
 
     <!-- ── Right: forms ── -->
     <div class="col-12 col-lg-8">
 
+      <!-- العميل -->
       <div class="card">
         <div class="ct mb-2">بيانات العميل</div>
+
         <div class="row g-2">
+
           <div class="col-12 col-sm-6">
-            <label class="form-label">الاسم الكامل <span class="text-danger">*</span></label>
-            <input formControlName="name" type="text" class="form-control"
-              [class.is-invalid]="isInvalid('name')" placeholder="محمد العمري" />
-            @if (isInvalid('name')) { <div class="invalid-feedback">الاسم مطلوب (3 أحرف على الأقل)</div> }
+            <label class="form-label">
+              العميل
+              <span class="text-danger">*</span>
+            </label>
+
+            <select
+              formControlName="clientId"
+              class="form-select"
+              [class.is-invalid]="isInvalid('clientId')"
+            >
+              <option [ngValue]="null" disabled>
+                اختر العميل
+              </option>
+
+              @for (c of clients(); track c.id) {
+                <option [value]="c.id">
+                  {{ c.fullName }}
+                </option>
+              }
+            </select>
+
+            <app-form-error
+              [control]="form.controls.clientId"
+              label="العميل"
+            />
           </div>
+
           <div class="col-12 col-sm-6">
-            <label class="form-label">رقم الهاتف (WhatsApp) <span class="text-danger">*</span></label>
-            <input formControlName="phone" type="tel" class="form-control"
-              [class.is-invalid]="isInvalid('phone')" placeholder="05xxxxxxxx" />
-            @if (isInvalid('phone')) { <div class="invalid-feedback">أدخل رقم جوال سعودي صحيح</div> }
-          </div>
-          <div class="col-12">
-            <label class="form-label">العنوان</label>
-            <input formControlName="address" type="text" class="form-control" placeholder="المدينة، الحي، الشارع" />
-          </div>
-          <div class="col-12 col-sm-6">
-            <label class="form-label">رقم الهوية الوطنية <span class="text-danger">*</span></label>
-            <input formControlName="nationalId" type="text" class="form-control"
-              [class.is-invalid]="isInvalid('nationalId')" placeholder="10 أرقام" />
-            @if (isInvalid('nationalId')) { <div class="invalid-feedback">رقم الهوية يجب أن يكون 10 أرقام</div> }
-          </div>
-          <div class="col-12 col-sm-6">
-            <label class="form-label">المندوب المسؤول</label>
-            <select formControlName="repId" class="form-select">
-              <option value="">-- اختر --</option>
-              <option value="r1">أحمد سالم (5%)</option>
-              <option value="r2">محمد عبدالله (4%)</option>
+            <label class="form-label">
+              المندوب المسؤول
+            </label>
+
+            <select
+              formControlName="representativeId"
+              class="form-select"
+            >
+              <option [ngValue]="null">
+                بدون مندوب
+              </option>
+
+              @for (r of representatives(); track r.id) {
+                <option [value]="r.id">
+                  {{ r.fullName }}
+                </option>
+              }
             </select>
           </div>
+
         </div>
       </div>
 
+      <!-- بيانات العقد -->
       <div class="card">
-        <div class="ct mb-2">بيانات البضاعة والعقد</div>
+        <div class="ct mb-2">
+          بيانات البضاعة والعقد
+        </div>
+
         <div class="row g-2">
+
+          <!-- المنتج -->
           <div class="col-12 col-sm-6">
-            <label class="form-label">اسم البضاعة</label>
-            <input formControlName="product" type="text" class="form-control" placeholder="وصف المنتج" />
+            <label class="form-label">
+              المنتج
+              <span class="text-danger">*</span>
+            </label>
+
+            <select
+              formControlName="productId"
+              class="form-select"
+              [class.is-invalid]="isInvalid('productId')"
+            >
+              <option [ngValue]="null" disabled>
+                اختر المنتج
+              </option>
+
+              @for (p of products(); track p.id) {
+                <option [value]="p.id">
+                  {{ p.name }}
+                </option>
+              }
+            </select>
+
+            <app-form-error
+              [control]="form.controls.productId"
+              label="المنتج"
+            />
           </div>
+
+          <!-- المخزن -->
           <div class="col-12 col-sm-6">
-            <label class="form-label">تاريخ الشراء</label>
-            <input formControlName="purchaseDate" type="date" class="form-control" />
+            <label class="form-label">
+              المخزن
+              <span class="text-danger">*</span>
+            </label>
+
+            <select
+              formControlName="warehouseId"
+              class="form-select"
+              [class.is-invalid]="isInvalid('warehouseId')"
+            >
+              <option [ngValue]="null" disabled>
+                اختر المخزن
+              </option>
+
+              @for (w of warehouses(); track w.id) {
+                <option [value]="w.id">
+                  {{ w.name }}
+                </option>
+              }
+            </select>
+
+            <app-form-error
+              [control]="form.controls.warehouseId"
+              label="المخزن"
+            />
           </div>
+
+          <!-- الكمية -->
           <div class="col-12 col-sm-6">
-            <label class="form-label">سعر الشراء (ج.م)</label>
-            <input formControlName="costPrice" type="number" class="form-control" placeholder="0" min="0" />
+            <label class="form-label">
+              الكمية
+            </label>
+
+            <input
+              type="number"
+              formControlName="quantity"
+              class="form-control"
+              min="1"
+            />
           </div>
+
+          <!-- تاريخ الشراء -->
           <div class="col-12 col-sm-6">
-            <label class="form-label">سعر البيع كاش (ج.م) <span class="text-danger">*</span></label>
-            <input formControlName="cashPrice" type="number" class="form-control"
-              [class.is-invalid]="isInvalid('cashPrice')" placeholder="0" min="1" />
-            @if (isInvalid('cashPrice')) { <div class="invalid-feedback">أدخل سعراً صحيحاً</div> }
+            <label class="form-label">
+              تاريخ الشراء
+            </label>
+
+            <input
+              type="date"
+              formControlName="purchaseDate"
+              class="form-control"
+            />
           </div>
+
+          <!-- سعر الشراء -->
           <div class="col-12 col-sm-6">
-            <label class="form-label">المقدم (ج.م)</label>
-            <input formControlName="downPayment" type="number" class="form-control" placeholder="0" min="0" />
+            <label class="form-label">
+              سعر الشراء (ج.م)
+            </label>
+
+            <input
+              type="number"
+              formControlName="purchasePrice"
+              class="form-control"
+              min="0"
+            />
           </div>
+
+          <!-- سعر الكاش -->
           <div class="col-12 col-sm-6">
-            <label class="form-label">نسبة الربح %</label>
-            <input formControlName="profitRate" type="number" class="form-control" placeholder="0" step="0.5" min="0" max="100" />
+            <label class="form-label">
+              سعر البيع كاش
+            </label>
+
+            <input
+              type="number"
+              formControlName="cashPrice"
+              class="form-control"
+              min="1"
+            />
           </div>
+
+          <!-- المقدم -->
           <div class="col-12 col-sm-6">
-            <label class="form-label">نوع الدفع</label>
-            <select formControlName="installmentPeriod" class="form-select">
-              <option>أسبوعي</option>
-              <option>شهري</option>
-              <option>ربع سنوي</option>
-              <option>نصف سنوي</option>
+            <label class="form-label">
+              المقدم
+            </label>
+
+            <input
+              type="number"
+              formControlName="downPayment"
+              class="form-control"
+              min="0"
+            />
+          </div>
+
+          <!-- الربح -->
+          <div class="col-12 col-sm-6">
+            <label class="form-label">
+              نسبة الربح %
+            </label>
+
+            <input
+              type="number"
+              formControlName="profitRate"
+              class="form-control"
+              min="0"
+              max="100"
+              step="0.5"
+            />
+          </div>
+
+          <!-- دورية الدفع -->
+          <div class="col-12 col-sm-6">
+            <label class="form-label">
+              دورية الدفع
+            </label>
+
+            <select
+              formControlName="paymentFrequency"
+              class="form-select"
+            >
+              @for (f of frequencies; track f.value) {
+                <option [value]="f.value">
+                  {{ f.label }}
+                </option>
+              }
             </select>
           </div>
+
+          <!-- الأقساط -->
           <div class="col-12 col-sm-6">
-            <label class="form-label">عدد الأقساط</label>
-            <input formControlName="installmentsCount" type="number" class="form-control" min="1" max="120" />
+            <label class="form-label">
+              عدد الأقساط
+            </label>
+
+            <input
+              type="number"
+              formControlName="installmentsCount"
+              class="form-control"
+              min="1"
+            />
           </div>
+
+          <!-- أول قسط -->
           <div class="col-12 col-sm-6">
-            <label class="form-label">موعد السداد (يوم الشهر)</label>
-            <input formControlName="dueDay" type="number" class="form-control" min="1" max="31" />
+            <label class="form-label">
+              تاريخ أول قسط
+            </label>
+
+            <input
+              type="date"
+              formControlName="firstInstallmentDate"
+              class="form-control"
+            />
           </div>
+
+          <!-- الخزنة -->
           <div class="col-12 col-sm-6">
-            <label class="form-label">تاريخ أول قسط</label>
-            <input formControlName="firstInstallmentDate" type="date" class="form-control" />
+            <label class="form-label">
+              الخزنة
+            </label>
+
+            <select
+              formControlName="treasuryId"
+              class="form-select"
+            >
+              <option [ngValue]="null" disabled>
+                اختر الخزنة
+              </option>
+
+              @for (t of treasuries(); track t.id) {
+                <option [value]="t.id">
+                  {{ t.name }}
+                </option>
+              }
+            </select>
           </div>
+
+          <!-- ملاحظات -->
           <div class="col-12">
-            <label class="form-label">ملاحظات</label>
-            <textarea formControlName="notes" class="form-control" rows="2" placeholder="أي ملاحظات على العقد..."></textarea>
+            <label class="form-label">
+              ملاحظات
+            </label>
+
+            <textarea
+              formControlName="notes"
+              class="form-control"
+              rows="2"
+            ></textarea>
           </div>
+
         </div>
       </div>
 
     </div>
 
-    <!-- ── Left: summary ── -->
+    <!-- Summary -->
     <div class="col-12 col-lg-4">
       <div class="card" style="position:sticky;top:0">
-        <div class="ct mb-2">ملخص العقد المحسوب</div>
+
+        <div class="ct mb-2">
+          ملخص العقد المحسوب
+        </div>
+
         <div class="cr">
           <span>سعر البيع كاش</span>
-          <span>{{ summary().cashPrice | currencyAr }}</span>
+          <span>
+            {{ summary().cashPrice | currencyAr }}
+          </span>
         </div>
+
         <div class="cr">
           <span>المقدم</span>
-          <span>{{ summary().downPayment | currencyAr }}</span>
+          <span>
+            {{ summary().downPayment | currencyAr }}
+          </span>
         </div>
+
         <div class="cr">
           <span>الإجمالي بعد المقدم</span>
-          <span>{{ summary().afterDown | currencyAr }}</span>
+          <span>
+            {{ summary().afterDown | currencyAr }}
+          </span>
         </div>
+
         <div class="cr">
-          <span>مبلغ الربح ({{ summary().profitRate }}%)</span>
-          <span>{{ summary().profitAmount | currencyAr }}</span>
+          <span>
+            مبلغ الربح
+            ({{ summary().profitRate }}%)
+          </span>
+
+          <span>
+            {{ summary().profitAmount | currencyAr }}
+          </span>
         </div>
+
         <div class="ct2">
           <span>إجمالي البيع بالأقساط</span>
-          <span>{{ summary().totalAmount | currencyAr }}</span>
+
+          <span>
+            {{ summary().totalAmount | currencyAr }}
+          </span>
         </div>
+
         <div class="ci">
-          <span>القسط {{ summary().period }} × {{ summary().count }}</span>
-          <span>{{ summary().installmentAmt | currencyAr }}</span>
+          <span>
+            القسط × {{ summary().count }}
+          </span>
+
+          <span>
+            {{ summary().installmentAmt | currencyAr }}
+          </span>
         </div>
+
         <hr class="my-2">
+
         <div class="cr" style="background:var(--gr-l)">
-          <span style="color:var(--gr)">هامش الربح التقديري</span>
-          <span style="color:var(--gr)">{{ summary().marginProfit | currencyAr }}</span>
+          <span style="color:var(--gr)">
+            هامش الربح التقديري
+          </span>
+
+          <span style="color:var(--gr)">
+            {{ summary().marginProfit | currencyAr }}
+          </span>
         </div>
+
         <div class="d-flex gap-2 mt-3">
-          <button type="submit" class="btn btn-bl flex-fill" [disabled]="isSaving()">
-            {{ isSaving() ? 'جاري الحفظ...' : 'حفظ وطباعة PDF' }}
+
+          <button
+            type="submit"
+            class="btn btn-bl flex-fill"
+            [disabled]="isSaving() || form.invalid"
+          >
+            @if (isSaving()) {
+              <span class="spinner-border spinner-border-sm me-1"></span>
+            }
+
+            {{
+              isSaving()
+                ? 'جاري الحفظ...'
+                : 'حفظ العقد'
+            }}
           </button>
-          <button type="button" class="btn" (click)="reset()">مسح</button>
+
+          <button
+            type="button"
+            class="btn"
+            (click)="reset()"
+          >
+            مسح
+          </button>
+
         </div>
-        <button type="button" class="btn btn-wa w-100 mt-2">
-          📱 إرسال نسخة WhatsApp للعميل
-        </button>
+
       </div>
     </div>
 
   </div>
 </form>
+
+}

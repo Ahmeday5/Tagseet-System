@@ -57,3 +57,82 @@ export interface SuppliersListResponse {
   summary: SuppliersSummary;
   items: PagedResponse<Supplier>;
 }
+
+// ─────────────────────────────────────────────────────────────────
+//  Live API: GET /dashboard/suppliers/{id}/statement
+//  Per-supplier account statement with optional date range +
+//  `includeDrafts` toggle. Backend reuses purchase-invoice statuses
+//  (Draft / Pending / PartiallyPaid / Paid / Confirmed / Cancelled).
+// ─────────────────────────────────────────────────────────────────
+
+/** Status values returned on `StatementInvoice`. Mirrors the invoices feature. */
+export type SupplierStatementInvoiceStatus =
+  | 'Draft'
+  | 'Pending'
+  | 'PartiallyPaid'
+  | 'Paid'
+  | 'Confirmed'
+  | 'Cancelled';
+
+export interface SupplierStatementQuery {
+  /** ISO date (YYYY-MM-DD) — inclusive lower bound. */
+  from?: string;
+  /** ISO date (YYYY-MM-DD) — inclusive upper bound. */
+  to?: string;
+  /** Include `Draft` invoices in the response. Defaults to `false` server-side. */
+  includeDrafts?: boolean;
+}
+
+/** Trimmed supplier projection embedded in the statement payload. */
+export interface SupplierStatementParty {
+  id: number;
+  fullName: string;
+  phoneNumber: string;
+  address: string;
+}
+
+/** Resolved period — `null` on both ends when the request omitted the filter. */
+export interface SupplierStatementPeriod {
+  from: string | null;
+  to: string | null;
+}
+
+export interface SupplierStatementSummary {
+  invoicesCount: number;
+  totalPurchases: number;
+  totalPaid: number;
+  totalRemaining: number;
+  firstSupplyDate: string | null;
+  lastSupplyDate: string | null;
+}
+
+export interface SupplierStatementItem {
+  productId: number;
+  productName: string;
+  quantity: number;
+  unitPrice: number;
+  discountPercent: number;
+  lineTotal: number;
+}
+
+export interface SupplierStatementInvoice {
+  id: number;
+  invoiceNumber: string;
+  invoiceDate: string;
+  dueDate: string;
+  status: SupplierStatementInvoiceStatus;
+  subtotal: number;
+  discountAmount: number;
+  taxAmount: number;
+  totalAmount: number;
+  paidAmount: number;
+  remainingAmount: number;
+  items: SupplierStatementItem[];
+}
+
+export interface SupplierStatement {
+  supplier: SupplierStatementParty;
+  period: SupplierStatementPeriod;
+  summary: SupplierStatementSummary;
+  invoices: SupplierStatementInvoice[];
+}

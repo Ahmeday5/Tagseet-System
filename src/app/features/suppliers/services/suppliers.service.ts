@@ -14,11 +14,14 @@ import {
   CreateSupplierPayload,
   Supplier,
   SuppliersListResponse,
+  SupplierStatement,
+  SupplierStatementQuery,
   UpdateSupplierPayload,
 } from '../models/supplier.model';
 
 const SUPPLIERS_CACHE_KEY = 'suppliers';
 const SUPPLIERS_TTL_MS = 5 * 60 * 1000; // 5 min — list churns whenever a supplier is added/edited
+const STATEMENT_TTL_MS = 60 * 1000; // 1 min — figures move with every payment/draft
 /**
  * Page size used by callers that want a flat list (e.g. dropdowns inside
  * the invoice form). Large enough to cover all realistic catalogs without
@@ -66,6 +69,52 @@ export class SuppliersService {
     return this.api.get<Supplier>(API_ENDPOINTS.suppliers.byId(id), {
       context: withCache({ ttlMs: SUPPLIERS_TTL_MS }),
     });
+  }
+
+  // ─────────── account statement ───────────
+
+  /**
+   * Per-supplier account statement. Filter window is inclusive on both
+   * ends; omitting both `from` and `to` returns the entire history.
+   *
+   * `includeDrafts` defaults to `false` on the server; we pass it
+   * through verbatim so the URL stays explicit about intent.
+   */
+  statement(
+    id: number,
+    query: SupplierStatementQuery = {},
+  ): Observable<SupplierStatement> {
+    return this.api.get<SupplierStatement>(
+      API_ENDPOINTS.suppliers.statement(id),
+      {
+        params: this.toStatementParams(query),
+        context: withCache({ ttlMs: STATEMENT_TTL_MS }),
+      },
+    );
+  }
+
+  /** User-driven refresh — bypasses the in-memory cache. */
+  refreshStatement(
+    id: number,
+    query: SupplierStatementQuery = {},
+  ): Observable<SupplierStatement> {
+    return this.api.get<SupplierStatement>(
+      API_ENDPOINTS.suppliers.statement(id),
+      {
+        params: this.toStatementParams(query),
+        context: withCacheBypass(withCache({ ttlMs: STATEMENT_TTL_MS })),
+      },
+    );
+  }
+
+  private toStatementParams(
+    query: SupplierStatementQuery,
+  ): Record<string, unknown> {
+    return {
+      from: query.from || undefined,
+      to: query.to || undefined,
+      includeDrafts: query.includeDrafts ?? false,
+    };
   }
 
   // ─────────── writes ───────────

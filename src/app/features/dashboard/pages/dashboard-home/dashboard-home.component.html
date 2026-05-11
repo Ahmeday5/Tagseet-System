@@ -13,6 +13,86 @@
   </div>
 </div>
 
+<!-- ── الفصل المالي (Financial Separation) ── -->
+<section class="fs-block">
+  <header class="fs-block-head">
+    <div>
+      <div class="fs-block-title">الفصل المالي</div>
+      <div class="fs-block-sub">صورة لحظية للوضع المالي بين الأصول والالتزامات</div>
+    </div>
+    <button
+      type="button"
+      class="btn btn-sm d-inline-flex align-items-center gap-1"
+      [disabled]="financialLoading()"
+      (click)="refreshFinancial()"
+    >
+      @if (financialLoading()) {
+        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+      }
+      <span>تحديث</span>
+    </button>
+  </header>
+
+  @if (financial(); as f) {
+    <div class="fs-net" [class.fs-net--neg]="f.netFinancialPosition < 0">
+      <div>
+        <div class="fs-net-label">صافي المركز المالي</div>
+        <div class="fs-net-value">{{ f.netFinancialPosition | currencyAr: true }}</div>
+      </div>
+      @if (coverageRatio(); as ratio) {
+        <div class="fs-coverage">
+          <div class="fs-coverage-label">تغطية الالتزامات</div>
+          <div
+            class="fs-coverage-value"
+            [class.fs-coverage-value--bad]="ratio < 1"
+          >×{{ ratio.toFixed(2) }}</div>
+        </div>
+      }
+    </div>
+
+    <div class="fs-grid">
+      <div class="fs-tile fs-tile--treasury">
+        <div class="fs-tile-icon" aria-hidden="true">💼</div>
+        <div class="fs-tile-body">
+          <div class="fs-tile-label">الخزينة</div>
+          <div class="fs-tile-value">{{ f.treasury | currencyAr: true }}</div>
+        </div>
+      </div>
+
+      <div class="fs-tile fs-tile--receivable">
+        <div class="fs-tile-icon" aria-hidden="true">📥</div>
+        <div class="fs-tile-body">
+          <div class="fs-tile-label">مستحقات لنا</div>
+          <div class="fs-tile-value">{{ f.receivables | currencyAr: true }}</div>
+        </div>
+      </div>
+
+      <div class="fs-tile fs-tile--inventory">
+        <div class="fs-tile-icon" aria-hidden="true">📦</div>
+        <div class="fs-tile-body">
+          <div class="fs-tile-label">قيمة المخزون</div>
+          <div class="fs-tile-value">{{ f.inventoryValue | currencyAr: true }}</div>
+        </div>
+      </div>
+
+      <div class="fs-tile fs-tile--payable">
+        <div class="fs-tile-icon" aria-hidden="true">📤</div>
+        <div class="fs-tile-body">
+          <div class="fs-tile-label">مستحقات علينا</div>
+          <div class="fs-tile-value">{{ f.payables | currencyAr: true }}</div>
+        </div>
+      </div>
+    </div>
+  } @else if (financialLoading()) {
+    <div class="fs-loading">
+      <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+      <span>جاري تحميل الفصل المالي...</span>
+    </div>
+  } @else {
+    <div class="fs-empty">تعذّر تحميل الفصل المالي.</div>
+  }
+</section>
+
 @if (data()) {
 <!-- إحصائيات عامة -->
 <div class="row row-cols-lg-6 row-cols-md-3 row-cols-2 g-2 mb-3">

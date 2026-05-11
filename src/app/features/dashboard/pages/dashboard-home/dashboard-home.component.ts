@@ -10,9 +10,13 @@ import {
 import { RouterLink } from '@angular/router';
 import { DashboardService } from '../../services/dashboard.service';
 import { DashboardData } from '../../models/dashboard.model';
+import { FinancialService } from '../../services/financial.service';
+import { FinancialSeparation } from '../../models/financial.model';
 import { StatCardComponent } from '../../../../shared/components/stat-card/stat-card.component';
 import { CurrencyArPipe } from '../../../../shared/pipes/currency-ar.pipe';
 import { ToastService } from '../../../../core/services/toast.service';
+import { HttpCacheService } from '../../../../core/services/http-cache.service';
+import { onInvalidate } from '../../../../core/utils/auto-refresh.util';
 import { computed } from '@angular/core';
 import { BadgeComponent } from '../../../../shared/components/badge/badge.component';
 import { TableColumn } from '../../../../shared/components/data-table/data-table.component';
@@ -27,8 +31,16 @@ import { TableColumn } from '../../../../shared/components/data-table/data-table
 })
 export class DashboardHomeComponent implements OnInit {
   private readonly dashService = inject(DashboardService);
+  private readonly financialService = inject(FinancialService);
   private readonly toast = inject(ToastService);
+  private readonly cache = inject(HttpCacheService);
+
   protected readonly data = signal<DashboardData | null>(null);
+
+  // ── financial-separation block ──
+  protected readonly financial = signal<FinancialSeparation | null>(null);
+  protected readonly financialLoading = signal(false);
+
   @ViewChild('ratingTpl') ratingTpl!: TemplateRef<any>;
   @ViewChild('statusTpl') statusTpl!: TemplateRef<any>;
 
@@ -36,11 +48,63 @@ export class DashboardHomeComponent implements OnInit {
   readonly profitChart = computed(() => this.data()?.profitChart ?? []);
   readonly topCustomers = computed(() => this.data()?.topCustomers ?? []);
 
+  /**
+   * `treasury + receivables + inventoryValue` — the gross side of the
+   * net position equation. Surfaced as a single derived number so the
+   * UI can show payables side-by-side with what backs them.
+   */
+  readonly totalAssets = computed(() => {
+    const f = this.financial();
+    if (!f) return 0;
+    return (f.treasury ?? 0) + (f.receivables ?? 0) + (f.inventoryValue ?? 0);
+  });
+
+  /**
+   * `assets / payables` ratio — anything < 1 means short-term liabilities
+   * exceed what's available to cover them. Returns `null` when there are
+   * no payables at all (the ratio is undefined).
+   */
+  readonly coverageRatio = computed(() => {
+    const f = this.financial();
+    if (!f || !f.payables) return null;
+    return this.totalAssets() / f.payables;
+  });
+
+  constructor() {
+    // Refresh the financial block whenever an invoice / treasury /
+    // payment mutation invalidates anything financial — keeps the
+    // hero numbers honest across the rest of the app.
+    onInvalidate(this.cache, 'treasur', () => this.loadFinancial(true));
+    onInvalidate(this.cache, 'invoice', () => this.loadFinancial(true));
+    onInvalidate(this.cache, 'payment', () => this.loadFinancial(true));
+  }
+
   ngOnInit(): void {
     this.dashService.getDashboardData().subscribe({
       next: (d) => this.data.set(d),
       error: () => this.toast.error('فشل تحميل بيانات لوحة التحكم'),
     });
+    this.loadFinancial(false);
+  }
+
+  private loadFinancial(force: boolean): void {
+    this.financialLoading.set(true);
+    const stream$ = force
+      ? this.financialService.refreshSeparation()
+      : this.financialService.separation();
+    stream$.subscribe({
+      next: (f) => {
+        this.financial.set(f);
+        this.financialLoading.set(false);
+      },
+      error: () => {
+        this.financialLoading.set(false);
+      },
+    });
+  }
+
+  protected refreshFinancial(): void {
+    this.loadFinancial(true);
   }
 
   ngAfterViewInit() {

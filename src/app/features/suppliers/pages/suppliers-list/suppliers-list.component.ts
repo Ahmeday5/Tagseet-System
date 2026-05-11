@@ -13,6 +13,7 @@ import {
   SuppliersSummary,
 } from '../../models/supplier.model';
 import { SupplierFormModalComponent } from '../../components/supplier-form-modal/supplier-form-modal.component';
+import { SupplierStatementModalComponent } from '../../components/supplier-statement-modal/supplier-statement-modal.component';
 import { PaginationComponent } from '../../../../shared/components/pagination/pagination.component';
 import { CurrencyArPipe } from '../../../../shared/pipes/currency-ar.pipe';
 import { FormMode } from '../../../../shared/models/form-mode.model';
@@ -39,6 +40,7 @@ const DEFAULT_PAGE_SIZE = 10;
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     SupplierFormModalComponent,
+    SupplierStatementModalComponent,
     PaginationComponent,
     CurrencyArPipe,
   ],
@@ -69,6 +71,10 @@ export class SuppliersListComponent implements OnInit {
   protected readonly modalOpen     = signal(false);
   protected readonly modalMode     = signal<FormMode>('create');
   protected readonly modalSupplier = signal<Supplier | null>(null);
+
+  // ── statement modal state ──
+  protected readonly statementOpen     = signal(false);
+  protected readonly statementSupplier = signal<Supplier | null>(null);
 
   /** Tracks which row is currently being deleted, for inline button state. */
   protected readonly deletingId = signal<number | null>(null);
@@ -177,6 +183,15 @@ export class SuppliersListComponent implements OnInit {
 
   protected closeModal(): void {
     this.modalOpen.set(false);
+  }
+
+  protected openStatement(supplier: Supplier): void {
+    this.statementSupplier.set(supplier);
+    this.statementOpen.set(true);
+  }
+
+  protected closeStatement(): void {
+    this.statementOpen.set(false);
   }
 
   protected onSaved(saved: Supplier): void {

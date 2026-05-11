@@ -1,52 +1,162 @@
 import {
-  ChangeDetectionStrategy, Component, computed, inject, OnInit, signal,
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  DestroyRef,
+  inject,
+  OnInit,
+  signal,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { ToastService } from '../../../../core/services/toast.service';
-import { WarehouseService } from '../../services/warehouse.service';
-import { AlertSeverity, InventoryAlert } from '../../models/warehouse.model';
+import { DecimalPipe } from '@angular/common';
+import { InventoryService } from '../../services/inventory.service';
+import {
+  InventoryAlertItem,
+  InventoryAlertLevel,
+  InventoryAlertSummary,
+} from '../../models/warehouse.model';
+import {
+  INVENTORY_LEVEL_META,
+  INVENTORY_LEVEL_ORDER,
+  InventoryLevelMeta,
+} from '../../constants/inventory-alert-levels';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+
+const EMPTY_SUMMARY: InventoryAlertSummary = {
+  outOfStockCount: 0,
+  criticalCount: 0,
+  monitoringCount: 0,
+};
 
 @Component({
   selector: 'app-inv-alerts',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink],
+  imports: [RouterLink, DecimalPipe],
   templateUrl: './inv-alerts.component.html',
   styleUrl: './inv-alerts.component.scss',
 })
 export class InvAlertsComponent implements OnInit {
-  private readonly svc   = inject(WarehouseService);
-  private readonly toast = inject(ToastService);
+  private readonly svc = inject(InventoryService);
+  private readonly destroyRef = inject(DestroyRef);
 
-  protected readonly alerts = signal<InventoryAlert[]>([]);
+  // ── data ──
+  protected readonly alerts = signal<InventoryAlertItem[]>([]);
+  protected readonly summary = signal<InventoryAlertSummary>(EMPTY_SUMMARY);
+  protected readonly loading = signal(false);
+  protected readonly error = signal<string | null>(null);
 
-  protected readonly outCount      = computed(() => this.alerts().filter(a => a.severity === 'out').length);
-  protected readonly criticalCount = computed(() => this.alerts().filter(a => a.severity === 'critical').length);
-  protected readonly lowCount      = computed(() => this.alerts().filter(a => a.severity === 'low').length);
+  // ── filters ──
+  /** `null` = no level filter applied (show everything). */
+  protected readonly levelFilter = signal<InventoryAlertLevel | null>(null);
+  protected readonly search = signal('');
+
+  // ── meta exposed to the template ──
+  protected readonly levelOrder = INVENTORY_LEVEL_ORDER;
+  protected readonly levelMeta = INVENTORY_LEVEL_META;
+
+  // ── derived ──
+  protected readonly hasResults = computed(
+    () => this.filteredAlerts().length > 0,
+  );
+  protected readonly hasSearch = computed(
+    () => this.search().trim().length > 0,
+  );
+
+  /** Total of all alert items regardless of level — for the "الكل" chip. */
+  protected readonly totalCount = computed(() => this.alerts().length);
+
+  /** Search applied client-side over the level-filtered server response. */
+  protected readonly filteredAlerts = computed(() => {
+    const term = this.search().trim().toLowerCase();
+    if (!term) return this.alerts();
+    return this.alerts().filter((a) => {
+      if (a.productName.toLowerCase().includes(term)) return true;
+      return a.warehouseBreakdown.some((w) =>
+        w.warehouseName.toLowerCase().includes(term),
+      );
+    });
+  });
+
+  /** Net stock value across the visible rows — surfaces blast radius at a glance. */
+  protected readonly totalQuantity = computed(() =>
+    this.filteredAlerts().reduce((sum, a) => sum + a.totalQuantity, 0),
+  );
 
   ngOnInit(): void {
-    this.svc.getInventoryAlerts().subscribe(a => this.alerts.set(a));
+    this.fetch(undefined, false);
   }
 
-  protected requestOrder(alert: InventoryAlert): void {
-    this.toast.success(`تم إنشاء طلب توريد لـ ${alert.name} (${alert.suggestedQty} وحدة)`);
+  // ─────────── data loading ───────────
+
+  private fetch(level: InventoryAlertLevel | undefined, force: boolean): void {
+    this.loading.set(true);
+    this.error.set(null);
+
+    const stream$ = force
+      ? this.svc.refreshAlerts({ level })
+      : this.svc.alerts({ level });
+
+    stream$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: (res) => {
+        this.alerts.set(res.alerts);
+        this.summary.set(res.summary);
+        this.loading.set(false);
+      },
+      error: () => {
+        this.alerts.set([]);
+        this.summary.set(EMPTY_SUMMARY);
+        this.error.set('تعذّر تحميل تنبيهات المخزون. حاول مجددًا.');
+        this.loading.set(false);
+      },
+    });
   }
 
-  protected requestTransfer(alert: InventoryAlert): void {
-    this.toast.info(`تم طلب تحويل من مخزن ${alert.transferSource} لـ ${alert.name}`);
+  // ─────────── filter handlers ───────────
+
+  protected selectLevel(level: InventoryAlertLevel | null): void {
+    if (this.levelFilter() === level) return;
+
+    this.levelFilter.set(level);
+
+    this.fetch(level ?? undefined, false);
   }
 
-  protected notifyManager(alert: InventoryAlert): void {
-    this.toast.success(`تم إرسال تنبيه WhatsApp للمدير عن ${alert.name}`);
+  protected onSearch(value: string): void {
+    this.search.set(value);
   }
 
-  protected cardClass(severity: AlertSeverity): string {
-    const map: Record<AlertSeverity, string> = {
-      out:      'inv-alert-card inv-alert-critical',
-      critical: 'inv-alert-card inv-alert-low',
-      low:      'inv-alert-card inv-alert-low',
-      ok:       'inv-alert-card inv-alert-ok',
-    };
-    return map[severity];
+  protected clearSearch(): void {
+    if (!this.search()) return;
+    this.search.set('');
+  }
+
+  protected refresh(): void {
+    this.fetch(this.levelFilter() ?? undefined, true);
+  }
+
+  // ─────────── view helpers ───────────
+
+  protected metaFor(level: InventoryAlertLevel): InventoryLevelMeta {
+    return this.levelMeta[level];
+  }
+
+  /** Count by level — drives the chip badges. */
+  protected countFor(level: InventoryAlertLevel): number {
+    const s = this.summary();
+    switch (level) {
+      case 'OutOfStock':
+        return s.outOfStockCount;
+      case 'Critical':
+        return s.criticalCount;
+      case 'NeedsMonitoring':
+        return s.monitoringCount;
+      case 'Sufficient':
+        // Summary endpoint doesn't expose this; fall back to a client count
+        // when the Sufficient chip is active so the badge isn't empty.
+        return this.levelFilter() === 'Sufficient'
+          ? this.alerts().filter((a) => a.level === 'Sufficient').length
+          : 0;
+    }
   }
 }

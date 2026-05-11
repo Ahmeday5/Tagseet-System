@@ -6,7 +6,6 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { RouterLink } from '@angular/router';
 
 import { CustomersService } from '../../services/customers.service';
 import {
@@ -15,7 +14,10 @@ import {
   DashboardClientStatus,
 } from '../../models/dashboard-client.model';
 import { CustomerFormComponent } from '../../components/customer-form/customer-form.component';
-import { BadgeComponent, BadgeType } from '../../../../shared/components/badge/badge.component';
+import {
+  BadgeComponent,
+  BadgeType,
+} from '../../../../shared/components/badge/badge.component';
 import { PaginationComponent } from '../../../../shared/components/pagination/pagination.component';
 import { CurrencyArPipe } from '../../../../shared/pipes/currency-ar.pipe';
 import { ApiError } from '../../../../core/models/api-response.model';
@@ -26,22 +28,11 @@ import { onInvalidate } from '../../../../core/utils/auto-refresh.util';
 const DEFAULT_PAGE_SIZE = 10;
 const SEARCH_DEBOUNCE_MS = 300;
 
-/**
- * Installments clients index — server-paginated against
- * `GET /dashboard/clients`.
- *
- *   - debounced search (name / phone / address)
- *   - "overdue only" toggle (`onlyOverdue=true` query)
- *   - server-side pagination via `<app-pagination>`
- *   - quick-create modal stays on top of the legacy mock service for now;
- *     a successful save triggers a force-refresh of the live list
- */
 @Component({
   selector: 'app-customers-list',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    RouterLink,
     BadgeComponent,
     PaginationComponent,
     CurrencyArPipe,
@@ -52,22 +43,22 @@ const SEARCH_DEBOUNCE_MS = 300;
 })
 export class CustomersListComponent {
   private readonly service = inject(CustomersService);
-  private readonly toast   = inject(ToastService);
-  private readonly cache   = inject(HttpCacheService);
+  private readonly toast = inject(ToastService);
+  private readonly cache = inject(HttpCacheService);
 
   // ── data ──
-  protected readonly clients             = signal<DashboardClient[]>([]);
+  protected readonly clients = signal<DashboardClient[]>([]);
   protected readonly overdueClientsCount = signal(0);
-  protected readonly loading             = signal(false);
+  protected readonly loading = signal(false);
 
   // ── filters ──
-  protected readonly searchTerm  = signal('');
+  protected readonly searchTerm = signal('');
   protected readonly onlyOverdue = signal(false);
-  protected readonly pageIndex   = signal(1);
-  protected readonly pageSize    = signal(DEFAULT_PAGE_SIZE);
+  protected readonly pageIndex = signal(1);
+  protected readonly pageSize = signal(DEFAULT_PAGE_SIZE);
 
   // ── server pagination meta ──
-  protected readonly count      = signal(0);
+  protected readonly count = signal(0);
   protected readonly totalPages = signal(0);
 
   // ── modal ──
@@ -182,9 +173,9 @@ export class CustomersListComponent {
 
   protected statusLabel(status: DashboardClientStatus): string {
     const map: Record<DashboardClientStatus, string> = {
-      New:             'جديد',
-      OnTrack:         'منتظم',
-      OneOverdue:      'متأخر قسط',
+      New: 'جديد',
+      OnTrack: 'منتظم',
+      OneOverdue: 'متأخر قسط',
       MultipleOverdue: 'متأخر',
     };
     return map[status] ?? status;
@@ -192,9 +183,9 @@ export class CustomersListComponent {
 
   protected statusBadge(status: DashboardClientStatus): BadgeType {
     const map: Record<DashboardClientStatus, BadgeType> = {
-      New:             'info',
-      OnTrack:         'ok',
-      OneOverdue:      'warn',
+      New: 'info',
+      OnTrack: 'ok',
+      OneOverdue: 'warn',
       MultipleOverdue: 'bad',
     };
     return map[status] ?? 'info';
@@ -202,7 +193,10 @@ export class CustomersListComponent {
 
   protected ratingLabel(rating: DashboardClientRating): string {
     const map: Record<DashboardClientRating, string> = {
-      A: 'ممتاز', B: 'جيد', C: 'متوسط', D: 'ضعيف',
+      A: 'ممتاز',
+      B: 'جيد',
+      C: 'متوسط',
+      D: 'ضعيف',
     };
     return map[rating];
   }
@@ -210,13 +204,13 @@ export class CustomersListComponent {
   protected paymentFrequencyLabel(freq: string | null): string {
     if (!freq) return '—';
     const map: Record<string, string> = {
-      Monthly:     'شهري',
-      Weekly:      'أسبوعي',
-      Quarterly:   'ربع سنوي',
-      SemiAnnual:  'نصف سنوي',
-      SemiAnnually:'نصف سنوي',
-      Annual:      'سنوي',
-      Annually:    'سنوي',
+      Monthly: 'شهري',
+      Weekly: 'أسبوعي',
+      Quarterly: 'ربع سنوي',
+      SemiAnnual: 'نصف سنوي',
+      SemiAnnually: 'نصف سنوي',
+      Annual: 'سنوي',
+      Annually: 'سنوي',
     };
     return map[freq] ?? freq;
   }
@@ -225,17 +219,44 @@ export class CustomersListComponent {
   protected progressPercent(progress: string | null): number {
     if (!progress) return 0;
     const [paid, total] = progress.split('/').map((n) => Number(n));
-    if (!Number.isFinite(paid) || !Number.isFinite(total) || total <= 0) return 0;
+    if (!Number.isFinite(paid) || !Number.isFinite(total) || total <= 0)
+      return 0;
     return Math.min(100, Math.round((paid / total) * 100));
   }
 
   protected progressColor(status: DashboardClientStatus): string {
     const map: Record<DashboardClientStatus, string> = {
-      New:             'var(--bl)',
-      OnTrack:         'var(--gr)',
-      OneOverdue:      'var(--am)',
+      New: 'var(--bl)',
+      OnTrack: 'var(--gr)',
+      OneOverdue: 'var(--am)',
       MultipleOverdue: 'var(--re)',
     };
     return map[status] ?? 'var(--bl)';
+  }
+
+  protected openWhatsApp(phone: string | null): void {
+    if (!phone) {
+      this.toast.error('رقم الهاتف غير متوفر');
+      return;
+    }
+
+    // remove spaces, dashes, parentheses...etc
+    let normalized = phone.replace(/\D/g, '');
+
+    // Convert Egyptian local format to international
+    // 01012345678 -> 201012345678
+    if (normalized.startsWith('0')) {
+      normalized = `2${normalized}`;
+    }
+
+    // sanity check
+    if (normalized.length < 11) {
+      this.toast.error('رقم الهاتف غير صالح');
+      return;
+    }
+
+    const url = `https://wa.me/${normalized}`;
+
+    window.open(url, '_blank', 'noopener,noreferrer');
   }
 }

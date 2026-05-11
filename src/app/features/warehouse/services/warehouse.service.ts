@@ -3,7 +3,6 @@ import { Observable, of } from 'rxjs';
 import { delay } from 'rxjs/operators';
 import {
   CreateWarehousePayload,
-  InventoryAlert,
   UpdateWarehousePayload,
   Warehouse,
   WarehouseDetailItem,
@@ -164,10 +163,6 @@ export class WarehouseService {
       MOCK_DETAIL_ITEMS.filter((i) => i.warehouseId === warehouseId),
     ).pipe(delay(200));
   }
-
-  getInventoryAlerts(): Observable<InventoryAlert[]> {
-    return of([...MOCK_INVENTORY_ALERTS]).pipe(delay(200));
-  }
 }
 
 const MOCK_ITEMS: WarehouseItem[] = [
@@ -182,34 +177,6 @@ const MOCK_LOCATIONS: WarehouseLocation[] = [
   { id: '1', name: 'مخزن الرياض',  city: 'الرياض',  colorVar: '--te', purchased: 120, sold: 98,  available: 22, capacity: 50,  totalValue: 285000, profit: 42000 },
   { id: '2', name: 'مخزن جدة',    city: 'جدة',     colorVar: '--pu', purchased: 80,  sold: 61,  available: 19, capacity: 40,  totalValue: 190000, profit: 28500 },
   { id: '3', name: 'مخزن الدمام', city: 'الدمام',  colorVar: '--am', purchased: 55,  sold: 38,  available: 17, capacity: 30,  totalValue: 125000, profit: 18000 },
-];
-
-const MOCK_INVENTORY_ALERTS: InventoryAlert[] = [
-  {
-    id: '1', name: 'شاشة Samsung 55"', severity: 'out',
-    currentStock: 0, minStock: 2,
-    warehouseInfo: 'المخازن الثلاثة: 0 وحدة — آخر بيعة: 3 مارس',
-    supplierName: 'إلكترونيات الخليج',
-    suggestedQty: 10, canTransfer: false,
-  },
-  {
-    id: '2', name: 'iPhone 15 Pro', severity: 'critical',
-    currentStock: 1, minStock: 5,
-    warehouseInfo: 'مخزن الرياض: 1 وحدة — نقطة إعادة الطلب: 5 وحدات — آخر بيع: 5 وحدات / شهر',
-    suggestedQty: 10, canTransfer: false,
-  },
-  {
-    id: '3', name: 'مخزن الدمام', severity: 'low',
-    currentStock: 2, minStock: 10,
-    warehouseInfo: 'جميع الأصناف: 2 وحدة فقط — يحتاج تجديد شامل',
-    suggestedQty: 15, canTransfer: true, transferSource: 'الرياض',
-  },
-  {
-    id: '4', name: 'Samsung Galaxy S25', severity: 'ok',
-    currentStock: 8, minStock: 3,
-    warehouseInfo: 'الرياض: 5 وحدات | جدة: 3 وحدات — فوق نقطة إعادة الطلب',
-    suggestedQty: 0, canTransfer: false,
-  },
 ];
 
 const MOCK_DETAIL_ITEMS: WarehouseDetailItem[] = [

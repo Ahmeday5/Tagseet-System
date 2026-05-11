@@ -1,94 +1,181 @@
+<!-- ── PAGE HEADER ── -->
 <div class="pgh">
   <div>
     <div class="pgt">تنبيهات المخزون</div>
-    <div class="pgs">تنبيه تلقائي عند نفاد الأصناف أو اقترابها من الحد الأدنى</div>
+    <div class="pgs">رؤية لحظية للأصناف منخفضة الكمية مع تفصيل لكل مخزن</div>
   </div>
-  <a class="btn btn-sm btn-bl" routerLink="/invoices/new">إنشاء فاتورة مشتريات</a>
-</div>
-
-<!-- إحصائيات -->
-<div class="row row-cols-1 row-cols-md-3 g-2 mb-3">
-  <div class="col">
-    <div class="sc">
-      <div class="sc-l">أصناف نفدت</div>
-      <div class="sc-v" style="color:var(--re)">{{ outCount() }}</div>
-      <div class="sc-s" style="color:var(--re)">شاشة Samsung</div>
-    </div>
-  </div>
-  <div class="col">
-    <div class="sc">
-      <div class="sc-l">أصناف حرجة (أقل من 3)</div>
-      <div class="sc-v" style="color:var(--am)">{{ criticalCount() }}</div>
-      <div class="sc-s">iPhone 15، مخزن الدمام</div>
-    </div>
-  </div>
-  <div class="col">
-    <div class="sc">
-      <div class="sc-l">أصناف تحتاج مراقبة</div>
-      <div class="sc-v" style="color:var(--bl)">{{ lowCount() }}</div>
-      <div class="sc-s">أقل من 5 وحدات</div>
-    </div>
+  <div class="d-flex gap-2">
+    <button type="button" class="btn btn-sm d-inline-flex align-items-center gap-1" [disabled]="loading()"
+      (click)="refresh()">
+      @if (loading()) {
+      <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+      }
+      <span>تحديث</span>
+    </button>
+    <a class="btn btn-sm btn-bl" routerLink="/invoices/new">+ فاتورة مشتريات</a>
   </div>
 </div>
 
-<!-- بطاقات التنبيه -->
-@for (alert of alerts(); track alert.id) {
-  <div [class]="cardClass(alert.severity)">
-    <!-- أيقونة التنبيه -->
-    <div class="alert-icon" [class]="'alert-icon-' + (alert.severity === 'out' ? 're' : alert.severity === 'ok' ? 'gr' : 'am')">
-      @if (alert.severity === 'out') {
-        <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-          <path d="M11 2L2 20h18L11 2z" stroke="#fff" stroke-width="1.6"/>
-          <path d="M11 9v4.5" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/>
-          <circle cx="11" cy="16.5" r="1" fill="#fff"/>
-        </svg>
-      } @else if (alert.severity === 'ok') {
-        <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-          <path d="M5 11l5 5 8-8" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/>
-        </svg>
-      } @else {
-        <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-          <circle cx="11" cy="11" r="9" stroke="#fff" stroke-width="1.6"/>
-          <path d="M11 7v5" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/>
-          <circle cx="11" cy="14.5" r="1" fill="#fff"/>
-        </svg>
-      }
-    </div>
+<!-- ── HERO ── -->
+<div class="iva-hero">
+  <div class="iva-hero-main">
+    <div class="iva-hero-label">إجمالي الأصناف المتابعة</div>
+    <div class="iva-hero-value">{{ totalCount() | number }} صنف</div>
 
-    <!-- النص -->
-    <div class="flex-grow-1">
-      <div class="alert-title" [class]="'alert-title-' + (alert.severity === 'out' ? 're' : alert.severity === 'ok' ? 'gr' : 'am')">
-        {{ alert.name }}
-        @if (alert.severity === 'out')      { — نفدت من المخزون }
-        @else if (alert.severity === 'ok')  { — {{ alert.currentStock }} وحدات (كافية) }
-        @else                               { — {{ alert.currentStock }} {{ alert.currentStock === 1 ? 'وحدة فقط متبقية' : 'وحدات فقط' }} }
+    <div class="iva-hero-stats">
+      <div>
+        <div class="iva-hero-stat-label">نفد المخزون</div>
+        <div class="iva-hero-stat-val iva-hero-re">
+          {{ summary().outOfStockCount | number }}
+        </div>
       </div>
-      <div class="alert-sub" [class]="'alert-sub-' + (alert.severity === 'out' ? 're' : alert.severity === 'ok' ? 'gr' : 'am')">
-        {{ alert.warehouseInfo }}
-        @if (alert.supplierName) { — المورد: {{ alert.supplierName }} }
+      <div>
+        <div class="iva-hero-stat-label">حرج</div>
+        <div class="iva-hero-stat-val iva-hero-or">
+          {{ summary().criticalCount | number }}
+        </div>
       </div>
-    </div>
+      <div>
+        <div class="iva-hero-stat-label">يحتاج مراقبة</div>
+        <div class="iva-hero-stat-val iva-hero-am">
+          {{ summary().monitoringCount | number }}
+        </div>
+      </div>
+      <div>
+        <div class="iva-hero-stat-label">إجمالي الوحدات المعروضة</div>
+        <div class="iva-hero-stat-val">{{ totalQuantity() | number }}</div>
+      </div>
 
-    <!-- إجراءات -->
-    <div class="d-flex gap-2 flex-shrink-0 flex-wrap">
-      @if (alert.severity === 'ok') {
-        <span class="badge bok" style="font-size:11px;padding:4px 12px">كافي</span>
-      } @else {
-        @if (alert.canTransfer && alert.transferSource) {
-          <button class="btn btn-sm btn-am" (click)="requestTransfer(alert)">
-            تحويل من {{ alert.transferSource }}
-          </button>
-        }
-        @if (alert.severity === 'out') {
-          <button class="btn btn-sm btn-re" (click)="requestOrder(alert)">طلب فوري</button>
-          <button class="btn btn-sm btn-wa" (click)="notifyManager(alert)">📱 تنبيه للمدير</button>
-        } @else {
-          <button class="btn btn-sm btn-am" (click)="requestOrder(alert)">
-            طلب {{ alert.suggestedQty }} وحدة
-          </button>
-        }
-        <a class="btn btn-sm btn-bl" routerLink="/invoices/new">فاتورة جديدة</a>
+      @if (loading()) {
+      <div class="d-inline-flex align-items-center gap-2" style="opacity:.85">
+        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+        <span style="font-size:11px">جاري التحميل...</span>
+      </div>
       }
     </div>
   </div>
+</div>
+
+<!-- ── FILTER CHIPS ── -->
+<div class="iva-chips" role="tablist" aria-label="فلترة حسب الحالة">
+  <button type="button" role="tab" class="iva-chip" [class.iva-chip--active]="levelFilter() === null"
+    [attr.aria-selected]="levelFilter() === null" (click)="selectLevel(null)">
+    <span>الكل</span>
+    <span class="iva-chip-badge iva-chip-badge--all">{{ totalCount() | number }}</span>
+  </button>
+
+  @for (level of levelOrder; track level) {
+  <button type="button" role="tab" class="iva-chip" [class.iva-chip--active]="levelFilter() === level"
+    [class]="'iva-chip iva-chip--' + metaFor(level).tone + (levelFilter() === level ? ' iva-chip--active' : '')"
+    [attr.aria-selected]="levelFilter() === level" (click)="selectLevel(level)">
+    <span class="iva-chip-dot" aria-hidden="true"></span>
+    <span>{{ metaFor(level).label }}</span>
+    <span class="iva-chip-badge">{{ countFor(level) | number }}</span>
+  </button>
+  }
+</div>
+
+<!-- ── TOOLBAR ── -->
+<div class="iva-toolbar">
+  <div class="iva-search">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+      stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <circle cx="11" cy="11" r="7" />
+      <path d="m21 21-4.3-4.3" />
+    </svg>
+    <input type="text" placeholder="ابحث باسم الصنف أو المخزن..." [value]="search()"
+      (input)="onSearch($any($event.target).value)" />
+    @if (hasSearch()) {
+    <button type="button" class="iva-search-clear" aria-label="مسح البحث" (click)="clearSearch()">×</button>
+    }
+  </div>
+</div>
+
+<!-- ── ERROR ── -->
+@if (error(); as msg) {
+<div class="alert alert-danger mb-3" role="alert" style="font-size:12px;">
+  {{ msg }}
+</div>
 }
+
+<!-- ── CARDS ── -->
+<div class="row g-2">
+  @for (alert of filteredAlerts(); track alert.productId) {
+  @let meta = metaFor(alert.level);
+  <div class="col-md-6">
+    <article class="iva-card h-100" [class]="'iva-card iva-card--' + meta.tone">
+      <header class="iva-card-head">
+        <div class="iva-card-icon" [attr.aria-hidden]="true">
+          <span>{{ meta.icon }}</span>
+        </div>
+        <div class="iva-card-head-text">
+          <div class="iva-card-title">{{ alert.productName }}</div>
+          <div class="iva-card-sub">
+            <span class="iva-pill" [class]="'iva-pill iva-pill--' + meta.tone">
+              {{ meta.label }}
+            </span>
+            <span class="iva-card-range">{{ meta.rangeLabel }}</span>
+          </div>
+        </div>
+        <div class="iva-card-qty">
+          <div class="iva-card-qty-val" [class]="'iva-card-qty-val iva-text-' + meta.tone">
+            {{ alert.totalQuantity | number }}
+          </div>
+          <div class="iva-card-qty-label">وحدة متاحة</div>
+        </div>
+      </header>
+
+      <div class="iva-breakdown">
+        <div class="iva-breakdown-label">توزيع المخازن</div>
+        <div class="iva-breakdown-rows">
+          @for (w of alert.warehouseBreakdown; track w.warehouseId) {
+          <div class="iva-breakdown-row" [class.iva-breakdown-row--zero]="w.quantity === 0">
+            <span class="iva-breakdown-name">{{ w.warehouseName }}</span>
+            <span class="iva-breakdown-qty">
+              <span>{{ w.quantity | number }}</span>
+              <span class="iva-breakdown-unit">وحدة</span>
+            </span>
+          </div>
+          } @empty {
+          <div class="iva-breakdown-empty">لا توجد بيانات للمخازن.</div>
+          }
+        </div>
+      </div>
+    </article>
+  </div>
+  } @empty {
+  <div class="iva-empty">
+    @if (loading()) {
+    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+    <span>جاري تحميل التنبيهات...</span>
+    } @else if (hasSearch()) {
+    <div class="iva-empty-block">
+      <div class="iva-empty-icon" aria-hidden="true">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"
+          stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="7" />
+          <path d="m21 21-4.3-4.3" />
+        </svg>
+      </div>
+      <div class="iva-empty-title">لا نتائج لـ "{{ search() }}"</div>
+      <div class="iva-empty-sub">جرّب كلمة بحث أخرى أو أزل الفلتر.</div>
+      <button type="button" class="btn btn-sm mt-2" (click)="clearSearch()">مسح البحث</button>
+    </div>
+    } @else {
+    <div class="iva-empty-block">
+      <div class="iva-empty-icon" aria-hidden="true">
+        <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3"
+          stroke-linecap="round" stroke-linejoin="round">
+          <path
+            d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+          <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+          <line x1="12" y1="22.08" x2="12" y2="12" />
+        </svg>
+      </div>
+      <div class="iva-empty-title">لا توجد تنبيهات حاليًا</div>
+      <div class="iva-empty-sub">كل الأصناف ضمن الحدود المقبولة لمستوى التخزين الحالي.</div>
+    </div>
+    }
+  </div>
+  }
+</div>
