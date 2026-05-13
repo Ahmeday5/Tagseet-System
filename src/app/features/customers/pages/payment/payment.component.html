@@ -5,16 +5,38 @@
     <div class="card">
       <div class="ct mb-2">تسجيل دفعة — يقبل التجزئة في نفس الشهر</div>
 
-      <div class="mb-2">
-        <label class="form-label">اختر العميل / العقد</label>
-        <select class="form-select"
-          [ngModel]="selectedContractId()"
-          (ngModelChange)="selectedContractId.set($event); payAmount.set(0)">
-          <option value="">-- اختر --</option>
-          @for (opt of paymentContracts(); track opt.id) {
-            <option [value]="opt.id">{{ opt.label }}</option>
-          }
-        </select>
+      <div class="row g-2 mb-2">
+        <div class="col-12 col-sm-6">
+          <label class="form-label">العميل</label>
+          <select class="form-select"
+            [ngModel]="selectedClientId() ?? ''"
+            (ngModelChange)="onClientChange($event)">
+            <option value="">-- اختر العميل --</option>
+            @for (c of clients(); track c.id) {
+              <option [value]="c.id">{{ c.fullName }} — {{ c.phoneNumber }}</option>
+            }
+          </select>
+        </div>
+        <div class="col-12 col-sm-6">
+          <label class="form-label">العقد</label>
+          <select class="form-select"
+            [disabled]="selectedClientId() === null || contracts().length === 0"
+            [ngModel]="selectedContractId() ?? ''"
+            (ngModelChange)="onContractChange($event)">
+            <option value="">
+              @if (selectedClientId() === null) {
+                -- اختر العميل أولاً --
+              } @else if (contracts().length === 0) {
+                -- لا توجد عقود --
+              } @else {
+                -- اختر العقد --
+              }
+            </option>
+            @for (opt of contracts(); track opt.id) {
+              <option [value]="opt.id">{{ contractOptionLabel(opt) }}</option>
+            }
+          </select>
+        </div>
       </div>
 
       <div class="row g-2 mb-2">
@@ -25,46 +47,80 @@
         </div>
         <div class="col-12 col-sm-6">
           <label class="form-label">المبلغ المدفوع الآن (ج.م)</label>
-          <input type="number" class="form-control" placeholder="0"
+          <input type="number" class="form-control" placeholder="0" min="0" step="0.01"
             [ngModel]="payAmount()" (ngModelChange)="payAmount.set(+$event)" />
         </div>
-        <div class="col-12">
+        <div class="col-12 col-sm-6">
+          <label class="form-label">الخزينة</label>
+          <select class="form-select"
+            [ngModel]="payTreasuryId() ?? ''"
+            (ngModelChange)="payTreasuryId.set($event ? +$event : null)">
+            <option value="">-- اختر الخزينة --</option>
+            @for (t of treasuries(); track t.id) {
+              <option [value]="t.id">
+                {{ t.name }} ({{ t.currentBalance | currencyAr : true }})
+              </option>
+            }
+          </select>
+        </div>
+        <div class="col-12 col-sm-6">
           <label class="form-label">طريقة الدفع</label>
           <select class="form-select"
             [ngModel]="payMethod()" (ngModelChange)="payMethod.set($event)">
-            <option>نقدي</option>
-            <option>تحويل</option>
-            <option>مدى</option>
-            <option>STC Pay</option>
-            <option>Apple Pay</option>
+            <option value="Cash">نقدي</option>
+            <option value="Transfer">تحويل</option>
+            <option value="Card">بطاقة</option>
+            <option value="STCPay">STC Pay</option>
+            <option value="ApplePay">Apple Pay</option>
           </select>
+        </div>
+        <div class="col-12">
+          <label class="form-label">ملاحظات</label>
+          <input type="text" class="form-control" placeholder="اختياري"
+            [ngModel]="payNotes()" (ngModelChange)="payNotes.set($event)" />
         </div>
       </div>
 
       @if (paymentInfo(); as info) {
         <div class="pay-info">
           <div class="fw-semibold mb-2" style="font-size:11px;color:var(--txt2)">بيان الدفعة الآني</div>
-          <div class="pay-row"><span>القسط المستحق</span><span>{{ info.due | currencyAr }}</span></div>
           <div class="pay-row">
-            <span>المدفوع سابقاً هذا الشهر</span>
-            <span style="color:var(--gr)">{{ info.prevPaid | currencyAr }}</span>
+            <span>قيمة القسط</span>
+            <span>{{ info.installmentDue | currencyAr }}</span>
           </div>
-          <div class="pay-row"><span>الدفعة الحالية</span><span>{{ info.now | currencyAr }}</span></div>
           <div class="pay-row">
-            <span style="color:var(--re)">الباقي في هذا الشهر</span>
-            <span style="color:var(--re);font-weight:700">{{ info.remaining | currencyAr }}</span>
+            <span>المسدد سابقًا</span>
+            <span style="color:var(--gr)">{{ info.totalPaid | currencyAr : true }}</span>
+          </div>
+          @if (info.overdue > 0) {
+            <div class="pay-row">
+              <span style="color:var(--re)">متأخرات</span>
+              <span style="color:var(--re);font-weight:700">{{ info.overdue | currencyAr }}</span>
+            </div>
+          }
+          <div class="pay-row">
+            <span>الدفعة الحالية</span>
+            <span>{{ info.now | currencyAr : true }}</span>
+          </div>
+          <div class="pay-row">
+            <span style="color:var(--re)">المتبقي بعد الدفعة</span>
+            <span style="color:var(--re);font-weight:700">{{ info.remainingAfter | currencyAr : true }}</span>
           </div>
           <hr class="my-1">
           <div class="pay-row">
             <span class="fw-bold">إجمالي المستحق (كشف الحساب)</span>
-            <span style="color:var(--re);font-size:13px;font-weight:700">{{ info.total | currencyAr }}</span>
+            <span style="color:var(--re);font-size:13px;font-weight:700">
+              {{ info.totalRemaining | currencyAr : true }}
+            </span>
           </div>
         </div>
       }
 
       <div class="d-flex gap-2 mt-3">
-        <button class="btn btn-bl flex-fill" (click)="recordPayment()">تسجيل الدفعة</button>
-        <button class="btn btn-wa flex-fill">📱 إرسال إيصال</button>
+        <button class="btn btn-bl flex-fill" (click)="recordPayment()" [disabled]="submitting()">
+          {{ submitting() ? 'جارٍ الحفظ...' : 'تسجيل الدفعة' }}
+        </button>
+        <button class="btn btn-wa flex-fill" [disabled]="submitting()">📱 إرسال إيصال</button>
       </div>
     </div>
   </div>

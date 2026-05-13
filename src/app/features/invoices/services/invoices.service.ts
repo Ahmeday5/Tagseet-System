@@ -21,18 +21,6 @@ import {
 const INVOICES_CACHE_KEY = 'supplier-purchase-invoices';
 const INVOICES_TTL_MS = 60 * 1000; // 1 min — list/summary churn with each save
 
-/**
- * Supplier-purchase-invoices facade.
- *
- *   - reads (list / summary / byId) hit the real API and use the shared
- *     short cache so quick navigation between the list and a detail
- *     pane doesn't refetch
- *   - writes (create / confirm) invalidate the entire cache key so the
- *     next list / summary read sees the fresh state
- *   - the supplier dropdown is fed by SuppliersService.listAll() — this
- *     service intentionally does NOT proxy that, so suppliers stays the
- *     single owner of supplier reads
- */
 @Injectable({ providedIn: 'root' })
 export class InvoicesService {
   private readonly api = inject(ApiService);

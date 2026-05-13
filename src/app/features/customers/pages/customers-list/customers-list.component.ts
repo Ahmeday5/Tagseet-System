@@ -13,7 +13,6 @@ import {
   DashboardClientRating,
   DashboardClientStatus,
 } from '../../models/dashboard-client.model';
-import { CustomerFormComponent } from '../../components/customer-form/customer-form.component';
 import {
   BadgeComponent,
   BadgeType,
@@ -36,7 +35,6 @@ const SEARCH_DEBOUNCE_MS = 300;
     BadgeComponent,
     PaginationComponent,
     CurrencyArPipe,
-    CustomerFormComponent,
   ],
   templateUrl: './customers-list.component.html',
   styleUrl: './customers-list.component.scss',

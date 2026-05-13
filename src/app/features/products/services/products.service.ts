@@ -21,17 +21,6 @@ export interface ProductsListQuery extends PagedQuery {
   categoryId?: number | '' | null;
 }
 
-/**
- * `/dashboard/products` facade.
- *
- *   - reads paginate (server-side `pageIndex` / `pageSize` + `search` +
- *     `categoryId` filter), with a 5-min cache that's force-refreshable
- *   - mutations go out as `multipart/form-data` so the picked image
- *     file is uploaded in the same request (the API expects this —
- *     JSON bodies are not accepted on POST/PUT)
- *   - successful mutations invalidate every cached `product` URL,
- *     so the list re-fetches naturally next time someone asks for it
- */
 @Injectable({ providedIn: 'root' })
 export class ProductsService {
   private readonly api = inject(ApiService);

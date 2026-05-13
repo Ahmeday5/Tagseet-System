@@ -10,6 +10,7 @@ import { AuthService } from '../../../core/services/auth.service';
 import { LayoutService } from '../../../core/services/layout.service';
 import { DialogService } from '../../../core/services/dialog.service';
 import { roleLabel } from '../../../core/constants/user-roles.const';
+import { NavCountsStore } from '../../../core/stores/nav-counts.store';
 
 @Component({
   selector: 'app-topbar',
@@ -23,6 +24,7 @@ export class TopbarComponent {
   private readonly authService = inject(AuthService);
   protected readonly layout = inject(LayoutService);
   protected readonly config = inject(DialogService);
+  protected readonly counts = inject(NavCountsStore);
 
   protected readonly searchQuery = signal('');
   protected readonly currentUser = this.authService.currentUser;

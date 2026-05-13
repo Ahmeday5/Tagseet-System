@@ -27,11 +27,6 @@ const EMPTY_SUMMARY: InventoryAlertSummary = {
 export class InventoryService {
   private readonly api = inject(ApiService);
 
-  /**
-   * Stock-alert list, optionally narrowed to a single severity level.
-   * The backend returns the data wrapped in the standard envelope; the
-   * `ApiService` unwraps it to `InventoryAlertsResponse`.
-   */
   alerts(query: InventoryAlertsQuery = {}): Observable<InventoryAlertsResponse> {
     return this.api
       .get<InventoryAlertsResponse>(API_ENDPOINTS.inventory.alerts, {
@@ -71,10 +66,6 @@ export class InventoryService {
     };
   }
 
-  /**
-   * Bring the most urgent rows to the top — the API returns Sufficient
-   * items first, which buries any actual problem far down the page.
-   */
   private sortAlerts(alerts: InventoryAlertItem[]): InventoryAlertItem[] {
     const order: Record<string, number> = {
       OutOfStock: 0,

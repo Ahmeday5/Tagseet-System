@@ -18,8 +18,16 @@
     (click)="layout.closeMobile()">
     <app-nav-icon class="sbi-icon" [name]="item.icon" [size]="16"></app-nav-icon>
     <span class="sbi-label">{{ item.label }}</span>
-    @if (item.badge) {
-    <span [class]="getBadgeClass(item.badgeType)" class="sbb">{{ item.badge }}</span>
+    @if (item.badgeKey) {
+      @if (liveCount(item.badgeKey) > 0) {
+        <span [class]="getBadgeClass(item.badgeType)" class="sbb sbb-live"
+              [attr.data-pulse]="livePulse(item.badgeKey)"
+              [attr.aria-label]="item.label + ': ' + liveCount(item.badgeKey)">
+          {{ liveCount(item.badgeKey) }}
+        </span>
+      }
+    } @else if (item.badge) {
+      <span [class]="getBadgeClass(item.badgeType)" class="sbb">{{ item.badge }}</span>
     }
   </a>
   }

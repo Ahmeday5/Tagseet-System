@@ -1,7 +1,7 @@
 <div class="pgh">
   <div>
     <div class="pgt">لوحة التحكم</div>
-    <div class="pgs">الأربعاء 8 أبريل 2025 — نظام سليم</div>
+    <div class="pgs">نظام سليم</div>
   </div>
   <div class="d-flex gap-2">
     <button class="btn btn-sm btn-wa" routerLink="/notifications">
@@ -93,99 +93,77 @@
   }
 </section>
 
-@if (data()) {
-<!-- إحصائيات عامة -->
-<div class="row row-cols-lg-6 row-cols-md-3 row-cols-2 g-2 mb-3">
-  <div class="col">
-    <app-stat-card label="عملاء الأقساط" [value]="stats()?.totalCustomers ?? 0" sub="+12 هذا الشهر"
-      valueColor="var(--bl)" subColor="var(--gr)" />
-  </div>
-  <div class="col">
-    <app-stat-card label="المستحقات الكلية" [value]="data()!.stats.totalReceivables | currencyAr"
-      [sub]="'ج.م على ' + stats()?.totalCustomers + ' عميل'" />
-  </div>
-  <div class="col">
-    <app-stat-card label="المحصّل الشهر" [value]="data()!.stats.collectedThisMonth | currencyAr" sub="↑ 8.4%"
-      valueColor="var(--gr)" subColor="var(--gr)" />
-  </div>
-  <div class="col">
-    <app-stat-card label="الخزينة الرئيسية" [value]="data()!.stats.mainTreasury | currencyAr" sub="ج.م لحظي"
-      valueColor="var(--te)" />
-  </div>
-  <div class="col">
-    <app-stat-card label="أرباح الشهر" [value]="data()!.stats.monthlyProfit | currencyAr" sub="هامش 31%"
-      valueColor="var(--gr)" />
-  </div>
-  <div class="col">
-    <app-stat-card label="معدل التحصيل" [value]="data()!.stats.collectionRate + '%'" sub="من المستهدف 90%"
-      valueColor="var(--bl)" />
-  </div>
-</div>
-
-<!-- إحصائيات تفصيلية -->
-<div class="row row-cols-lg-4 row-cols-2 g-2 mb-3">
-  <div class="col">
-    <app-stat-card label="متأخرون" [value]="data()!.stats.lateCustomers" [sub]="data()!.stats.lateAmount | currencyAr"
-      valueColor="var(--re)" subColor="var(--re)" />
-  </div>
-  <div class="col">
-    <app-stat-card label="تقييم ممتاز (A)" [value]="data()!.stats.ratingACount"
-      [sub]="'عميل — ' + getRatingPercent() + '% من الإجمالي'" valueColor="var(--gr)" />
-  </div>
-  <div class="col">
-    <app-stat-card label="أصناف ستنفد" [value]="data()!.stats.lowStockCount" sub="تحتاج إعادة طلب"
-      valueColor="var(--am)" />
-  </div>
-  <div class="col">
-    <app-stat-card label="ضريبة مستحقة" [value]="data()!.stats.vatDue | currencyAr" sub="ج.م للربع الحالي"
-      valueColor="var(--pu)" />
-  </div>
-</div>
-
-<!-- تنبيه المتأخرين -->
-<div class="alert alert-danger mb-3">
-  <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-    <circle cx="6.5" cy="6.5" r="6" stroke="currentColor" stroke-width="1.1" />
-    <path d="M6.5 3.5v3.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" />
-    <circle cx="6.5" cy="9.5" r=".6" fill="currentColor" />
-  </svg>
-  {{ data()!.stats.lateCustomers }} عملاء متأخرون بإجمالي
-  {{ data()!.stats.lateAmount | currencyAr }} —
-  اضغط "إرسال تذكيرات WhatsApp" للتذكير الفوري
-</div>
-
 <!-- شارتات + أفضل العملاء -->
 <div class="row row-cols-md-2 row-cols-1 g-3">
   <!-- مخطط الأرباح -->
   <div class="col">
-    <div class="card">
-      <div class="chdr">
-        <div class="ct">أرباح آخر 6 أشهر (ج.م)</div>
-      </div>
-      <div class="bar-wrap">
-        @for (entry of data()!.profitChart; track entry.month) {
-        <div class="bar-g">
-          <div class="bar-v">{{ formatK(entry.amount) }}</div>
-          <div class="bar-i" [style.height.%]="getBarHeight(entry.amount)"
-            [style.background]="entry.isCurrent ? 'var(--te)' : 'var(--bl)'"></div>
-          <div class="bar-l">{{ entry.month }}</div>
+    <div class="card profit-card h-100">
+      <header class="profit-card__head">
+        <div>
+          <div class="profit-card__title">أرباح آخر 6 أشهر</div>
+          <div class="profit-card__sub">العملة بالجنيه المصري</div>
         </div>
+        @if (currentMonth(); as cur) {
+          <div class="profit-card__hero">
+            <div class="profit-card__hero-label">{{ cur.month }}</div>
+            <div class="profit-card__hero-value">{{ cur.formattedProfit }}</div>
+            @if (profitDeltaPct(); as d) {
+              <div
+                class="profit-card__delta"
+                [class.profit-card__delta--up]="d > 0"
+                [class.profit-card__delta--down]="d < 0"
+              >
+                <span class="profit-card__delta-arrow" aria-hidden="true">
+                  {{ d > 0 ? '▲' : d < 0 ? '▼' : '•' }}
+                </span>
+                {{ d > 0 ? '+' : '' }}{{ d | number: '1.0-1' }}%
+              </div>
+            }
+          </div>
         }
-      </div>
+      </header>
+
+      @if (profitMonths().length) {
+        <div class="profit-card__plot">
+          <div class="profit-card__yaxis" aria-hidden="true">
+            @for (tick of profitGridTicks(); track $index) {
+              <span class="profit-card__ytick">{{ formatProfitTick(tick) }}</span>
+            }
+          </div>
+          <div class="profit-card__canvas">
+            <div class="profit-card__grid" aria-hidden="true">
+              @for (tick of profitGridTicks(); track $index) {
+                <span class="profit-card__gridline"></span>
+              }
+            </div>
+            <div class="profit-card__bars">
+              @for (entry of profitMonths(); track entry.month; let i = $index) {
+                <div
+                  class="profit-card__bar"
+                  [class.profit-card__bar--current]="isCurrentMonth(i)"
+                  [attr.title]="entry.month + ': ' + entry.formattedProfit"
+                >
+                  <div
+                    class="profit-card__bar-fill"
+                    [style.height.%]="getBarHeight(entry.profitAmount)"
+                  >
+                    <span class="profit-card__bar-value">{{ entry.formattedProfit }}</span>
+                  </div>
+                  <div class="profit-card__bar-label">{{ entry.month }}</div>
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+      } @else {
+        <div class="profit-card__empty">جاري تحميل بيانات الأرباح...</div>
+      }
     </div>
   </div>
 
-  <ng-template #ratingTpl let-row>
-    <app-badge [text]="row.rating" type="ok" />
-  </ng-template>
-
-  <ng-template #statusTpl let-row>
-    <app-badge [text]="row.status" type="warn" />
-  </ng-template>
-
   <!-- أفضل 5 عملاء -->
   <div class="col">
-    <div class="card">
+    <div class="card h-100">
       <div class="chdr">
         <div class="ct">أفضل 5 عملاء هذا الشهر</div>
         <button class="btn btn-sm" routerLink="/customers">تحليلات أكثر</button>
@@ -201,26 +179,23 @@
             </tr>
           </thead>
           <tbody>
-            @for (c of topCustomers(); track c.rank) {
-            <tr>
-              <td style="padding:5px 0;font-weight:600">
-                {{ c.name }}
-              </td>
-
-              <td class="d-flex justify-content-center">
-                <div class="cs-ring cs-A" style="width:32px;height:32px;font-size:9px;font-weight:700;border-width:2px">
-                  {{ c.creditScore }}
-                </div>
-              </td>
-
-              <td style="color:var(--bl)">
-                {{ c.paid | currencyAr }}
-              </td>
-
-              <td>
-                <span class="b bok">منتظم</span>
-              </td>
-            </tr>
+            @for (c of topClients(); track c.clientName) {
+              <tr>
+                <td style="padding:5px 0;font-weight:600">{{ c.clientName }}</td>
+                <td class="d-flex justify-content-center">
+                  <app-badge [text]="c.rating" [type]="ratingBadge(c.rating)" />
+                </td>
+                <td style="color:var(--bl)">{{ c.amount | currencyAr }}</td>
+                <td>
+                  <app-badge [text]="c.statusText" [type]="statusBadge(c.statusText)" />
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="4" class="text-center" style="padding:30px; color:var(--txt3)">
+                  لا يوجد عملاء هذا الشهر.
+                </td>
+              </tr>
             }
           </tbody>
         </table>
@@ -233,10 +208,10 @@
       <div class="chdr">
         <div class="ct">أقساط مستحقة هذا الأسبوع</div>
         <div style="display:flex;gap:7px">
-          <a routerLink="/notifications" class="btn btn-sm btn-wa" onclick="goS('notifications','n-notifications')">
+          <a routerLink="/notifications" class="btn btn-sm btn-wa">
             إرسال WhatsApp للمتأخرين
           </a>
-          <a routerLink="/customers" class="btn btn-sm btn-bl" onclick="goS('customers','n-customers')">عرض الكل</a>
+          <a routerLink="/customers" class="btn btn-sm btn-bl">عرض الكل</a>
         </div>
       </div>
 
@@ -253,27 +228,31 @@
               <th>الباقي</th>
               <th>التقييم</th>
               <th>الحالة</th>
-              <th>إجراء</th>
             </tr>
           </thead>
           <tbody>
-            @for (row of installments; track row.id) {
-            <tr>
-              <td style="font-weight:600">{{ row.customer }}</td>
-              <td>{{ row.product }}</td>
-              <td>{{ row.installment }}</td>
-              <td>{{ row.amount }}</td>
-              <td>{{ row.dueDate }}</td>
-              <td>{{ row.paymentType }}</td>
-              <td>{{ row.remaining }}</td>
-              <td><span class="badge bok">{{ row.rating }}</span></td>
-              <td><span class="badge bwarn">{{ row.status }}</span></td>
-              <td>
-                <button class="btn btn-wa" style="padding:3px 8px;font-size:10px">
-                  📱 تذكير
-                </button>
-              </td>
-            </tr>
+            @for (row of dueInstallments(); track $index) {
+              <tr>
+                <td style="font-weight:600">{{ row.clientName }}</td>
+                <td>{{ row.productName }}</td>
+                <td>{{ row.installmentProgress }}</td>
+                <td>{{ row.amount | currencyAr }}</td>
+                <td>{{ row.dueDate }}</td>
+                <td>{{ row.paymentType }}</td>
+                <td>{{ row.remainingAmount | currencyAr }}</td>
+                <td>
+                  <app-badge [text]="row.rating" [type]="ratingBadge(row.rating)" />
+                </td>
+                <td>
+                  <app-badge [text]="row.statusText" [type]="statusBadge(row.statusText)" />
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="10" class="text-center" style="padding:30px; color:var(--txt3)">
+                  لا توجد أقساط مستحقة هذا الأسبوع.
+                </td>
+              </tr>
             }
           </tbody>
         </table>
@@ -281,8 +260,3 @@
     </div>
   </div>
 </div>
-} @else {
-<div class="text-center" style="padding:60px; color:var(--txt3)">
-  جاري تحميل البيانات...
-</div>
-}

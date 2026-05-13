@@ -101,6 +101,9 @@
 
 /* ── Quick Pills ── */
 .tpill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-size: 11px;
   padding: 3px 10px;
   border-radius: 20px;
@@ -109,10 +112,12 @@
   border: none;
   font-family: inherit;
   white-space: nowrap;
-  transition: opacity 0.12s;
+  transition: opacity 0.12s, transform 0.18s, box-shadow 0.2s;
+  position: relative;
 
   &:hover {
-    opacity: 0.8;
+    opacity: 0.9;
+    transform: translateY(-1px);
   }
   &-re {
     background: var(--re-l);
@@ -126,10 +131,54 @@
     background: var(--gr-l);
     color: var(--gr);
   }
+  &-bl {
+    background: var(--bl-l);
+    color: var(--bl);
+  }
 
   @media (max-width: 1024px) {
     display: none;
   }
+}
+
+/* Pulsing status dot for live pills */
+.tpill-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+  position: relative;
+  box-shadow: 0 0 0 0 currentColor;
+  animation: t-dot-pulse 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes t-dot-pulse {
+  0%   { box-shadow: 0 0 0 0    rgba(255, 255, 255, 0); }
+  35%  { box-shadow: 0 0 0 5px  rgba(255, 255, 255, 0); }
+  100% { box-shadow: 0 0 0 0    rgba(255, 255, 255, 0); }
+}
+
+/* One-shot pulse when count rises — re-triggered by `data-pulse` value bump */
+.tpill-live {
+  &[data-pulse] {
+    animation: t-pill-bump 0.7s ease-out;
+  }
+}
+
+@keyframes t-pill-bump {
+  0%   { transform: scale(1);    box-shadow: 0 0 0 0 currentColor; }
+  20%  { transform: scale(1.08); box-shadow: 0 0 0 6px rgba(0, 0, 0, 0); }
+  100% { transform: scale(1);    box-shadow: 0 0 0 0 rgba(0, 0, 0, 0); }
+}
+
+.tdot-live {
+  animation: t-dot-live 1.6s ease-in-out infinite;
+}
+
+@keyframes t-dot-live {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.55; transform: scale(0.8); }
 }
 
 /* ── Icon button ── */

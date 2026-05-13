@@ -222,7 +222,8 @@
   white-space: nowrap;
   transition:
     opacity 0.16s,
-    width 0.22s;
+    width 0.22s,
+    transform 0.18s;
 
   &.sbb-am {
     background: var(--am-l);
@@ -232,4 +233,44 @@
     background: var(--gr-l);
     color: var(--gr);
   }
+}
+
+/* Live badge — perpetual gentle pulse + one-shot bump when count rises */
+.sbb-live {
+  position: relative;
+  animation: sbb-breathe 2.4s ease-in-out infinite;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 20px;
+    box-shadow: 0 0 0 0 currentColor;
+    animation: sbb-ring 2.4s ease-out infinite;
+    pointer-events: none;
+    opacity: 0.55;
+  }
+
+  &[data-pulse] {
+    animation:
+      sbb-breathe 2.4s ease-in-out infinite,
+      sbb-bump 0.65s ease-out;
+  }
+}
+
+@keyframes sbb-breathe {
+  0%, 100% { opacity: 1;    transform: scale(1); }
+  50%      { opacity: 0.85; transform: scale(0.97); }
+}
+
+@keyframes sbb-ring {
+  0%   { box-shadow: 0 0 0 0   currentColor; opacity: 0.55; }
+  70%  { box-shadow: 0 0 0 6px currentColor; opacity: 0;    }
+  100% { box-shadow: 0 0 0 0   currentColor; opacity: 0;    }
+}
+
+@keyframes sbb-bump {
+  0%   { transform: scale(1); }
+  35%  { transform: scale(1.25); }
+  100% { transform: scale(1); }
 }

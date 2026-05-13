@@ -12,7 +12,6 @@ import {
 import {
   ClientOrder,
   ConvertToContractPayload,
-  Product,
 } from '../models/catalog.model';
 
 const CLIENT_ORDERS_CACHE_KEY = 'client-orders';

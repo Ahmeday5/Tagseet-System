@@ -48,6 +48,18 @@ export const API_ENDPOINTS = {
   },
   dashboard: {
     summary: 'dashboard/summary',
+    homeSummary: 'dashboard/home-summary',
+  },
+  charts: {
+    profitsLast6Months: 'dashboard/charts/profits-last-6-months',
+  },
+  installments: {
+    dueThisWeek: 'dashboard/installments/due-this-week',
+    /**
+     * Records a payment against an open installment contract.
+     * Note: this endpoint is mounted at the API root (no /dashboard prefix).
+     */
+    pay: 'installments/pay',
   },
   clientOrders: {
     base: 'dashboard/client-orders',
@@ -58,6 +70,8 @@ export const API_ENDPOINTS = {
   clients: {
     base: 'dashboard/clients',
     byId: (id: number) => `dashboard/clients/${id}`,
+    topThisMonth: 'dashboard/clients/top-this-month',
+    contracts: (id: number) => `dashboard/clients/${id}/contracts`,
   },
   inventory: {
     alerts: 'dashboard/inventory/alerts',
@@ -71,5 +85,6 @@ export const API_ENDPOINTS = {
   },
   contracts: {
     base: 'dashboard/contracts',
+    details: (id: number) => `dashboard/contracts/${id}/details`,
   },
 } as const;

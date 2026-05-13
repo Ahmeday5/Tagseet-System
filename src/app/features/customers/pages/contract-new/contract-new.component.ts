@@ -20,6 +20,8 @@ import { CurrencyArPipe } from '../../../../shared/pipes/currency-ar.pipe';
 import { ToastService } from '../../../../core/services/toast.service';
 import { FormErrorComponent } from '../../../../shared/components/form-error/form-error.component';
 import { LoaderComponent } from '../../../../shared/components/loader/loader.component';
+import { ApiError } from '../../../../core/models/api-response.model';
+import { apiErrorToMessage } from '../../../../core/utils/api-error.util';
 
 import { ContractsService } from '../../../contracts/services/contracts.service';
 import { CustomersService } from '../../services/customers.service';
@@ -286,6 +288,7 @@ export class ContractNewComponent implements OnInit {
   protected save(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
+      this.toast.error(this.firstInvalidFieldMessage() || 'يرجى تعبئة الحقول المطلوبة');
       return;
     }
 
@@ -356,14 +359,38 @@ export class ContractNewComponent implements OnInit {
           ]);
         },
 
-        error: (err) => {
-          const msg =
-            err?.error?.message ||
-            'فشل في إنشاء العقد';
-
-          this.toast.error(msg);
+        error: (err: ApiError) => {
+          this.toast.error(apiErrorToMessage(err, 'فشل في إنشاء العقد'));
         },
       });
+  }
+
+  /**
+   * Builds a human-readable message pointing to the first invalid field,
+   * so the user knows what to fix without scrolling the form. The labels
+   * mirror what the corresponding form-error message would surface.
+   */
+  private firstInvalidFieldMessage(): string | null {
+    const labels: Record<string, string> = {
+      clientId: 'العميل',
+      productId: 'المنتج',
+      warehouseId: 'المخزن',
+      quantity: 'الكمية',
+      purchaseDate: 'تاريخ الشراء',
+      purchasePrice: 'سعر الشراء',
+      cashPrice: 'السعر الكاش',
+      downPayment: 'المقدم',
+      profitRate: 'نسبة الربح',
+      installmentsCount: 'عدد الأقساط',
+      paymentFrequency: 'طريقة التقسيط',
+      firstInstallmentDate: 'تاريخ أول قسط',
+      treasuryId: 'الخزينة',
+    };
+    for (const [key, label] of Object.entries(labels)) {
+      const control = this.form.get(key);
+      if (control?.invalid) return `يرجى مراجعة الحقل: ${label}`;
+    }
+    return null;
   }
 
   // ───────────────── helpers ─────────────────

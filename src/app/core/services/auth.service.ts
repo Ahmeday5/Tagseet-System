@@ -1,7 +1,15 @@
 import { Injectable, NgZone, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { Observable, of, shareReplay, throwError } from 'rxjs';
-import { catchError, finalize, map, tap } from 'rxjs/operators';
+import { Observable, defer, firstValueFrom, from, of, throwError } from 'rxjs';
+import {
+  catchError,
+  delay,
+  finalize,
+  map,
+  share,
+  switchMap,
+  tap,
+} from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { ApiService } from './api.service';
 import { StorageService } from './storage.service';
@@ -30,9 +38,26 @@ const USER_KEY = 'taqseet_user';
 const REFRESH_BUFFER_MS = 60 * 1000;
 /** Lower bound for the proactive refresh timer to avoid timer storms on edge cases. */
 const MIN_REFRESH_DELAY_MS = 5_000;
-/** Backoff window after a transient (network/5xx) refresh failure. */
-const REFRESH_RETRY_DELAY_MS = 30_000;
+/** Exponential backoff schedule for transient (network/5xx) refresh failures. */
+const REFRESH_RETRY_BACKOFF_MS: readonly number[] = [5_000, 15_000, 45_000, 120_000];
+/**
+ * After a "reuse detected" error we wait briefly to let any winning tab's
+ * storage write + BroadcastChannel message arrive, then re-read storage. If a
+ * fresh token landed in that window the failure was a benign cross-tab race,
+ * not a security event.
+ */
+const REUSE_RACE_RECHECK_DELAY_MS = 250;
 const BROADCAST_CHANNEL_NAME = 'taqseet-auth';
+/** Cross-tab/cross-process mutex name for the refresh-token round-trip. */
+const REFRESH_LOCK_NAME = 'taqseet-auth-refresh';
+/**
+ * `setTimeout` stores its delay as a signed 32-bit integer — values above
+ * 2^31-1 (~24.8 days) overflow and fire IMMEDIATELY. A long-lived access
+ * token (e.g. months) would therefore trigger an instant-refresh loop,
+ * which both hammers the backend and trips reuse-detection. We clamp to
+ * just under the limit and re-arm on wake if the token is still safe.
+ */
+const MAX_SETTIMEOUT_DELAY_MS = 2_147_000_000;
 
 /**
  * Statuses that prove the refresh token itself is invalid — anything else
@@ -42,8 +67,8 @@ const BROADCAST_CHANNEL_NAME = 'taqseet-auth';
 const AUTH_FATAL_STATUSES: ReadonlySet<number> = new Set([400, 401, 403]);
 
 type CrossTabMessage =
-  | { type: 'session-updated' }
-  | { type: 'logged-out' };
+  | { type: 'session-updated'; from: string }
+  | { type: 'logged-out'; from: string };
 
 export interface LoginInput {
   email: string;
@@ -71,11 +96,25 @@ export class AuthService {
   readonly currentUser = this.currentUserSignal.asReadonly();
   readonly isAuthenticated = computed(() => !!this.currentUserSignal());
 
-  /** Shared in-flight refresh — prevents duplicate network calls. */
+  /** Shared in-flight refresh — collapses concurrent callers in this tab. */
   private inflightRefresh: Observable<AuthTokens> | null = null;
   private refreshTimerId: ReturnType<typeof setTimeout> | null = null;
   private channel: BroadcastChannel | null = null;
   private hasScheduledLogoutToast = false;
+  /** Consecutive transient refresh failures — drives backoff. Reset on success. */
+  private refreshFailureStreak = 0;
+  /**
+   * Set once the session has been declared dead (server-rejected refresh,
+   * missing token, etc). Pending callers that race past the logout are
+   * short-circuited here so we don't trigger duplicate navigations
+   * (which the Angular Router rejects with `InvalidStateError`).
+   */
+  private sessionDead = false;
+  /** Per-tab id so we can ignore our own broadcasts. */
+  private readonly tabId =
+    typeof crypto !== 'undefined' && 'randomUUID' in crypto
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
   constructor() {
     this.initCrossTabSync();
@@ -122,76 +161,58 @@ export class AuthService {
     }
 
     this.clearLocalSession();
-    this.broadcast({ type: 'logged-out' });
+    this.broadcast({ type: 'logged-out', from: this.tabId });
 
     if (reason) this.toast.warning(reason);
-    if (redirect) {
-      this.router.navigate(['/auth/login']);
-    }
+    if (redirect) this.navigateToLogin();
   }
 
   /**
-   * Issues a refresh-token request, shared across concurrent callers. On
-   * success the new tokens are persisted and the proactive timer is rescheduled.
-   * On fatal failure the session is cleared and the user is redirected.
+   * Safe wrapper around `router.navigate(['/auth/login'])`. Skips the call
+   * when we're already on the login route (avoids a redundant navigation
+   * that the Router rejects with `InvalidStateError` when a previous
+   * navigation is still resolving).
+   */
+  private navigateToLogin(): void {
+    const url = this.router.url ?? '';
+    if (url.startsWith('/auth/login')) return;
+    this.router.navigate(['/auth/login']).catch(() => {
+      /* Navigation rejected (e.g. concurrent navigation already in
+       * progress) — the other navigation will land the user on the login
+       * page, so swallowing here is correct. */
+    });
+  }
+
+  /**
+   * Issues a refresh-token request, serialized across **all tabs** via the Web
+   * Locks API and collapsed across concurrent in-tab callers via shared
+   * observable. The lock body re-reads storage first: if another tab already
+   * rotated the token while we were waiting, we skip the network entirely.
    */
   refreshToken(): Observable<AuthTokens> {
     if (this.inflightRefresh) return this.inflightRefresh;
 
-    // Race shortcut: another tab may have already refreshed.
+    // Session was already declared dead — don't try to refresh, and
+    // crucially don't trigger another logout/redirect (the first one
+    // already happened, the second one races Angular's navigation).
+    if (this.sessionDead) {
+      return throwError(() => this.makeAuthError('Session expired'));
+    }
+
+    // Race shortcut (no lock needed): another tab may have already refreshed
+    // and the new tokens are sitting in storage right now.
     const fromAnotherTab = this.readFreshTokens();
     if (fromAnotherTab) {
       this.scheduleProactiveRefresh();
       return of(fromAnotherTab);
     }
 
-    const refreshToken = this.getRefreshToken();
-    if (!refreshToken) {
-      this.scheduleSessionExpiredLogout();
-      return throwError(() => this.makeAuthError('Missing refresh token'));
-    }
-
-    const dev = this.device.getInfo();
-    const payload: RefreshTokenRequest = {
-      refreshToken,
-      deviceInfo: dev.deviceInfo,
-      deviceId: dev.deviceId,
-    };
-
-    this.inflightRefresh = this.api
-      .post<AuthResponseData>(API_ENDPOINTS.auth.refresh, payload, {
-        context: withInlineHandling(withSkipAuth()),
-      })
-      .pipe(
-        tap((data) => this.persistSession(data, false)),
-        map((data) => this.extractTokens(data)),
-        catchError((err) => {
-          // Last-ditch race recovery: another tab might have refreshed
-          // between our request being sent and the failure landing.
-          const recovered = this.readFreshTokens();
-          if (recovered) {
-            this.scheduleProactiveRefresh();
-            return of(recovered);
-          }
-
-          // Distinguish auth-fatal (server rejected the refresh token)
-          // from transient (network blip, CORS, 5xx, runasp.net cold-
-          // start). Only the former proves the session is dead — for
-          // anything else we re-arm and let the user keep their session
-          // until the server actually disowns the token.
-          if (this.isAuthFatal(err)) {
-            this.scheduleSessionExpiredLogout();
-            return throwError(() => err);
-          }
-
-          this.scheduleRefreshRetry();
-          return throwError(() => err);
-        }),
-        finalize(() => {
-          this.inflightRefresh = null;
-        }),
-        shareReplay({ bufferSize: 1, refCount: false })
-      );
+    this.inflightRefresh = this.runUnderRefreshLock().pipe(
+      finalize(() => {
+        this.inflightRefresh = null;
+      }),
+      share()
+    );
 
     return this.inflightRefresh;
   }
@@ -225,6 +246,137 @@ export class AuthService {
       : perms.includes(permission as string);
   }
 
+  // ──────────────────────── refresh pipeline ────────────────────────
+
+  /**
+   * Wraps the refresh round-trip in a Web Lock so only ONE tab in the entire
+   * browser profile is in flight at a time. Inside the lock we re-check
+   * storage — the tab that held the lock before us may have already rotated.
+   */
+  private runUnderRefreshLock(): Observable<AuthTokens> {
+    const locks = typeof navigator !== 'undefined' ? navigator.locks : undefined;
+
+    // Web Locks unsupported (older browsers, non-browser env) — fall back to
+    // the in-tab guard only. This loses cross-tab safety but the runtime
+    // already discounts that environment.
+    if (!locks) return this.executeRefresh();
+
+    return defer(() =>
+      from(
+        locks.request(REFRESH_LOCK_NAME, () => {
+          // Inside the lock: did the previous holder already refresh?
+          const fresh = this.readFreshTokens();
+          if (fresh) {
+            this.scheduleProactiveRefresh();
+            return Promise.resolve(fresh);
+          }
+          // `locks.request` holds the lock until the returned promise settles,
+          // so awaiting the observable here is exactly what we want.
+          return firstValueFrom(this.executeRefresh());
+        })
+      ).pipe(
+        catchError((err) => {
+          // `navigator.locks.request` can reject with `InvalidStateError`
+          // when the page is being unloaded (or the lock manager is in an
+          // unrecoverable state). The request that triggered the refresh
+          // is also being torn down, so propagating a quiet auth error is
+          // the right call — nothing useful can act on it.
+          if ((err as DOMException | undefined)?.name === 'InvalidStateError') {
+            return throwError(() => this.makeAuthError('Refresh aborted'));
+          }
+          return throwError(() => err);
+        })
+      )
+    );
+  }
+
+  /** The actual network call + post-processing. Always runs under a held lock. */
+  private executeRefresh(): Observable<AuthTokens> {
+    const refreshToken = this.getRefreshToken();
+    if (!refreshToken) {
+      this.scheduleSessionExpiredLogout();
+      return throwError(() => this.makeAuthError('Missing refresh token'));
+    }
+
+    const dev = this.device.getInfo();
+    const payload: RefreshTokenRequest = {
+      refreshToken,
+      deviceInfo: dev.deviceInfo,
+      deviceId: dev.deviceId,
+    };
+
+    return this.api
+      .post<AuthResponseData>(API_ENDPOINTS.auth.refresh, payload, {
+        context: withInlineHandling(withSkipAuth()),
+      })
+      .pipe(
+        tap((data) => this.persistSession(data, false)),
+        map((data) => this.extractTokens(data)),
+        catchError((err) => this.recoverOrFail(err))
+      );
+  }
+
+  /**
+   * Decides between three outcomes for a failed refresh:
+   *
+   *  1. Reuse-detected — could be either a race or a real attack. Wait a beat
+   *     and re-read storage; if a fresher token landed, treat as race and
+   *     succeed. Otherwise treat as fatal.
+   *  2. Auth-fatal (400/401/403) — the server explicitly rejected us. Kill
+   *     the session.
+   *  3. Transient (network, CORS, 5xx) — server didn't disown the token, we
+   *     just couldn't reach it. Backoff + retry; keep session alive.
+   */
+  private recoverOrFail(err: unknown): Observable<AuthTokens> {
+    // Cheap pre-check: another tab may have already broadcasted a refresh by
+    // the time the failure landed. Skip the wait when possible.
+    const immediate = this.readFreshTokens();
+    if (immediate) {
+      this.refreshFailureStreak = 0;
+      this.scheduleProactiveRefresh();
+      return of(immediate);
+    }
+
+    if (this.isReuseDetected(err)) {
+      return of(null).pipe(
+        delay(REUSE_RACE_RECHECK_DELAY_MS),
+        switchMap(() => {
+          const recovered = this.readFreshTokens();
+          if (recovered) {
+            this.refreshFailureStreak = 0;
+            this.scheduleProactiveRefresh();
+            return of(recovered);
+          }
+          // Genuine reuse — token family is dead server-side, session is gone.
+          this.scheduleSessionExpiredLogout();
+          return throwError(() => err);
+        })
+      );
+    }
+
+    if (this.isAuthFatal(err)) {
+      this.scheduleSessionExpiredLogout();
+      return throwError(() => err);
+    }
+
+    this.scheduleRefreshRetry();
+    return throwError(() => err);
+  }
+
+  /**
+   * Server-signaled "your refresh token was already used". On this backend
+   * the marker is the `details` field; we also tolerate older shapes where it
+   * was buried in `message`.
+   */
+  private isReuseDetected(err: unknown): boolean {
+    const body = (err as { error?: { details?: string; message?: string } } | null)?.error;
+    const raw = (err as { raw?: { details?: string; message?: string } } | null)?.raw;
+    const haystacks = [body?.details, body?.message, raw?.details, raw?.message]
+      .filter((s): s is string => typeof s === 'string')
+      .map((s) => s.toLowerCase());
+    return haystacks.some((s) => s.includes('reuse'));
+  }
+
   // ────────────────────── persistence ──────────────────────
 
   /**
@@ -248,7 +400,9 @@ export class AuthService {
       if (stored) this.currentUserSignal.set(stored);
     }
 
-    this.broadcast({ type: 'session-updated' });
+    this.refreshFailureStreak = 0;
+    this.sessionDead = false;
+    this.broadcast({ type: 'session-updated', from: this.tabId });
     this.scheduleProactiveRefresh();
   }
 
@@ -259,6 +413,7 @@ export class AuthService {
     this.currentUserSignal.set(null);
     this.cancelScheduledRefresh();
     this.inflightRefresh = null;
+    this.refreshFailureStreak = 0;
     // Wipe the HTTP cache — leftover entries belong to the previous user
     // and would leak into the next session.
     this.httpCache.clear();
@@ -330,7 +485,6 @@ export class AuthService {
       if (!Number.isNaN(parsed) && parsed > Date.now()) return parsed;
     }
 
-    // Last-resort: assume the documented 15-minute access-token window.
     return Date.now() + 15 * 60 * 1000;
   }
 
@@ -358,23 +512,26 @@ export class AuthService {
     const expiresAt = getJwtExpiry(accessToken);
     if (!expiresAt) return;
 
-    const delay = Math.max(
+    const remainingMs = expiresAt - Date.now() - REFRESH_BUFFER_MS;
+    const delayMs = Math.max(
       MIN_REFRESH_DELAY_MS,
-      expiresAt - Date.now() - REFRESH_BUFFER_MS
+      Math.min(remainingMs, MAX_SETTIMEOUT_DELAY_MS)
     );
 
-    // Schedule outside the Angular zone — we don't want a 14-minute idle
-    // timer keeping zone.js "busy" and blocking stable detection (tests, SSR).
     this.zone.runOutsideAngular(() => {
       this.refreshTimerId = setTimeout(() => {
         this.zone.run(() => {
           if (!this.isLoggedIn()) return;
-          this.refreshToken().subscribe({
-            // Success/failure persistence is handled inside refreshToken().
-            error: () => {/* fatal already handled by the catchError above */},
-          });
+          // When we hit the setTimeout cap on a long-lived token, the
+          // timer fires long before the token is anywhere near expiry —
+          // just re-arm without touching the network.
+          if (this.readFreshTokens()) {
+            this.scheduleProactiveRefresh();
+            return;
+          }
+          this.refreshToken().subscribe({ error: () => {} });
         });
-      }, delay);
+      }, delayMs);
     });
   }
 
@@ -386,22 +543,23 @@ export class AuthService {
   }
 
   /**
-   * Re-arm the refresh after a transient failure (network blip, 5xx,
-   * cold-starting backend). Short delay so we recover quickly when the
-   * server comes back; the next user-driven request will also retry on
-   * its own 401, so this is mostly a belt-and-suspenders measure.
+   * Re-arm the refresh after a transient failure with exponential backoff
+   * (5s → 15s → 45s → 120s, capped). The next user-driven 401 will also
+   * retry on its own, so this is mostly a recovery net for idle tabs.
    */
   private scheduleRefreshRetry(): void {
     this.cancelScheduledRefresh();
+    const idx = Math.min(this.refreshFailureStreak, REFRESH_RETRY_BACKOFF_MS.length - 1);
+    const delayMs = REFRESH_RETRY_BACKOFF_MS[idx];
+    this.refreshFailureStreak += 1;
+
     this.zone.runOutsideAngular(() => {
       this.refreshTimerId = setTimeout(() => {
         this.zone.run(() => {
           if (!this.isLoggedIn()) return;
-          this.refreshToken().subscribe({
-            error: () => {/* recursive retry handled inside refreshToken */},
-          });
+          this.refreshToken().subscribe({ error: () => {} });
         });
-      }, REFRESH_RETRY_DELAY_MS);
+      }, delayMs);
     });
   }
 
@@ -428,9 +586,6 @@ export class AuthService {
       const expiresAt = accessToken ? getJwtExpiry(accessToken) : null;
       if (!expiresAt) return;
 
-      // setTimeout is throttled in background tabs — when we come back, the
-      // scheduled refresh may already be overdue. Run it now, otherwise just
-      // re-arm with the freshly-computed remaining time.
       if (expiresAt - Date.now() <= REFRESH_BUFFER_MS) {
         this.refreshToken().subscribe({ error: () => {} });
       } else {
@@ -439,8 +594,6 @@ export class AuthService {
     });
 
     if (typeof window !== 'undefined') {
-      // pageshow fires when the page is restored from bfcache (back/forward
-      // navigation) — treat it like visibility coming back.
       window.addEventListener('pageshow', (e) => {
         if (!(e as PageTransitionEvent).persisted) return;
         if (this.isLoggedIn()) this.scheduleProactiveRefresh();
@@ -475,6 +628,7 @@ export class AuthService {
         if (e.key !== environment.tokenKey) return;
         this.onCrossTabMessage({
           type: e.newValue ? 'session-updated' : 'logged-out',
+          from: 'storage-event',
         });
       });
     }
@@ -482,15 +636,18 @@ export class AuthService {
 
   private onCrossTabMessage(msg: CrossTabMessage): void {
     if (!msg || typeof msg !== 'object') return;
+    // Ignore our own BroadcastChannel echoes (storage events never fire in
+    // the originating tab so the 'storage-event' sentinel is always external).
+    if (msg.from === this.tabId) return;
 
     if (msg.type === 'logged-out') {
+      this.sessionDead = true;
       this.clearLocalSession();
-      this.router.navigate(['/auth/login']);
+      this.navigateToLogin();
       return;
     }
 
     if (msg.type === 'session-updated') {
-      // Another tab signed in / refreshed — resync from storage and re-arm.
       this.currentUserSignal.set(this.loadStoredUser());
       this.scheduleProactiveRefresh();
     }
@@ -512,7 +669,8 @@ export class AuthService {
    * first (otherwise the user sees the redirect before the toast).
    */
   private scheduleSessionExpiredLogout(): void {
-    if (this.hasScheduledLogoutToast) return;
+    if (this.sessionDead || this.hasScheduledLogoutToast) return;
+    this.sessionDead = true;
     this.hasScheduledLogoutToast = true;
     queueMicrotask(() => {
       this.hasScheduledLogoutToast = false;

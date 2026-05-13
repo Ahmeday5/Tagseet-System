@@ -22,11 +22,7 @@ import {
 const SUPPLIERS_CACHE_KEY = 'suppliers';
 const SUPPLIERS_TTL_MS = 5 * 60 * 1000; // 5 min — list churns whenever a supplier is added/edited
 const STATEMENT_TTL_MS = 60 * 1000; // 1 min — figures move with every payment/draft
-/**
- * Page size used by callers that want a flat list (e.g. dropdowns inside
- * the invoice form). Large enough to cover all realistic catalogs without
- * an autocomplete; switch to server-side search if it ever overshoots.
- */
+
 const FLAT_LIST_PAGE_SIZE = 500;
 
 @Injectable({ providedIn: 'root' })
@@ -35,12 +31,6 @@ export class SuppliersService {
 
   // ─────────── reads ───────────
 
-  /**
-   * Server-paginated list with summary aggregates.
-   *
-   *   data: { summary: { totalPurchases, totalPaid, totalRemaining },
-   *           items:   { pageIndex, pageSize, count, totalPages, data: Supplier[] } }
-   */
   list(query: PagedQuery = {}): Observable<SuppliersListResponse> {
     return this.api.get<SuppliersListResponse>(API_ENDPOINTS.suppliers.base, {
       params: this.toParams(query),
@@ -55,10 +45,6 @@ export class SuppliersService {
     });
   }
 
-  /**
-   * Flat list for dropdowns. Wraps `list()` with a high `pageSize` and
-   * unwraps the paged envelope so the caller gets `Supplier[]` directly.
-   */
   listAll(): Observable<Supplier[]> {
     return this.list({ pageIndex: 1, pageSize: FLAT_LIST_PAGE_SIZE }).pipe(
       map((res) => Array.isArray(res?.items?.data) ? res.items.data : []),
@@ -73,13 +59,6 @@ export class SuppliersService {
 
   // ─────────── account statement ───────────
 
-  /**
-   * Per-supplier account statement. Filter window is inclusive on both
-   * ends; omitting both `from` and `to` returns the entire history.
-   *
-   * `includeDrafts` defaults to `false` on the server; we pass it
-   * through verbatim so the URL stays explicit about intent.
-   */
   statement(
     id: number,
     query: SupplierStatementQuery = {},

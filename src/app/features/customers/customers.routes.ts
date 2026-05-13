@@ -40,13 +40,4 @@ export const customersRoutes: Routes = [
       },
     ],
   },
-
-  // Customer detail — outside the shell (no tab nav)
-  {
-    path: ':id',
-    loadComponent: () =>
-      import('./pages/customer-detail/customer-detail.component').then(
-        (m) => m.CustomerDetailComponent,
-      ),
-  },
 ];

@@ -198,16 +198,3 @@
     [disabled]="loading()" (pageChange)="onPageChange($event)" (pageSizeChange)="onPageSizeChange($event)" />
   }
 </div>
-
-<!-- Quick-add modal -->
-@if (showForm()) {
-<div class="app-modal-backdrop" (click)="showForm.set(false)">
-  <div class="app-modal" (click)="$event.stopPropagation()">
-    <div class="app-modal-title">
-      <span>إضافة عميل سريع</span>
-      <button class="app-modal-close" (click)="showForm.set(false)">×</button>
-    </div>
-    <app-customer-form (saved)="onSaved()" (cancelled)="showForm.set(false)" />
-  </div>
-</div>
-}

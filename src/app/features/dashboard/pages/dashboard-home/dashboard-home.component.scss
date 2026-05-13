@@ -1,32 +1,244 @@
-/* ── BAR CHART ── */
-.bar-wrap {
-  display: flex;
-  align-items: flex-end;
-  gap: 4px;
-  height: 70px;
-  margin-top: 6px;
-}
-.bar-g {
+/* ════════════════════════════════════════════════════════════════
+   Profit chart — last 6 months of net profit
+   ════════════════════════════════════════════════════════════════ */
+.profit-card {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  padding: 16px;
+}
+
+.profit-card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+
+.profit-card__title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--txt);
+  line-height: 1.2;
+}
+
+.profit-card__sub {
+  font-size: 11px;
+  color: var(--txt3);
+  margin-top: 3px;
+}
+
+.profit-card__hero {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
   gap: 2px;
+  min-width: 0;
+}
+
+.profit-card__hero-label {
+  font-size: 10px;
+  color: var(--txt3);
+  font-weight: 500;
+}
+
+.profit-card__hero-value {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--txt);
+  letter-spacing: -0.3px;
+  line-height: 1.1;
+}
+
+.profit-card__delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  padding: 3px 8px;
+  font-size: 10.5px;
+  font-weight: 700;
+  border-radius: 999px;
+  background: var(--bg3);
+  color: var(--txt2);
+
+  &--up {
+    background: var(--gr-l);
+    color: var(--gr);
+  }
+  &--down {
+    background: var(--re-l);
+    color: var(--re);
+  }
+}
+
+.profit-card__delta-arrow {
+  font-size: 8px;
+  line-height: 1;
+}
+
+/* ── plot area: y-axis + canvas ── */
+.profit-card__plot {
+  display: flex;
+  gap: 10px;
   flex: 1;
+  min-height: 180px;
 }
-.bar-i {
-  width: 100%;
-  border-radius: 3px 3px 0 0;
-  min-height: 4px;
-  transition: height 0.3s;
+
+.profit-card__yaxis {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding-block: 0 22px; /* leave room for the x-axis labels under the canvas */
+  text-align: end;
 }
-.bar-l {
+
+.profit-card__ytick {
   font-size: 9px;
   color: var(--txt3);
+  font-weight: 500;
+  line-height: 1;
+  transform: translateY(-50%); /* center on its gridline */
+
+  &:first-child {
+    transform: translateY(0);
+  }
+  &:last-child {
+    transform: translateY(-100%);
+  }
 }
-.bar-v {
-  font-size: 8px;
-  color: var(--txt2);
-  margin-bottom: 1px;
+
+.profit-card__canvas {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  padding-bottom: 22px; /* x-axis label band */
+}
+
+/* dashed horizontal gridlines */
+.profit-card__grid {
+  position: absolute;
+  inset: 0 0 22px 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+.profit-card__gridline {
+  display: block;
+  height: 1px;
+  background: repeating-linear-gradient(
+    to inline-end,
+    var(--brd) 0 4px,
+    transparent 4px 8px
+  );
+  opacity: 0.7;
+
+  &:last-child {
+    background: var(--brd2);
+    opacity: 1;
+  }
+}
+
+/* bars layer sits on top of the grid */
+.profit-card__bars {
+  position: absolute;
+  inset: 0 0 0 0;
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+}
+
+.profit-card__bar {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  min-width: 0;
+}
+
+.profit-card__bar-fill {
+  position: relative;
+  width: 100%;
+  max-width: 38px;
+  margin-inline: auto;
+  border-radius: 6px 6px 0 0;
+  background: linear-gradient(180deg, var(--bl) 0%, var(--bl-d) 100%);
+  transition:
+    height 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.2s ease;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04) inset;
+
+  &::after {
+    /* faint top highlight to give the bar a "filled" feel */
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 6px;
+    border-radius: 6px 6px 0 0;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.22), transparent);
+  }
+}
+
+.profit-card__bar:hover .profit-card__bar-fill {
+  filter: brightness(1.06);
+}
+
+.profit-card__bar-value {
+  position: absolute;
+  bottom: 100%;
+  inset-inline: 50%;
+  transform: translate(50%, -4px);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--txt);
+  white-space: nowrap;
+  background: var(--bg2);
+  padding: 1px 5px;
+  border-radius: 4px;
+  border: 1px solid var(--brd);
+  pointer-events: none;
+}
+
+.profit-card__bar-label {
+  position: absolute;
+  bottom: -20px;
+  inset-inline: 0;
+  font-size: 10.5px;
+  color: var(--txt3);
+  text-align: center;
+  font-weight: 500;
+}
+
+/* current-month treatment — teal gradient + soft glow + bold label */
+.profit-card__bar--current {
+  .profit-card__bar-fill {
+    background: linear-gradient(180deg, #14b89a 0%, var(--te) 100%);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.2) inset,
+      0 6px 14px rgba(15, 110, 86, 0.22);
+  }
+  .profit-card__bar-label {
+    color: var(--te);
+    font-weight: 700;
+  }
+  .profit-card__bar-value {
+    color: var(--te);
+    border-color: var(--te-l);
+  }
+}
+
+.profit-card__empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 50px 20px;
+  color: var(--txt3);
+  font-size: 12px;
 }
 
 /* ════════════════════════════════════════════════════════════════
@@ -136,7 +348,7 @@
   overflow: hidden;
 
   &::before {
-    content: '';
+    content: "";
     position: absolute;
     inset-inline-start: 0;
     inset-block: 0;
@@ -144,10 +356,38 @@
     background: var(--brd);
   }
 
-  &--treasury  { &::before { background: var(--te); } .fs-tile-icon { background: rgba(13, 148, 136, 0.12); } }
-  &--receivable{ &::before { background: var(--bl); } .fs-tile-icon { background: var(--bl-l); } }
-  &--inventory { &::before { background: var(--am); } .fs-tile-icon { background: var(--am-l); } }
-  &--payable   { &::before { background: var(--re); } .fs-tile-icon { background: var(--re-l); } }
+  &--treasury {
+    &::before {
+      background: var(--te);
+    }
+    .fs-tile-icon {
+      background: rgba(13, 148, 136, 0.12);
+    }
+  }
+  &--receivable {
+    &::before {
+      background: var(--bl);
+    }
+    .fs-tile-icon {
+      background: var(--bl-l);
+    }
+  }
+  &--inventory {
+    &::before {
+      background: var(--am);
+    }
+    .fs-tile-icon {
+      background: var(--am-l);
+    }
+  }
+  &--payable {
+    &::before {
+      background: var(--re);
+    }
+    .fs-tile-icon {
+      background: var(--re-l);
+    }
+  }
 }
 
 .fs-tile-icon {
@@ -192,4 +432,154 @@
   padding: 18px;
   color: var(--txt3);
   font-size: 12px;
+}
+
+.hero-stats {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 18px;
+  margin-bottom: 24px;
+}
+
+.hero-card {
+  position: relative;
+  overflow: hidden;
+  grid-column: span 2;
+  border-radius: 24px;
+  padding: 10px;
+  min-height: 100px;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(18px);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease;
+  isolation: isolate;
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset: auto -10px -10px auto;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    opacity: 0.12;
+    z-index: -1;
+  }
+
+  &:hover {
+    transform: translateY(-6px);
+    box-shadow:
+      0 20px 40px rgba(0, 0, 0, 0.12),
+      inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  }
+}
+
+.hero-card__icon {
+  width: 25px;
+  height: 25px;
+  border-radius: 18px;
+  display: grid;
+  place-items: center;
+  font-size: 15px;
+  margin-bottom: 8px;
+  color: white;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.12);
+}
+
+.hero-card__content {
+  display: flex;
+  gap: 4px;
+  flex-direction: column;
+}
+
+.hero-card__label {
+  font-size: 12px;
+  color: var(--txt2);
+  margin-bottom: 2px;
+}
+
+.hero-card__value {
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1.2;
+  margin-bottom: 2px;
+  color: var(--txt);
+}
+
+.hero-card__meta {
+  font-size: 13px;
+  color: var(--txt3);
+}
+
+.hero-card--blue {
+  .hero-card__icon,
+  &::before {
+    background: linear-gradient(135deg, #2563eb, #60a5fa);
+  }
+}
+
+.hero-card--green {
+  .hero-card__icon,
+  &::before {
+    background: linear-gradient(135deg, #059669, #34d399);
+  }
+}
+
+.hero-card--purple {
+  .hero-card__icon,
+  &::before {
+    background: linear-gradient(135deg, #7c3aed, #a78bfa);
+  }
+}
+
+.hero-card--orange {
+  .hero-card__icon,
+  &::before {
+    background: linear-gradient(135deg, #ea580c, #fb923c);
+  }
+}
+
+.hero-card--danger {
+  .hero-card__icon,
+  &::before {
+    background: linear-gradient(135deg, #dc2626, #f87171);
+  }
+}
+
+.hero-card--cyan {
+  .hero-card__icon,
+  &::before {
+    background: linear-gradient(135deg, #0891b2, #67e8f9);
+  }
+}
+
+@media (max-width: 1400px) {
+  .hero-card {
+    grid-column: span 4;
+  }
+}
+
+@media (max-width: 992px) {
+  .hero-card {
+    grid-column: span 6;
+  }
+}
+
+@media (max-width: 576px) {
+  .hero-stats {
+    gap: 14px;
+  }
+
+  .hero-card {
+    grid-column: span 12;
+    min-height: unset;
+  }
+
+  .hero-card__value {
+    font-size: 15px;
+  }
 }

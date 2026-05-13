@@ -12,9 +12,8 @@ export class ReportsService {
     return of(REPORT_CARDS).pipe(delay(100));
   }
 
-  generate(reportId: string): Observable<void> {
-    // استبدل بـ: return this.api.post<void>(`reports/${reportId}/generate`, {});
-    console.log(`Generating report: ${reportId}`);
+  generate(_reportId: string): Observable<void> {
+    // TODO: replace with `return this.api.post<void>(\`reports/${_reportId}/generate\`, {});`
     return of(undefined).pipe(delay(1000));
   }
 }

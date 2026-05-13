@@ -16,7 +16,7 @@ import { RouterModule } from '@angular/router';
   templateUrl: './contracts-home.component.html',
   styleUrl: './contracts-home.component.scss',
 })
-export class ContractsHomeComponent implements OnInit {
+export class ContractsHomeComponent {
   private readonly svc   = inject(ContractsService);
   private readonly toast = inject(ToastService);
 
@@ -27,12 +27,6 @@ export class ContractsHomeComponent implements OnInit {
     this.contracts().find(c => c.id === this.selectedId()) ?? null
   );
 
-  ngOnInit(): void {
-    this.svc.getAll().subscribe(cs => {
-      this.contracts.set(cs);
-      if (cs.length > 0) this.selectedId.set(cs[0].id);
-    });
-  }
 
   protected selectContract(id: string): void { this.selectedId.set(id); }
 

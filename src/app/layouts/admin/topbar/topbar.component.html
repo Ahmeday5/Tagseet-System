@@ -36,10 +36,37 @@
   />
 
   <div class="tright">
-    <!-- Quick pills — hidden on tablet/below -->
-    <button class="tpill tpill-re" routerLink="/warehouse/alerts">3 أصناف ستنفد</button>
-    <button class="tpill tpill-am" routerLink="/customers">5 متأخرون</button>
-    <button class="tpill tpill-gr">نظام سليم</button>
+    <!-- Quick pills — hidden on tablet/below. Live from NavCountsStore. -->
+    @if (counts.lowStockProducts() > 0) {
+      <button class="tpill tpill-re tpill-live"
+              [attr.data-pulse]="counts.lowStockPulse()"
+              routerLink="/warehouse/alerts"
+              title="منتجات بمخزون منخفض">
+        <span class="tpill-dot"></span>
+        {{ counts.lowStockProducts() }} {{ counts.lowStockProducts() === 1 ? 'صنف سينفد' : 'أصناف ستنفد' }}
+      </button>
+    }
+    @if (counts.overdueClients() > 0) {
+      <button class="tpill tpill-am tpill-live"
+              [attr.data-pulse]="counts.overduePulse()"
+              routerLink="/customers"
+              title="عملاء متأخرون عن السداد">
+        <span class="tpill-dot"></span>
+        {{ counts.overdueClients() }} {{ counts.overdueClients() === 1 ? 'عميل متأخر' : 'متأخرون' }}
+      </button>
+    }
+    @if (counts.pendingClientOrders() > 0) {
+      <button class="tpill tpill-bl tpill-live"
+              [attr.data-pulse]="counts.pendingPulse()"
+              routerLink="/catalog"
+              title="طلبات لم تتم مراجعتها">
+        <span class="tpill-dot"></span>
+        {{ counts.pendingClientOrders() }} {{ counts.pendingClientOrders() === 1 ? 'طلبية جديدة' : 'طلبيات جديدة' }}
+      </button>
+    }
+    @if (!counts.hasAlerts() && !counts.loading()) {
+      <button class="tpill tpill-gr" title="لا توجد تنبيهات حالياً">نظام سليم</button>
+    }
 
     <!-- Notifications icon -->
     <a class="ticon" routerLink="/notifications" title="الإشعارات">
@@ -48,7 +75,7 @@
           stroke="currentColor" stroke-width="1.2"/>
         <path d="M6.5 13.5a1.5 1.5 0 003 0" stroke="currentColor" stroke-width="1.2"/>
       </svg>
-      <div class="tdot"></div>
+      @if (counts.hasAlerts()) { <div class="tdot tdot-live"></div> }
     </a>
 
     <!-- User avatar -->

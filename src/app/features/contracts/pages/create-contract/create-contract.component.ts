@@ -30,6 +30,8 @@ import { FormErrorComponent } from '../../../../shared/components/form-error/for
 import { LoaderComponent } from '../../../../shared/components/loader/loader.component';
 import { ToastService } from '../../../../core/services/toast.service';
 import { CurrencyArPipe } from '../../../../shared/pipes/currency-ar.pipe';
+import { ApiError } from '../../../../core/models/api-response.model';
+import { apiErrorToMessage } from '../../../../core/utils/api-error.util';
 
 @Component({
   selector: 'app-create-contract',
@@ -208,9 +210,8 @@ export class CreateContractComponent implements OnInit {
           this.toast.success('تم إنشاء العقد بنجاح');
           this.router.navigate(['/contracts']);
         },
-        error: (err) => {
-          const msg = err?.error?.message || 'فشل في إنشاء العقد';
-          this.toast.error(msg);
+        error: (err: ApiError) => {
+          this.toast.error(apiErrorToMessage(err, 'فشل في إنشاء العقد'));
         },
       });
   }

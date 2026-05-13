@@ -106,12 +106,7 @@ export class RepsService {
     };
   }
 
-  /**
-   * Trim string fields and clamp numerics into the ranges the backend
-   * accepts. `performanceRating` outside 0..5 returns a 400 from the API,
-   * so we cap it here to surface the issue as a form-validation error
-   * before the request leaves the client.
-   */
+ 
   private normalize(
     payload: CreateRepresentativePayload,
   ): CreateRepresentativePayload {

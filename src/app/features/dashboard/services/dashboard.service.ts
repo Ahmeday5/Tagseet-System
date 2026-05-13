@@ -1,77 +1,84 @@
 import { Injectable, inject } from '@angular/core';
-import { Observable, of } from 'rxjs';
-import { delay } from 'rxjs/operators';
-import { DashboardData } from '../models/dashboard.model';
-// import { ApiService } from '../../../core/services/api.service'; // فعّل عند ربط API
+import { Observable } from 'rxjs';
+import {
+  DueInstallmentDto,
+  HomeSummaryDto,
+  ProfitMonthDto,
+  TopClientDto,
+} from '../models/dashboard.model';
+import { ApiService } from '../../../core/services/api.service';
+import { API_ENDPOINTS } from '../../../core/constants/api-endpoints.const';
+import {
+  withCache,
+  withCacheBypass,
+} from '../../../core/http/http-context.tokens';
+import { toList } from '../../../core/utils/api-list.util';
+
+/** All three dashboard widgets share the same staleness profile — a minute is plenty. */
+const HOME_WIDGET_TTL_MS = 60 * 1000;
 
 @Injectable({ providedIn: 'root' })
 export class DashboardService {
-  // private readonly api = inject(ApiService);
+  private readonly api = inject(ApiService);
+  // ──────────────── live widgets ────────────────
 
-  getDashboardData(): Observable<DashboardData> {
-    // ──── Mock Data ────
-    // استبدل هذا بـ: return this.api.get<DashboardData>('dashboard');
-    return of(MOCK_DASHBOARD).pipe(delay(300));
+  profitsLast6Months(): Observable<ProfitMonthDto[]> {
+    return this.api
+      .get<ProfitMonthDto[]>(API_ENDPOINTS.charts.profitsLast6Months, {
+        context: withCache({ ttlMs: HOME_WIDGET_TTL_MS }),
+      })
+      .pipe(toList<ProfitMonthDto>());
+  }
+
+  refreshProfitsLast6Months(): Observable<ProfitMonthDto[]> {
+    return this.api
+      .get<ProfitMonthDto[]>(API_ENDPOINTS.charts.profitsLast6Months, {
+        context: withCacheBypass(withCache({ ttlMs: HOME_WIDGET_TTL_MS })),
+      })
+      .pipe(toList<ProfitMonthDto>());
+  }
+
+  topClientsThisMonth(): Observable<TopClientDto[]> {
+    return this.api
+      .get<TopClientDto[]>(API_ENDPOINTS.clients.topThisMonth, {
+        context: withCache({ ttlMs: HOME_WIDGET_TTL_MS }),
+      })
+      .pipe(toList<TopClientDto>());
+  }
+
+  refreshTopClientsThisMonth(): Observable<TopClientDto[]> {
+    return this.api
+      .get<TopClientDto[]>(API_ENDPOINTS.clients.topThisMonth, {
+        context: withCacheBypass(withCache({ ttlMs: HOME_WIDGET_TTL_MS })),
+      })
+      .pipe(toList<TopClientDto>());
+  }
+
+  installmentsDueThisWeek(): Observable<DueInstallmentDto[]> {
+    return this.api
+      .get<DueInstallmentDto[]>(API_ENDPOINTS.installments.dueThisWeek, {
+        context: withCache({ ttlMs: HOME_WIDGET_TTL_MS }),
+      })
+      .pipe(toList<DueInstallmentDto>());
+  }
+
+  refreshInstallmentsDueThisWeek(): Observable<DueInstallmentDto[]> {
+    return this.api
+      .get<DueInstallmentDto[]>(API_ENDPOINTS.installments.dueThisWeek, {
+        context: withCacheBypass(withCache({ ttlMs: HOME_WIDGET_TTL_MS })),
+      })
+      .pipe(toList<DueInstallmentDto>());
+  }
+
+  homeSummary(): Observable<HomeSummaryDto> {
+    return this.api.get<HomeSummaryDto>(API_ENDPOINTS.dashboard.homeSummary, {
+      context: withCache({ ttlMs: HOME_WIDGET_TTL_MS }),
+    });
+  }
+
+  refreshHomeSummary(): Observable<HomeSummaryDto> {
+    return this.api.get<HomeSummaryDto>(API_ENDPOINTS.dashboard.homeSummary, {
+      context: withCacheBypass(withCache({ ttlMs: HOME_WIDGET_TTL_MS })),
+    });
   }
 }
-
-const MOCK_DASHBOARD: DashboardData = {
-  stats: {
-    totalCustomers: 148,
-    totalReceivables: 284600,
-    collectedThisMonth: 42800,
-    mainTreasury: 89200,
-    monthlyProfit: 18400,
-    collectionRate: 87,
-    lateCustomers: 5,
-    lateAmount: 12400,
-    ratingACount: 94,
-    lowStockCount: 3,
-    vatDue: 8420,
-  },
-  profitChart: [
-    { month: 'نوف', amount: 13600, isCurrent: false },
-    { month: 'ديس', amount: 15200, isCurrent: false },
-    { month: 'يناير', amount: 14800, isCurrent: false },
-    { month: 'فبراير', amount: 16400, isCurrent: false },
-    { month: 'مارس', amount: 18900, isCurrent: false },
-    { month: 'أبريل', amount: 18400, isCurrent: true },
-  ],
-  topCustomers: [
-    {
-      rank: 1,
-      name: 'عبدالله العمري',
-      paid: 8400,
-      installments: 24,
-      creditScore: 'A',
-    },
-    {
-      rank: 2,
-      name: 'فاطمة السالم',
-      paid: 7200,
-      installments: 18,
-      creditScore: 'A',
-    },
-    {
-      rank: 3,
-      name: 'محمد الغامدي',
-      paid: 6800,
-      installments: 12,
-      creditScore: 'B',
-    },
-    {
-      rank: 4,
-      name: 'نورة الحربي',
-      paid: 5600,
-      installments: 24,
-      creditScore: 'A',
-    },
-    {
-      rank: 5,
-      name: 'خالد الزهراني',
-      paid: 4900,
-      installments: 12,
-      creditScore: 'C',
-    },
-  ],
-};

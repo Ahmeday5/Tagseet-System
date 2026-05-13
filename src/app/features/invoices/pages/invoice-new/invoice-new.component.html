@@ -77,7 +77,7 @@
         </div>
 
         <div formArrayName="items">
-          @for (line of items.controls; track $index; let idx = $index) {
+          @for (line of items.controls; track line; let idx = $index) {
           <div class="inv-line-r" [formGroupName]="idx">
             <select formControlName="productId" (change)="onProductChange(idx)">
               <option [ngValue]="0" disabled>— اختر —</option>

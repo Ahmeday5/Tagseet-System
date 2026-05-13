@@ -3,7 +3,8 @@
     "allow": [
       "Bash(npx ng:*)",
       "Bash(npx tsc:*)",
-      "PowerShell(npx tsc --noEmit 2>&1)"
+      "PowerShell(npx tsc --noEmit 2>&1)",
+      "Bash(echo \"exit:$?\")"
     ]
   }
 }
