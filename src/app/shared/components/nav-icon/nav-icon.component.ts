@@ -17,7 +17,8 @@ export type NavIconName =
   | 'clipboard'
   | 'chart'
   | 'file-pdf'
-  | 'tag';
+  | 'tag'
+  | 'receipt';
 
 @Component({
   selector: 'app-nav-icon',
@@ -123,6 +124,10 @@ export type NavIconName =
         @case ('tag') {
           <path d="M20.59 13.41 13.42 20.58a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
           <circle cx="7.2" cy="7.2" r="1.2" fill="currentColor" stroke="none" />
+        }
+        @case ('receipt') {
+          <path d="M6 3h12v18l-2.5-1.5L13 21l-2.5-1.5L8 21l-2-1.5V3z" />
+          <path d="M9 8h6M9 12h6M9 16h4" />
         }
       }
     </svg>

@@ -59,6 +59,14 @@ export interface AuthResponseData {
   userId: string;
   email: string | null;
   userName: string | null;
+  /**
+   * The user's role name (e.g. `"Admin"`). Distinct from `userType` which
+   * has historically been used as a coarse "AppUser" / "Client" partition.
+   * `role` is the source of truth for the role-policy table.
+   */
+  role?: string | null;
+  /** Flat array of permission strings (e.g. `"Treasury.FullAccess"`). */
+  permissions?: ReadonlyArray<string> | null;
   /** ISO date — may be `0001-01-01T00:00:00` on refresh. JWT `exp` is the source of truth. */
   expiresAtUtc: string;
 }

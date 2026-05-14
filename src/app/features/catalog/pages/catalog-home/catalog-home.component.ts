@@ -15,6 +15,8 @@ import {
 } from '../../models/catalog.model';
 import { ConvertToContractModalComponent } from '../../components/convert-to-contract-modal/convert-to-contract-modal.component';
 import { ClientOrderDetailsModalComponent } from '../../components/client-order-details-modal/client-order-details-modal.component';
+import { HasPermissionDirective } from '../../../../shared/directives/has-permission.directive';
+import { PERMISSIONS } from '../../../../core/constants/permissions.const';
 
 interface InstallmentRow {
   index: number;
@@ -25,7 +27,12 @@ interface InstallmentRow {
   selector: 'app-catalog-home',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CurrencyArPipe, ConvertToContractModalComponent, ClientOrderDetailsModalComponent],
+  imports: [
+    CurrencyArPipe,
+    ConvertToContractModalComponent,
+    ClientOrderDetailsModalComponent,
+    HasPermissionDirective,
+  ],
   templateUrl: './catalog-home.component.html',
   styleUrl: './catalog-home.component.scss',
 })
@@ -33,6 +40,9 @@ export class CatalogHomeComponent implements OnInit {
   private readonly svc    = inject(CatalogService);
   private readonly toast  = inject(ToastService);
   private readonly dialog = inject(DialogService);
+
+  /** Exposed so the template can gate write actions with `*appHasPermission`. */
+  protected readonly PERMS = PERMISSIONS;
 
   // ── data ──
   protected readonly products       = signal<Product[]>([]);

@@ -28,6 +28,11 @@ import {
 import { ApiError } from '../models/api-response.model';
 import { API_ENDPOINTS } from '../constants/api-endpoints.const';
 import {
+  ALL_PERMISSIONS,
+  Permission,
+  ROLE_PERMISSIONS,
+} from '../constants/permissions.const';
+import {
   withInlineHandling,
   withSkipAuth,
 } from '../http/http-context.tokens';
@@ -95,6 +100,16 @@ export class AuthService {
   private readonly currentUserSignal = signal<User | null>(this.loadStoredUser());
   readonly currentUser = this.currentUserSignal.asReadonly();
   readonly isAuthenticated = computed(() => !!this.currentUserSignal());
+
+  /**
+   * Set of permissions the current user holds. Kept as a derived signal so
+   * directives / guards can subscribe reactively — when the user logs in
+   * (or another tab updates the session) every gated UI element refreshes
+   * without manual rewiring.
+   */
+  readonly permissionSet = computed<ReadonlySet<string>>(
+    () => new Set(this.currentUserSignal()?.permissions ?? []),
+  );
 
   /** Shared in-flight refresh — collapses concurrent callers in this tab. */
   private inflightRefresh: Observable<AuthTokens> | null = null;
@@ -238,12 +253,25 @@ export class AuthService {
     return !!current && roles.includes(current);
   }
 
-  hasPermission(permission: string | readonly string[]): boolean {
-    const perms = this.currentUserSignal()?.permissions ?? [];
-    if (perms.includes('all')) return true;
-    return Array.isArray(permission)
-      ? permission.every((p) => perms.includes(p))
-      : perms.includes(permission as string);
+  /**
+   * Returns true when the user holds **every** permission in the input.
+   * Accepts a single permission or an array — array form is "all of".
+   *
+   * For "any of" semantics use {@link hasAnyPermission}.
+   */
+  hasPermission(permission: Permission | string | readonly string[]): boolean {
+    const set = this.permissionSet();
+    if (Array.isArray(permission)) {
+      return permission.every((p) => set.has(p));
+    }
+    return set.has(permission as string);
+  }
+
+  /** Returns true when the user holds AT LEAST ONE of the given permissions. */
+  hasAnyPermission(permissions: readonly string[]): boolean {
+    if (permissions.length === 0) return true;
+    const set = this.permissionSet();
+    return permissions.some((p) => set.has(p));
   }
 
   // ──────────────────────── refresh pipeline ────────────────────────
@@ -442,13 +470,16 @@ export class AuthService {
       data.userName?.trim() ||
       data.email?.split('@')[0] ||
       'مستخدم';
+    // Prefer the explicit `role` field; fall back to `userType` for legacy
+    // payloads that only carried the coarse AppUser/Client partition.
+    const role = this.normalizeRole(data.role ?? data.userType);
     return {
       id: data.userId,
       name: userName,
       email: data.email ?? '',
-      role: this.normalizeRole(data.userType),
+      role,
       avatar: this.deriveAvatar(userName),
-      permissions: [],
+      permissions: this.resolvePermissions(data.permissions, role),
     };
   }
 
@@ -460,8 +491,34 @@ export class AuthService {
       accountant: 'Accountant',
       representative: 'Representative',
       client: 'Client',
+      // `userType: "AppUser"` is the coarse partition the backend used before
+      // roles were exposed — treat it as the most-privileged role only when
+      // the explicit `role` field is missing. Defaults to Client otherwise.
+      appuser: 'Admin',
     };
     return map[(raw ?? '').trim().toLowerCase()] ?? 'Client';
+  }
+
+  /**
+   * Resolves the effective permission list for a user.
+   *
+   *   1. If the backend explicitly returned `permissions`, trust them
+   *      verbatim — only intersect with the known catalogue to drop unknown
+   *      strings (defensive against typos or unreleased flags).
+   *   2. Otherwise, derive the list from the static `ROLE_PERMISSIONS` map.
+   *      This keeps the app usable when an older build of the backend
+   *      omits the array.
+   */
+  private resolvePermissions(
+    fromWire: ReadonlyArray<string> | null | undefined,
+    role: UserRole,
+  ): string[] {
+    if (fromWire && fromWire.length > 0) {
+      const known = new Set<string>(ALL_PERMISSIONS);
+      return fromWire.filter((p) => known.has(p));
+    }
+    const fallback = ROLE_PERMISSIONS[role] as ReadonlyArray<Permission> | undefined;
+    return fallback ? [...fallback] : [];
   }
 
   private deriveAvatar(name: string): string {

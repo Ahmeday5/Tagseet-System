@@ -23,6 +23,8 @@ import { ApiError } from '../../../../core/models/api-response.model';
 import { ToastService } from '../../../../core/services/toast.service';
 import { HttpCacheService } from '../../../../core/services/http-cache.service';
 import { onInvalidate } from '../../../../core/utils/auto-refresh.util';
+import { HasPermissionDirective } from '../../../../shared/directives/has-permission.directive';
+import { PERMISSIONS } from '../../../../core/constants/permissions.const';
 
 const DEFAULT_PAGE_SIZE = 10;
 const SEARCH_DEBOUNCE_MS = 300;
@@ -35,6 +37,7 @@ const SEARCH_DEBOUNCE_MS = 300;
     BadgeComponent,
     PaginationComponent,
     CurrencyArPipe,
+    HasPermissionDirective,
   ],
   templateUrl: './customers-list.component.html',
   styleUrl: './customers-list.component.scss',
@@ -43,6 +46,9 @@ export class CustomersListComponent {
   private readonly service = inject(CustomersService);
   private readonly toast = inject(ToastService);
   private readonly cache = inject(HttpCacheService);
+
+  /** Exposed so the template can gate write actions with `*appHasPermission`. */
+  protected readonly PERMS = PERMISSIONS;
 
   // ── data ──
   protected readonly clients = signal<DashboardClient[]>([]);

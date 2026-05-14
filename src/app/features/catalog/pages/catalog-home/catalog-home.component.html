@@ -99,7 +99,7 @@
                 </button>
                 @switch (order.status) {
                 @case ('Pending') {
-                <div class="d-flex gap-1 justify-content-center">
+                <div class="d-flex gap-1 justify-content-center" *appHasPermission="PERMS.clientsFullAccess">
                   <button type="button" class="btn btn-sm btn-bl" [disabled]="rejectingId() === order.id"
                     (click)="openConvertModal(order)">تحويل لعقد</button>
                   <button type="button" class="btn btn-sm btn-soft-re d-inline-flex align-items-center gap-1"
@@ -286,7 +286,11 @@
       }
 
       <div class="ord-actions">
-        <button class="btn btn-bl ord-btn-grow-2" (click)="createContract()">إنشاء العقد وطباعته PDF</button>
+        <button
+          *appHasPermission="PERMS.clientsFullAccess"
+          class="btn btn-bl ord-btn-grow-2"
+          (click)="createContract()"
+        >إنشاء العقد وطباعته PDF</button>
         <button class="btn btn-wa ord-btn-grow-1" (click)="sendWhatsapp()">📱 WhatsApp</button>
       </div>
     </div>

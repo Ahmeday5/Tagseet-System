@@ -66,7 +66,11 @@
     <span>تحديث</span>
   </button>
 
-  <button class="btn btn-sm btn-bl" (click)="goToNew()">+ فاتورة جديدة</button>
+  <button
+    *appHasPermission="PERMS.suppliersFullAccess"
+    class="btn btn-sm btn-bl"
+    (click)="goToNew()"
+  >+ فاتورة جديدة</button>
 </div>
 
 <!-- ── TABLE ── -->
@@ -113,6 +117,7 @@
               >تفاصيل</button>
               @if (isDraft(inv)) {
                 <button
+                  *appHasPermission="PERMS.suppliersFullAccess"
                   type="button"
                   class="btn btn-sm btn-gr"
                   (click)="openConfirm(inv)"

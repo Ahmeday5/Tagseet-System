@@ -25,11 +25,19 @@ import {
   BadgeComponent,
   BadgeType,
 } from '../../../../shared/components/badge/badge.component';
+import { HasPermissionDirective } from '../../../../shared/directives/has-permission.directive';
+import { PERMISSIONS } from '../../../../core/constants/permissions.const';
 @Component({
   selector: 'app-dashboard-home',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, CurrencyArPipe, BadgeComponent, DecimalPipe],
+  imports: [
+    RouterLink,
+    CurrencyArPipe,
+    BadgeComponent,
+    DecimalPipe,
+    HasPermissionDirective,
+  ],
   templateUrl: './dashboard-home.component.html',
   styleUrl: './dashboard-home.component.scss',
 })
@@ -37,6 +45,9 @@ export class DashboardHomeComponent implements OnInit {
   private readonly dashService = inject(DashboardService);
   private readonly financialService = inject(FinancialService);
   private readonly cache = inject(HttpCacheService);
+
+  /** Exposed so the template can gate write actions with `*appHasPermission`. */
+  protected readonly PERMS = PERMISSIONS;
 
   // ── live home widgets ──
   protected readonly profitMonths = signal<ProfitMonthDto[]>([]);
@@ -78,6 +89,95 @@ export class DashboardHomeComponent implements OnInit {
   protected readonly profitGridTicks = computed(() => {
     const max = this.maxProfit();
     return [1, 0.75, 0.5, 0.25, 0].map((r) => max * r);
+  });
+
+  /* ──────────────────────────────────────────────────────────────
+     SVG chart geometry. The viewBox is fixed at 600×200 so the path
+     scales to whatever pixel width the SCSS gives the canvas.
+     Internal padding keeps the line off the edges of the plot area.
+     ────────────────────────────────────────────────────────────── */
+  private readonly CHART_VB_W = 600;
+  private readonly CHART_VB_H = 200;
+  private readonly CHART_PAD_X = 24;
+  private readonly CHART_PAD_TOP = 18;
+  private readonly CHART_PAD_BOTTOM = 22;
+
+  protected readonly chartViewBox = `0 0 ${this.CHART_VB_W} ${this.CHART_VB_H}`;
+
+  /**
+   * Pixel-space points (within the viewBox) for each month — used to draw
+   * the line, the area, the dots and to anchor the value labels in HTML
+   * (overlaid via percentage coordinates).
+   */
+  protected readonly chartPoints = computed<
+    Array<{
+      x: number;
+      y: number;
+      xPct: number;
+      yPct: number;
+      month: string;
+      value: number;
+      formatted: string;
+    }>
+  >(() => {
+    const months = this.profitMonths();
+    if (!months.length) return [];
+    const max = this.maxProfit();
+    const innerW = this.CHART_VB_W - this.CHART_PAD_X * 2;
+    const innerH =
+      this.CHART_VB_H - this.CHART_PAD_TOP - this.CHART_PAD_BOTTOM;
+    const stepX =
+      months.length === 1 ? 0 : innerW / (months.length - 1);
+
+    return months.map((m, i) => {
+      const x = this.CHART_PAD_X + stepX * i;
+      const ratio = max ? m.profitAmount / max : 0;
+      const y = this.CHART_PAD_TOP + innerH * (1 - ratio);
+      return {
+        x,
+        y,
+        xPct: (x / this.CHART_VB_W) * 100,
+        yPct: (y / this.CHART_VB_H) * 100,
+        month: m.month,
+        value: m.profitAmount,
+        formatted: m.formattedProfit,
+      };
+    });
+  });
+
+  /** Smooth Catmull-Rom-ish curve path through the data points. */
+  protected readonly chartLinePath = computed<string>(() => {
+    const pts = this.chartPoints();
+    if (pts.length === 0) return '';
+    if (pts.length === 1) {
+      const { x, y } = pts[0];
+      return `M ${x} ${y}`;
+    }
+    let d = `M ${pts[0].x} ${pts[0].y}`;
+    for (let i = 0; i < pts.length - 1; i++) {
+      const p0 = pts[i - 1] ?? pts[i];
+      const p1 = pts[i];
+      const p2 = pts[i + 1];
+      const p3 = pts[i + 2] ?? p2;
+      // Cardinal-spline control points (tension ≈ 0.2 for a gentle curve).
+      const cp1x = p1.x + (p2.x - p0.x) / 6;
+      const cp1y = p1.y + (p2.y - p0.y) / 6;
+      const cp2x = p2.x - (p3.x - p1.x) / 6;
+      const cp2y = p2.y - (p3.y - p1.y) / 6;
+      d += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2.x} ${p2.y}`;
+    }
+    return d;
+  });
+
+  /** Same curve, closed at the bottom to produce a filled area. */
+  protected readonly chartAreaPath = computed<string>(() => {
+    const pts = this.chartPoints();
+    if (pts.length === 0) return '';
+    const line = this.chartLinePath();
+    const baseY = this.CHART_VB_H - this.CHART_PAD_BOTTOM;
+    const lastX = pts[pts.length - 1].x;
+    const firstX = pts[0].x;
+    return `${line} L ${lastX} ${baseY} L ${firstX} ${baseY} Z`;
   });
 
   readonly totalAssets = computed(() => {
@@ -172,10 +272,6 @@ export class DashboardHomeComponent implements OnInit {
 
   protected refreshFinancial(): void {
     this.loadFinancial(true);
-  }
-
-  protected getBarHeight(amount: number): number {
-    return Math.round((amount / this.maxProfit()) * 85) + 10;
   }
 
   /** The last month returned by the API is "this month" — we highlight it differently. */

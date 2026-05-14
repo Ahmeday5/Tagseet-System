@@ -4,7 +4,11 @@ import {
   Treasury,
   CreateTreasuryPayload,
   UpdateTreasuryPayload,
+  CreateTreasuryTransferPayload,
+  TreasuryTransfer,
+  TreasuryTransfersQuery,
 } from '../models/treasury.model';
+import { PagedResponse } from '../../../core/models/api-response.model';
 import { ApiService } from '../../../core/services/api.service';
 import { API_ENDPOINTS } from '../../../core/constants/api-endpoints.const';
 import {
@@ -13,9 +17,16 @@ import {
   withCacheInvalidate,
   withInlineHandling,
 } from '../../../core/http/http-context.tokens';
-import { toList } from '../../../core/utils/api-list.util';
+import { toList, toPaged } from '../../../core/utils/api-list.util';
 
-const TREASURY_CACHE_KEY = 'treasury';
+/**
+ * Cache invalidation pattern for treasury-scoped GETs.
+ *
+ * Use `'treasur'` (NOT `'treasury'`) so the pattern matches both
+ * `/treasuries` (the list) AND `/treasuries/transfers` — the y/ies plural
+ * difference would otherwise let either URL drift out of sync after a write.
+ */
+const TREASURY_CACHE_KEY = 'treasur';
 const TREASURY_TTL_MS = 15 * 60 * 1000;
 
 @Injectable({ providedIn: 'root' })
@@ -64,5 +75,58 @@ export class TreasuryService {
         context: withCacheInvalidate([TREASURY_CACHE_KEY]),
       },
     );
+  }
+
+  // ─────────────── transfers ───────────────
+
+  listTransfers(
+    query: TreasuryTransfersQuery = {},
+  ): Observable<PagedResponse<TreasuryTransfer>> {
+    return this.api
+      .get<unknown>(API_ENDPOINTS.treasuries.transfers, {
+        params: this.toTransferParams(query),
+        context: withCache({ ttlMs: TREASURY_TTL_MS }),
+      })
+      .pipe(toPaged<TreasuryTransfer>());
+  }
+
+  refreshTransfers(
+    query: TreasuryTransfersQuery = {},
+  ): Observable<PagedResponse<TreasuryTransfer>> {
+    return this.api
+      .get<unknown>(API_ENDPOINTS.treasuries.transfers, {
+        params: this.toTransferParams(query),
+        context: withCacheBypass(withCache({ ttlMs: TREASURY_TTL_MS })),
+      })
+      .pipe(toPaged<TreasuryTransfer>());
+  }
+
+  /**
+   * Records a money movement between two treasuries. Invalidates the
+   * `treasury` cache scope so balances on every page re-fetch.
+   */
+  createTransfer(
+    payload: CreateTreasuryTransferPayload,
+  ): Observable<TreasuryTransfer> {
+    return this.api.post<TreasuryTransfer>(
+      API_ENDPOINTS.treasuries.transfers,
+      payload,
+      {
+        context: withInlineHandling(withCacheInvalidate([TREASURY_CACHE_KEY])),
+      },
+    );
+  }
+
+  private toTransferParams(
+    query: TreasuryTransfersQuery,
+  ): Record<string, unknown> {
+    return {
+      PageIndex: query.pageIndex ?? 1,
+      PageSize: query.pageSize ?? 10,
+      fromTreasuryId: query.fromTreasuryId || undefined,
+      toTreasuryId: query.toTreasuryId || undefined,
+      from: query.from || undefined,
+      to: query.to || undefined,
+    };
   }
 }

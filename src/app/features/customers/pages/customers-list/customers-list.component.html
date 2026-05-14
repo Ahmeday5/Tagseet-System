@@ -59,7 +59,11 @@
     <span>تحديث</span>
   </button>
 
-  <button class="btn btn-sm btn-bl ms-auto" (click)="showForm.set(true)">+ عقد جديد سريع</button>
+  <button
+    *appHasPermission="PERMS.clientsFullAccess"
+    class="btn btn-sm btn-bl ms-auto"
+    (click)="showForm.set(true)"
+  >+ عقد جديد سريع</button>
 </div>
 
 <!-- ── TABLE ── -->
@@ -183,7 +187,11 @@
               </div>
               <div class="cl-empty-title">لا يوجد عملاء بعد</div>
               <div class="cl-empty-sub">ابدأ بإضافة أول عقد لتبدأ متابعة الأقساط والتحصيل.</div>
-              <button class="btn btn-sm btn-bl mt-2" (click)="showForm.set(true)">+ عقد جديد سريع</button>
+              <button
+                *appHasPermission="PERMS.clientsFullAccess"
+                class="btn btn-sm btn-bl mt-2"
+                (click)="showForm.set(true)"
+              >+ عقد جديد سريع</button>
             </div>
             }
           </td>

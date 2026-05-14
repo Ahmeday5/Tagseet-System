@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { LayoutService } from '../../../core/services/layout.service';
 import { BADGE_CLASS_MAP, BadgeType } from '../../../core/constants/badge.constants';
@@ -6,6 +6,8 @@ import { getMappedClass } from '../../../core/utils/class-map.util';
 import { NAV_SECTIONS } from '../../../core/constants/nav.constants';
 import { NavIconComponent, NavIconName } from '../../../shared/components/nav-icon/nav-icon.component';
 import { NavCountsStore } from '../../../core/stores/nav-counts.store';
+import { AuthService } from '../../../core/services/auth.service';
+import { Permission } from '../../../core/constants/permissions.const';
 
 /**
  * Keys of `NavCountsStore` signals that nav items can bind to. The
@@ -27,6 +29,12 @@ export interface NavItem {
   badgeType?: 'red' | 'amber' | 'green' | 'whatsapp';
   /** Live counter source from `NavCountsStore`. Hides the badge when count is 0. */
   badgeKey?: NavBadgeKey;
+  /**
+   * Permission gate. Item is hidden unless the current user holds at least
+   * ONE of the listed permissions. Omit (or pass an empty array) to make
+   * the item visible to everyone.
+   */
+  requiredAnyPermission?: ReadonlyArray<Permission | string>;
 }
 
 export interface NavSection {
@@ -45,8 +53,25 @@ export interface NavSection {
 export class SidebarComponent {
   protected readonly layout = inject(LayoutService);
   protected readonly counts = inject(NavCountsStore);
+  private readonly auth = inject(AuthService);
 
-  readonly navSections = NAV_SECTIONS;
+  /**
+   * Sidebar reflows whenever the user's permission set changes (login,
+   * cross-tab session refresh). Sections whose items all evaluate to
+   * hidden are dropped wholesale so we don't render orphan headers.
+   */
+  protected readonly visibleSections = computed(() => {
+    const set = this.auth.permissionSet();
+    return NAV_SECTIONS
+      .map((section) => ({
+        ...section,
+        items: section.items.filter((item) =>
+          !item.requiredAnyPermission?.length ||
+          item.requiredAnyPermission.some((p) => set.has(p)),
+        ),
+      }))
+      .filter((section) => section.items.length > 0);
+  });
 
   getBadgeClass(type?: BadgeType): string {
     return getMappedClass(BADGE_CLASS_MAP, type ?? 'red', 'red');

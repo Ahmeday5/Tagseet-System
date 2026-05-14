@@ -23,6 +23,8 @@ import { ToastService } from '../../../../core/services/toast.service';
 import { HttpCacheService } from '../../../../core/services/http-cache.service';
 import { onInvalidate } from '../../../../core/utils/auto-refresh.util';
 import { ApiError } from '../../../../core/models/api-response.model';
+import { HasPermissionDirective } from '../../../../shared/directives/has-permission.directive';
+import { PERMISSIONS } from '../../../../core/constants/permissions.const';
 
 /**
  * Per-card cycling palette. The summary endpoint doesn't expose a "color"
@@ -60,6 +62,7 @@ const INVENTORY_PAGE_SIZE = 10;
     CurrencyArPipe,
     PaginationComponent,
     WarehouseFormModalComponent,
+    HasPermissionDirective,
   ],
   templateUrl: './warehouse-home.component.html',
   styleUrl: './warehouse-home.component.scss',
@@ -68,6 +71,9 @@ export class WarehouseHomeComponent implements OnInit {
   private readonly svc    = inject(WarehouseService);
   private readonly dialog = inject(DialogService);
   private readonly toast  = inject(ToastService);
+
+  /** Exposed so the template can gate write actions with `*appHasPermission`. */
+  protected readonly PERMS = PERMISSIONS;
   private readonly cache  = inject(HttpCacheService);
 
   constructor() {

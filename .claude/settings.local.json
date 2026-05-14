@@ -4,7 +4,11 @@
       "Bash(npx ng:*)",
       "Bash(npx tsc:*)",
       "PowerShell(npx tsc --noEmit 2>&1)",
-      "Bash(echo \"exit:$?\")"
+      "Bash(echo \"exit:$?\")",
+      "Bash(type src\\\\environments\\\\environment.ts 2>nul)"
+    ],
+    "additionalDirectories": [
+      "F:\\Dashboards\\tagseetDashboard"
     ]
   }
 }

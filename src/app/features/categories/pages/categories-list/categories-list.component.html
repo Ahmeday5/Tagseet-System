@@ -5,7 +5,11 @@
     <div class="pgs">تصنيف المنتجات لتنظيم أفضل في الكتالوج والتقارير</div>
   </div>
   <div class="d-flex gap-2">
-    <button class="btn btn-sm btn-bl" (click)="openCreate()">+ فئة جديدة</button>
+    <button
+      *appHasPermission="PERMS.suppliersFullAccess"
+      class="btn btn-sm btn-bl"
+      (click)="openCreate()"
+    >+ فئة جديدة</button>
   </div>
 </div>
 
@@ -105,7 +109,7 @@
               </div>
             </td>
             <td>
-              <div class="d-flex gap-1 justify-content-center">
+              <div class="d-flex gap-1 justify-content-center" *appHasPermission="PERMS.suppliersFullAccess">
                 <button
                   type="button"
                   class="btn btn-sm btn-bl"
@@ -155,7 +159,11 @@
                   </div>
                   <div class="cat-empty-title">لا توجد فئات بعد</div>
                   <div class="cat-empty-sub">ابدأ بتصنيف منتجاتك بإضافة أول فئة.</div>
-                  <button class="btn btn-sm btn-bl mt-2" (click)="openCreate()">+ إضافة فئة جديدة</button>
+                  <button
+                    *appHasPermission="PERMS.suppliersFullAccess"
+                    class="btn btn-sm btn-bl mt-2"
+                    (click)="openCreate()"
+                  >+ إضافة فئة جديدة</button>
                 </div>
               }
             </td>

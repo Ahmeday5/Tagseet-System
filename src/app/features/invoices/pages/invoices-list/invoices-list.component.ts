@@ -24,6 +24,8 @@ import {
 import { Supplier } from '../../../suppliers/models/supplier.model';
 import { SuppliersService } from '../../../suppliers/services/suppliers.service';
 import { ConfirmInvoiceModalComponent } from '../../components/confirm-invoice-modal/confirm-invoice-modal.component';
+import { HasPermissionDirective } from '../../../../shared/directives/has-permission.directive';
+import { PERMISSIONS } from '../../../../core/constants/permissions.const';
 
 const STATUS_OPTIONS: ReadonlyArray<{
   value: PurchaseInvoiceStatus | '';
@@ -42,7 +44,7 @@ const STATUS_OPTIONS: ReadonlyArray<{
   selector: 'app-invoices-list',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CurrencyArPipe, ConfirmInvoiceModalComponent],
+  imports: [CurrencyArPipe, ConfirmInvoiceModalComponent, HasPermissionDirective],
   templateUrl: './invoices-list.component.html',
   styleUrl: './invoices-list.component.scss',
 })
@@ -51,6 +53,9 @@ export class InvoicesListComponent implements OnInit {
   private readonly suppliersService = inject(SuppliersService);
   private readonly router           = inject(Router);
   private readonly cache            = inject(HttpCacheService);
+
+  /** Exposed so the template can gate write actions with `*appHasPermission`. */
+  protected readonly PERMS = PERMISSIONS;
 
   // ── data ──
   protected readonly invoices  = signal<PurchaseInvoiceListItem[]>([]);

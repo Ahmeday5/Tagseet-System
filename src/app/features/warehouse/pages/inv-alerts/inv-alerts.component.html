@@ -12,7 +12,11 @@
       }
       <span>تحديث</span>
     </button>
-    <a class="btn btn-sm btn-bl" routerLink="/invoices/new">+ فاتورة مشتريات</a>
+    <a
+      *appHasPermission="PERMS.suppliersFullAccess"
+      class="btn btn-sm btn-bl"
+      routerLink="/invoices/new"
+    >+ فاتورة مشتريات</a>
   </div>
 </div>
 

@@ -4,14 +4,111 @@
     <div class="pgs">نظام سليم</div>
   </div>
   <div class="d-flex gap-2">
-    <button class="btn btn-sm btn-wa" routerLink="/notifications">
+    <button
+      *appHasPermission="PERMS.clientsView"
+      class="btn btn-sm btn-wa"
+      routerLink="/notifications"
+    >
       🟢 إرسال تذكيرات WhatsApp
     </button>
-    <button class="btn btn-sm btn-bl" routerLink="/catalog">
+    <button
+      *appHasPermission="PERMS.clientsFullAccess"
+      class="btn btn-sm btn-bl"
+      routerLink="/catalog"
+    >
       + طلبية جديدة
     </button>
   </div>
 </div>
+
+<!-- ── ملخّص الصفحة الرئيسية ── -->
+<section class="hs-block">
+  <header class="hs-block-head">
+    <div>
+      <div class="hs-block-title">نظرة عامة</div>
+      <div class="hs-block-sub">أهم المؤشرات اللحظية لإدارة الأقساط والتحصيل</div>
+    </div>
+    @if (summaryLoading()) {
+      <span class="hs-loading">
+        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+        <span>جاري التحميل...</span>
+      </span>
+    }
+  </header>
+
+  @if (summary(); as s) {
+    <div class="hs-grid">
+      <div class="hs-tile hs-tile--blue">
+        <div class="hs-tile-label">عملاء الأقساط</div>
+        <div class="hs-tile-value">{{ s.installmentClients.count | number }}</div>
+        <div class="hs-tile-meta">+{{ s.installmentClients.addedThisMonth | number }} هذا الشهر</div>
+      </div>
+
+      <div class="hs-tile hs-tile--orange">
+        <div class="hs-tile-label">إجمالي المستحقات</div>
+        <div class="hs-tile-value">{{ s.totalDues.amount | currencyAr: true }}</div>
+        <div class="hs-tile-meta">{{ s.totalDues.clientsCount | number }} عميل</div>
+      </div>
+
+      <div class="hs-tile hs-tile--green">
+        <div class="hs-tile-label">المُحصَّل هذا الشهر</div>
+        <div class="hs-tile-value">{{ s.collectedThisMonth.amount | currencyAr: true }}</div>
+        <div
+          class="hs-tile-meta"
+          [class.hs-up]="s.collectedThisMonth.growthPercent > 0"
+          [class.hs-down]="s.collectedThisMonth.growthPercent < 0"
+        >
+          {{ s.collectedThisMonth.growthPercent > 0 ? '▲' : s.collectedThisMonth.growthPercent < 0 ? '▼' : '•' }}
+          {{ s.collectedThisMonth.growthPercent | number: '1.0-1' }}%
+        </div>
+      </div>
+
+      <div class="hs-tile hs-tile--teal">
+        <div class="hs-tile-label">الخزينة الرئيسية</div>
+        <div class="hs-tile-value">{{ s.mainTreasury.balance | currencyAr: true }}</div>
+        <div class="hs-tile-meta">الرصيد الحالي</div>
+      </div>
+
+      <div class="hs-tile hs-tile--purple">
+        <div class="hs-tile-label">ربح الشهر</div>
+        <div class="hs-tile-value">{{ s.monthlyProfit.amount | currencyAr: true }}</div>
+        <div class="hs-tile-meta">هامش {{ s.monthlyProfit.marginPercent | number: '1.0-0' }}%</div>
+      </div>
+
+      <div class="hs-tile hs-tile--green">
+        <div class="hs-tile-label">معدل التحصيل</div>
+        <div class="hs-tile-value">{{ s.collectionRate.percent | number: '1.0-0' }}%</div>
+        <div class="hs-tile-meta">المستهدف {{ s.collectionRate.targetPercent | number: '1.0-0' }}%</div>
+      </div>
+
+      <div class="hs-tile hs-tile--red">
+        <div class="hs-tile-label">المتأخرون</div>
+        <div class="hs-tile-value">{{ s.delinquent.clientsCount | number }}</div>
+        <div class="hs-tile-meta">بقيمة {{ s.delinquent.amount | currencyAr: true }}</div>
+      </div>
+
+      <div class="hs-tile hs-tile--green">
+        <div class="hs-tile-label">تقييم ممتاز</div>
+        <div class="hs-tile-value">{{ s.excellentRating.clientsCount | number }}</div>
+        <div class="hs-tile-meta">{{ s.excellentRating.percent | number: '1.0-0' }}% من العملاء</div>
+      </div>
+
+      <div class="hs-tile hs-tile--orange">
+        <div class="hs-tile-label">مخزون منخفض</div>
+        <div class="hs-tile-value">{{ s.lowStock.productsCount | number }}</div>
+        <div class="hs-tile-meta">منتج بحاجة لإعادة الطلب</div>
+      </div>
+
+      <div class="hs-tile hs-tile--purple">
+        <div class="hs-tile-label">ضريبة الربع</div>
+        <div class="hs-tile-value">{{ s.quarterTax.amount | currencyAr: true }}</div>
+        <div class="hs-tile-meta">المستحق الحالي</div>
+      </div>
+    </div>
+  } @else if (!summaryLoading()) {
+    <div class="hs-empty">تعذّر تحميل ملخّص اللوحة.</div>
+  }
+</section>
 
 <!-- ── الفصل المالي (Financial Separation) ── -->
 <section class="fs-block">
@@ -131,26 +228,77 @@
             }
           </div>
           <div class="profit-card__canvas">
-            <div class="profit-card__grid" aria-hidden="true">
-              @for (tick of profitGridTicks(); track $index) {
-                <span class="profit-card__gridline"></span>
+            <svg
+              class="profit-card__svg"
+              [attr.viewBox]="chartViewBox"
+              preserveAspectRatio="none"
+              aria-hidden="true"
+            >
+              <defs>
+                <linearGradient id="profitArea" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="var(--bl)" stop-opacity="0.28" />
+                  <stop offset="100%" stop-color="var(--bl)" stop-opacity="0" />
+                </linearGradient>
+              </defs>
+
+              <!-- gridlines -->
+              @for (tick of profitGridTicks(); track $index; let i = $index) {
+                <line
+                  class="profit-card__svg-grid"
+                  [attr.x1]="0"
+                  [attr.x2]="600"
+                  [attr.y1]="18 + (200 - 40) * (i / 4)"
+                  [attr.y2]="18 + (200 - 40) * (i / 4)"
+                />
               }
-            </div>
-            <div class="profit-card__bars">
-              @for (entry of profitMonths(); track entry.month; let i = $index) {
-                <div
-                  class="profit-card__bar"
-                  [class.profit-card__bar--current]="isCurrentMonth(i)"
-                  [attr.title]="entry.month + ': ' + entry.formattedProfit"
-                >
-                  <div
-                    class="profit-card__bar-fill"
-                    [style.height.%]="getBarHeight(entry.profitAmount)"
-                  >
-                    <span class="profit-card__bar-value">{{ entry.formattedProfit }}</span>
-                  </div>
-                  <div class="profit-card__bar-label">{{ entry.month }}</div>
-                </div>
+
+              <!-- area fill -->
+              <path
+                class="profit-card__svg-area"
+                [attr.d]="chartAreaPath()"
+                fill="url(#profitArea)"
+              />
+
+              <!-- line -->
+              <path
+                class="profit-card__svg-line"
+                [attr.d]="chartLinePath()"
+                fill="none"
+              />
+
+              <!-- dots -->
+              @for (p of chartPoints(); track p.month; let i = $index) {
+                <circle
+                  class="profit-card__svg-dot"
+                  [class.profit-card__svg-dot--current]="isCurrentMonth(i)"
+                  [attr.cx]="p.x"
+                  [attr.cy]="p.y"
+                  [attr.r]="isCurrentMonth(i) ? 5 : 3.5"
+                />
+                <title>{{ p.month }}: {{ p.formatted }}</title>
+              }
+            </svg>
+
+            <!-- floating value label above the current month -->
+            @if (chartPoints().length; as len) {
+              @let last = chartPoints()[len - 1];
+              <div
+                class="profit-card__svg-callout"
+                [style.left.%]="last.xPct"
+                [style.top.%]="last.yPct"
+              >
+                {{ last.formatted }}
+              </div>
+            }
+
+            <!-- x-axis labels -->
+            <div class="profit-card__xaxis">
+              @for (p of chartPoints(); track p.month; let i = $index) {
+                <span
+                  class="profit-card__xlabel"
+                  [class.profit-card__xlabel--current]="isCurrentMonth(i)"
+                  [style.left.%]="p.xPct"
+                >{{ p.month }}</span>
               }
             </div>
           </div>

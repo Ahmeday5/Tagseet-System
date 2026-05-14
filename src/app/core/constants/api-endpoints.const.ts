@@ -19,6 +19,7 @@ export const API_ENDPOINTS = {
   treasuries: {
     base: 'dashboard/treasuries',
     byId: (id: number) => `dashboard/treasuries/${id}`,
+    transfers: 'dashboard/treasuries/transfers',
   },
   warehouses: {
     base: 'dashboard/warehouses',
@@ -49,6 +50,7 @@ export const API_ENDPOINTS = {
   dashboard: {
     summary: 'dashboard/summary',
     homeSummary: 'dashboard/home-summary',
+    vouchers: 'dashboard/vouchers',
   },
   charts: {
     profitsLast6Months: 'dashboard/charts/profits-last-6-months',

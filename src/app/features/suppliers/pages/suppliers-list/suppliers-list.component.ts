@@ -22,6 +22,8 @@ import { ToastService } from '../../../../core/services/toast.service';
 import { HttpCacheService } from '../../../../core/services/http-cache.service';
 import { onInvalidate } from '../../../../core/utils/auto-refresh.util';
 import { ApiError } from '../../../../core/models/api-response.model';
+import { HasPermissionDirective } from '../../../../shared/directives/has-permission.directive';
+import { PERMISSIONS } from '../../../../core/constants/permissions.const';
 
 const DEFAULT_PAGE_SIZE = 10;
 
@@ -43,6 +45,7 @@ const DEFAULT_PAGE_SIZE = 10;
     SupplierStatementModalComponent,
     PaginationComponent,
     CurrencyArPipe,
+    HasPermissionDirective,
   ],
   templateUrl: './suppliers-list.component.html',
   styleUrl: './suppliers-list.component.scss',
@@ -52,6 +55,9 @@ export class SuppliersListComponent implements OnInit {
   private readonly dialog  = inject(DialogService);
   private readonly toast   = inject(ToastService);
   private readonly cache   = inject(HttpCacheService);
+
+  /** Exposed so the template can gate write actions with `*appHasPermission`. */
+  protected readonly PERMS = PERMISSIONS;
 
   // ── data ──
   protected readonly suppliers = signal<Supplier[]>([]);

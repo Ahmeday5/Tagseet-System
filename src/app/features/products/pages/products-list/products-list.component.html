@@ -4,7 +4,11 @@
     <div class="pgs">إدارة كتالوج المنتجات — الأسعار، الصور، الفئات، حالة التوافر</div>
   </div>
   <div class="d-flex gap-2">
-    <button class="btn btn-sm btn-bl" (click)="openCreate()">+ منتج جديد</button>
+    <button
+      *appHasPermission="PERMS.suppliersFullAccess"
+      class="btn btn-sm btn-bl"
+      (click)="openCreate()"
+    >+ منتج جديد</button>
   </div>
 </div>
 
@@ -144,7 +148,7 @@
       </div>
 
       <!-- Actions -->
-      <div class="pl-card-actions">
+      <div class="pl-card-actions" *appHasPermission="PERMS.suppliersFullAccess">
         <button type="button" class="btn btn-sm btn-bl flex-grow-1" (click)="openEdit(p)">
           تعديل
         </button>
@@ -188,7 +192,11 @@
         </div>
         <div class="pl-empty-title">لا توجد منتجات بعد</div>
         <div class="pl-empty-sub">ابدأ ببناء كتالوج منتجاتك بإضافة أول منتج.</div>
-        <button class="btn btn-sm btn-bl mt-2" (click)="openCreate()">+ إضافة منتج جديد</button>
+        <button
+          *appHasPermission="PERMS.suppliersFullAccess"
+          class="btn btn-sm btn-bl mt-2"
+          (click)="openCreate()"
+        >+ إضافة منتج جديد</button>
       }
     </div>
   }

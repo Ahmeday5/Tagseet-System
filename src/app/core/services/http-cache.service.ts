@@ -19,8 +19,8 @@ interface PersistedShape<T = unknown> {
 }
 
 /** Bumped when the on-disk shape changes — any older entry is ignored. */
-const PERSIST_VERSION = 1;
-const STORAGE_PREFIX = 'taqseet_http_cache_v1::';
+const PERSIST_VERSION = 3;
+const STORAGE_PREFIX = 'taqseet_http_cache_v3::';
 const BROADCAST_CHANNEL = 'taqseet-http-cache';
 const SWEEP_INTERVAL_MS = 60_000; // garbage-collect expired entries once a minute
 

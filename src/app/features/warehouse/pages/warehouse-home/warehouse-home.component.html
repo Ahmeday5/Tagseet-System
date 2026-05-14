@@ -15,7 +15,11 @@
       }
       <span>تحديث</span>
     </button>
-    <button class="btn btn-sm btn-bl" (click)="openCreate()">+ مخزن جديد</button>
+    <button
+      *appHasPermission="PERMS.suppliersFullAccess"
+      class="btn btn-sm btn-bl"
+      (click)="openCreate()"
+    >+ مخزن جديد</button>
   </div>
 </div>
 
@@ -68,7 +72,7 @@
       }
 
       <!-- Card actions -->
-      <div class="wh-card-actions">
+      <div class="wh-card-actions" *appHasPermission="PERMS.suppliersFullAccess">
         <button type="button" class="link-btn" (click)="openEdit(w)">تعديل</button>
         <span class="sep">·</span>
         <button

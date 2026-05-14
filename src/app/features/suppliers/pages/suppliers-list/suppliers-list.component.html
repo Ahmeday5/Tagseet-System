@@ -5,7 +5,11 @@
     <div class="pgs">إدارة بيانات الموردين — الإضافة والتعديل والحذف</div>
   </div>
   <div class="d-flex gap-2">
-    <button class="btn btn-sm btn-bl" (click)="openCreate()">+ مورد جديد</button>
+    <button
+      *appHasPermission="PERMS.suppliersFullAccess"
+      class="btn btn-sm btn-bl"
+      (click)="openCreate()"
+    >+ مورد جديد</button>
   </div>
 </div>
 
@@ -148,22 +152,24 @@
                   (click)="openStatement(s)"
                   title="كشف الحساب"
                 >كشف الحساب</button>
-                <button
-                  type="button"
-                  class="btn btn-sm btn-bl"
-                  (click)="openEdit(s)"
-                >تعديل</button>
-                <button
-                  type="button"
-                  class="btn btn-sm btn-re d-inline-flex align-items-center gap-1"
-                  [disabled]="deletingId() === s.id"
-                  (click)="confirmDelete(s)"
-                >
-                  @if (deletingId() === s.id) {
-                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                  }
-                  <span>حذف</span>
-                </button>
+                <ng-container *appHasPermission="PERMS.suppliersFullAccess">
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-bl"
+                    (click)="openEdit(s)"
+                  >تعديل</button>
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-re d-inline-flex align-items-center gap-1"
+                    [disabled]="deletingId() === s.id"
+                    (click)="confirmDelete(s)"
+                  >
+                    @if (deletingId() === s.id) {
+                      <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                    }
+                    <span>حذف</span>
+                  </button>
+                </ng-container>
               </div>
             </td>
           </tr>
@@ -199,7 +205,11 @@
                   </div>
                   <div class="sup-empty-title">لا يوجد موردون بعد</div>
                   <div class="sup-empty-sub">ابدأ بإضافة أول مورد لإدارة فواتير المشتريات.</div>
-                  <button class="btn btn-sm btn-bl mt-2" (click)="openCreate()">+ إضافة مورد جديد</button>
+                  <button
+                    *appHasPermission="PERMS.suppliersFullAccess"
+                    class="btn btn-sm btn-bl mt-2"
+                    (click)="openCreate()"
+                  >+ إضافة مورد جديد</button>
                 </div>
               }
             </td>
