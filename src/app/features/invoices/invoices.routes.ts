@@ -27,6 +27,17 @@ export const invoicesRoutes: Routes = [
     ],
   },
 
+  // Edit reuses the new-invoice form (sibling of the shell — full-width,
+  // no list/new tab chrome). The component switches to update mode when
+  // an `:id` is present in the route.
+  {
+    path: ':id/edit',
+    loadComponent: () =>
+      import('./pages/invoice-new/invoice-new.component').then(
+        (m) => m.InvoiceNewComponent,
+      ),
+  },
+
   // Standalone details / preview page — sibling of the shell so the print
   // view doesn't carry the list/new chrome.
   {

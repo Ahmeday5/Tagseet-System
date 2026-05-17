@@ -67,7 +67,6 @@ export interface CreateContractPayload {
   quantity: number;
   /** ISO datetime — e.g. `2026-05-11T08:19:34.462Z`. */
   purchaseDate: string;
-  purchasePrice: number;
   cashPrice: number;
   downPayment: number;
   /** 0..100. */
@@ -118,7 +117,6 @@ export interface ContractFormState {
   warehouseId: number;
   quantity: number;
   purchaseDate: string;
-  purchasePrice: number;
   cashPrice: number;
   downPayment: number;
   profitRate: number;
@@ -149,7 +147,6 @@ export function buildCreateContractPayload(
     warehouseId: form.warehouseId,
     quantity: form.quantity,
     purchaseDate: form.purchaseDate,
-    purchasePrice: form.purchasePrice,
     cashPrice: form.cashPrice,
     downPayment: form.downPayment,
     profitRate: form.profitRate,

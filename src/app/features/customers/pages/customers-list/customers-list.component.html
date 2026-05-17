@@ -61,9 +61,13 @@
 
   <button
     *appHasPermission="PERMS.clientsFullAccess"
-    class="btn btn-sm btn-bl ms-auto"
+    type="button"
+    class="btn btn-sm btn-bl d-inline-flex align-items-center gap-1"
     (click)="showForm.set(true)"
-  >+ عقد جديد سريع</button>
+  >
+    <span aria-hidden="true">+</span>
+    <span>إضافة عميل</span>
+  </button>
 </div>
 
 <!-- ── TABLE ── -->
@@ -191,7 +195,7 @@
                 *appHasPermission="PERMS.clientsFullAccess"
                 class="btn btn-sm btn-bl mt-2"
                 (click)="showForm.set(true)"
-              >+ عقد جديد سريع</button>
+              >+ إضافة عميل</button>
             </div>
             }
           </td>
@@ -206,3 +210,9 @@
     [disabled]="loading()" (pageChange)="onPageChange($event)" (pageSizeChange)="onPageSizeChange($event)" />
   }
 </div>
+
+<app-client-form-modal
+  [open]="showForm()"
+  (closed)="showForm.set(false)"
+  (saved)="onSaved()"
+/>

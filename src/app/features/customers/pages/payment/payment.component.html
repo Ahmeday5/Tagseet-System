@@ -1,7 +1,6 @@
-<div class="row g-3">
-
+<div class="row">
   <!-- ── Payment form ── -->
-  <div class="col-12 col-md-6">
+  <div class="col-12 col-lg-8">
     <div class="card">
       <div class="ct mb-2">تسجيل دفعة — يقبل التجزئة في نفس الشهر</div>
 
@@ -121,39 +120,6 @@
           {{ submitting() ? 'جارٍ الحفظ...' : 'تسجيل الدفعة' }}
         </button>
         <button class="btn btn-wa flex-fill" [disabled]="submitting()">📱 إرسال إيصال</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ── Recent payments ── -->
-  <div class="col-12 col-md-6">
-    <div class="card">
-      <div class="chdr"><div class="ct">آخر الدفعات المسجلة</div></div>
-      <div class="tw" style="margin-bottom:0">
-        <table class="table">
-          <thead>
-            <tr>
-              <th>العميل</th>
-              <th>المبلغ</th>
-              <th>التاريخ</th>
-              <th>الطريقة</th>
-              <th>الحالة</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (p of recentPayments(); track p.id) {
-              <tr>
-                <td>{{ p.customerName }}</td>
-                <td>{{ p.amount | currencyAr }}</td>
-                <td>{{ p.date }}</td>
-                <td>{{ p.method }}</td>
-                <td>
-                  <app-badge [text]="getStatusLabel(p.status)" [type]="getStatusBadge(p.status)" />
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
       </div>
     </div>
   </div>

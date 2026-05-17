@@ -70,3 +70,16 @@ export interface AuthResponseData {
   /** ISO date — may be `0001-01-01T00:00:00` on refresh. JWT `exp` is the source of truth. */
   expiresAtUtc: string;
 }
+
+/**
+ * `data` shape of `GET /dashboard/auth/me/permissions` — the authoritative
+ * role + permission set for the currently authenticated user. Fetched right
+ * after login because the login payload's permission list isn't guaranteed.
+ */
+export interface MePermissionsData {
+  userId: string;
+  userName: string | null;
+  email: string | null;
+  role: string | null;
+  permissions: ReadonlyArray<string> | null;
+}

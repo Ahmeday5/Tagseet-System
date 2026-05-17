@@ -23,17 +23,8 @@
       <rect y="15" width="11" height="11" rx="2" fill="#85B7EB"/>
       <rect x="15" y="15" width="11" height="11" rx="2" fill="#1B5FA8"/>
     </svg>
-    <span class="logo-text">تقسيط برو v2</span>
+    <span class="logo-text">امان</span>
   </a>
-
-  <!-- Quick search — hidden on mobile -->
-  <input
-    class="tsearch"
-    type="search"
-    placeholder="بحث سريع... (عميل، فاتورة، صنف)"
-    [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event)"
-    (keyup.enter)="onSearch()"
-  />
 
   <div class="tright">
     <!-- Quick pills — hidden on tablet/below. Live from NavCountsStore. -->
@@ -67,16 +58,6 @@
     @if (!counts.hasAlerts() && !counts.loading()) {
       <button class="tpill tpill-gr" title="لا توجد تنبيهات حالياً">نظام سليم</button>
     }
-
-    <!-- Notifications icon -->
-    <a class="ticon" routerLink="/notifications" title="الإشعارات">
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <path d="M8 1.5a5.5 5.5 0 00-5.5 5.5v3L1 12h14l-1.5-2.5V7A5.5 5.5 0 008 1.5z"
-          stroke="currentColor" stroke-width="1.2"/>
-        <path d="M6.5 13.5a1.5 1.5 0 003 0" stroke="currentColor" stroke-width="1.2"/>
-      </svg>
-      @if (counts.hasAlerts()) { <div class="tdot tdot-live"></div> }
-    </a>
 
     <!-- User avatar -->
     <a class="tav" routerLink="/users" title="{{ currentUser()?.name }}">

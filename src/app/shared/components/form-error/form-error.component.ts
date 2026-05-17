@@ -9,21 +9,6 @@ import {
 import { AbstractControl } from '@angular/forms';
 import { firstError } from '../../utils/form-validation.util';
 
-/**
- * Renders the most relevant validation message for a given control.
- *
- *   <app-form-error [control]="form.controls.email" label="البريد الإلكتروني" />
- *
- * Returns nothing while the control is pristine + untouched, so the form
- * doesn't shout at the user before they've interacted.
- *
- * ── Why the manual `tick` signal? ──────────────────────────────────────
- * `AbstractControl.errors / touched / dirty` are plain mutable properties
- * — NOT signals — so a `computed()` over `this.control()` would never
- * re-run when the user types or blurs. We subscribe to the control's
- * `events` stream (Angular 18+) and bump a counter signal on each event,
- * which gives the `message` computed the reactive dependency it needs.
- */
 @Component({
   selector: 'app-form-error',
   standalone: true,

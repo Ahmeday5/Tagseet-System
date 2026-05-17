@@ -69,3 +69,26 @@ export interface DashboardClientsResponse {
   overdueClientsCount: number;
   clients: PagedResponse<DashboardClient>;
 }
+
+/** POST /dashboard/clients body. The backend creates the linked AppUser. */
+export interface CreateClientPayload {
+  fullName: string;
+  email: string;
+  nationalId: string;
+  address: string;
+  phoneNumber: string;
+  whatsappNumber: string;
+  password: string;
+}
+
+/** `data` returned by POST /dashboard/clients. */
+export interface CreatedClient {
+  id: number;
+  fullName: string;
+  email: string;
+  nationalId: string;
+  address: string;
+  phoneNumber: string;
+  whatsappNumber: string;
+  createdAt: string;
+}

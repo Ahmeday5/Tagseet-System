@@ -7,11 +7,21 @@ import {
   OnInit,
   signal,
 } from '@angular/core';
-import { Treasury, TreasuryTransfer } from '../../models/treasury.model';
+import {
+  Treasury,
+  TreasuryTransfer,
+  TreasuryOperation,
+  MonthlyProfit,
+} from '../../models/treasury.model';
 import { TreasuryService } from '../../services/treasury.service';
+import { RepsService } from '../../../reps/services/reps.service';
+import { RepresentativeSubTreasury } from '../../../reps/models/rep.model';
 import { TreasuryFormModelComponent } from '../../components/treasury-form-model/treasury-form-model.component';
 import { TreasuryTransferModalComponent } from '../../components/treasury-transfer-modal/treasury-transfer-modal.component';
-import { BadgeComponent, BadgeType } from '../../../../shared/components/badge/badge.component';
+import {
+  BadgeComponent,
+  BadgeType,
+} from '../../../../shared/components/badge/badge.component';
 import { PaginationComponent } from '../../../../shared/components/pagination/pagination.component';
 import { CurrencyArPipe } from '../../../../shared/pipes/currency-ar.pipe';
 import { DateArPipe } from '../../../../shared/pipes/date-ar.pipe';
@@ -28,20 +38,8 @@ import {
   TREASURY_TYPE_BADGE,
   TREASURY_TYPE_LABELS,
 } from '../../constants/treasury-type-labels';
+import { CommonModule } from '@angular/common';
 
-/**
- * Treasury home page.
- *
- * Owns three independent concerns:
- *
- *   1. Treasuries list (LIVE — fed from `/dashboard/treasuries`).
- *      Drives the hero summary, the breakdown chips and the manage card.
- *
- *   2. CRUD modal (create / edit) — local UI state only.
- *
- *   3. Static analytics tables (last operations, monthly P&L, sub-accounts,
- *      representatives) — kept untouched until their own endpoints land.
- */
 @Component({
   selector: 'app-treasury-home',
   standalone: true,
@@ -54,12 +52,14 @@ import {
     CurrencyArPipe,
     DateArPipe,
     HasPermissionDirective,
+    CommonModule,
   ],
   templateUrl: './treasury-home.component.html',
   styleUrl: './treasury-home.component.scss',
 })
 export class TreasuryHomeComponent implements OnInit {
   private readonly treasuryService = inject(TreasuryService);
+  private readonly repsService = inject(RepsService);
   private readonly dialog = inject(DialogService);
   private readonly toast = inject(ToastService);
   private readonly cache = inject(HttpCacheService);
@@ -70,6 +70,10 @@ export class TreasuryHomeComponent implements OnInit {
   // ── data ──
   protected readonly treasuries = signal<Treasury[]>([]);
   protected readonly loading = signal(false);
+
+  // ── representatives' sub-treasuries ──
+  protected readonly subTreasuries = signal<RepresentativeSubTreasury[]>([]);
+  protected readonly subTreasuriesLoading = signal(false);
 
   // ── modal state ──
   protected readonly modalOpen = signal(false);
@@ -97,7 +101,9 @@ export class TreasuryHomeComponent implements OnInit {
   protected readonly tTotalPages = signal(0);
 
   // ── derived ──
-  protected readonly hasTreasuries = computed(() => this.treasuries().length > 0);
+  protected readonly hasTreasuries = computed(
+    () => this.treasuries().length > 0,
+  );
 
   /** Sum of `currentBalance` across every treasury — drives the hero number. */
   protected readonly totalBalance = computed(() =>
@@ -109,6 +115,17 @@ export class TreasuryHomeComponent implements OnInit {
     this.treasuries()
       .filter((t) => t.type === TreasuryType.Main)
       .reduce((sum, t) => sum + (t.currentBalance ?? 0), 0),
+  );
+
+  /** Footer totals for the sub-treasuries table. */
+  protected readonly subTreasuriesTotalBalance = computed(() =>
+    this.subTreasuries().reduce((sum, s) => sum + (s.balance ?? 0), 0),
+  );
+  protected readonly subTreasuriesTotalCommission = computed(() =>
+    this.subTreasuries().reduce(
+      (sum, s) => sum + (s.accumulatedCommission ?? 0),
+      0,
+    ),
   );
 
   /** Combined trigger — any filter / page change refetches. */
@@ -129,8 +146,44 @@ export class TreasuryHomeComponent implements OnInit {
       !!this.tToDate(),
   );
 
+  /** Combined trigger — any filter / page change refetches. */
+  protected readonly operationsTrigger = computed(() => ({
+    pageIndex: this.oPageIndex(),
+    pageSize: this.oPageSize(),
+    treasuryId: this.oTreasuryFilter(),
+    from: this.oFromDate(),
+    to: this.oToDate(),
+  }));
+
+  protected readonly hasOperationFilters = computed(
+    () => !!this.oTreasuryFilter() || !!this.oFromDate() || !!this.oToDate(),
+  );
+
   /** Debounce handle for filter-driven transfer refetches. */
   private transfersDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+  // ── operations state ──
+  protected readonly operations = signal<TreasuryOperation[]>([]);
+  protected readonly operationsLoading = signal(false);
+  private operationsDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+  // operations filters
+  protected readonly oTreasuryFilter = signal<number | ''>('');
+  protected readonly oFromDate = signal<string>('');
+  protected readonly oToDate = signal<string>('');
+  protected readonly oPageIndex = signal(1);
+  protected readonly oPageSize = signal(10);
+
+  // server pagination meta
+  protected readonly oCount = signal(0);
+  protected readonly oTotalPages = signal(0);
+
+  // ── monthly profits state ──
+  protected readonly monthlyProfits = signal<MonthlyProfit[]>([]);
+  protected readonly monthlyProfitsLoading = signal(false);
+  protected readonly selectedYear = signal<number | null>(null);
+  private monthlyProfitsDebounceTimer: ReturnType<typeof setTimeout> | null =
+    null;
 
   constructor() {
     // Auto-refresh whenever a treasury-related cache key is invalidated
@@ -139,6 +192,9 @@ export class TreasuryHomeComponent implements OnInit {
     onInvalidate(this.cache, 'treasur', () => {
       this.refresh();
       this.fetchTransfers(this.transfersTrigger(), true);
+      this.fetchOperations(this.operationsTrigger(), true);
+      this.fetchMonthlyProfits(this.selectedYear(), true);
+      this.loadSubTreasuries(true);
     });
 
     // Refetch transfers on any filter / page change. The fetch is wrapped
@@ -154,10 +210,56 @@ export class TreasuryHomeComponent implements OnInit {
         200,
       );
     });
+
+    // Refetch operations on any filter / page change.
+    effect(() => {
+      const trigger = this.operationsTrigger();
+      if (this.operationsDebounceTimer) {
+        clearTimeout(this.operationsDebounceTimer);
+      }
+      this.operationsDebounceTimer = setTimeout(
+        () => this.fetchOperations(trigger, false),
+        200,
+      );
+    });
+
+    // Refetch monthly profits on year change.
+    effect(() => {
+      const year = this.selectedYear();
+      if (this.monthlyProfitsDebounceTimer) {
+        clearTimeout(this.monthlyProfitsDebounceTimer);
+      }
+      this.monthlyProfitsDebounceTimer = setTimeout(
+        () => this.fetchMonthlyProfits(year, false),
+        200,
+      );
+    });
   }
 
   ngOnInit(): void {
     this.loadTreasuries();
+    this.loadSubTreasuries(false);
+    this.loadOperations();
+    this.loadMonthlyProfits();
+  }
+
+  // ─────────────── sub-treasuries ───────────────
+
+  protected loadSubTreasuries(force: boolean): void {
+    this.subTreasuriesLoading.set(true);
+    const stream$ = force
+      ? this.repsService.refreshSubTreasuries()
+      : this.repsService.subTreasuries();
+    stream$.subscribe({
+      next: (list) => {
+        this.subTreasuries.set(list ?? []);
+        this.subTreasuriesLoading.set(false);
+      },
+      error: () => {
+        this.subTreasuries.set([]);
+        this.subTreasuriesLoading.set(false);
+      },
+    });
   }
 
   // ─────────────── data loading ───────────────
@@ -337,5 +439,140 @@ export class TreasuryHomeComponent implements OnInit {
     this.transferModalOpen.set(false);
     // Cache invalidation in the service already triggers `onInvalidate`,
     // which re-fetches treasuries AND transfers — no manual refresh needed.
+  }
+
+  // ─────────────── operations ───────────────
+
+  protected loadOperations(): void {
+    this.fetchOperations(this.operationsTrigger(), false);
+  }
+
+  private fetchOperations(
+    trigger: ReturnType<typeof this.operationsTrigger>,
+    force: boolean,
+  ): void {
+    this.operationsLoading.set(true);
+    const stream$ = force
+      ? this.treasuryService.refreshOperations(trigger)
+      : this.treasuryService.listOperations(trigger);
+
+    stream$.subscribe({
+      next: (page) => {
+        this.operations.set(page?.data ?? []);
+        this.oCount.set(page?.count ?? 0);
+        this.oTotalPages.set(page?.totalPages ?? 0);
+        this.operationsLoading.set(false);
+      },
+      error: () => {
+        this.operations.set([]);
+        this.oCount.set(0);
+        this.oTotalPages.set(0);
+        this.operationsLoading.set(false);
+      },
+    });
+  }
+
+  protected refreshOperations(): void {
+    this.fetchOperations(this.operationsTrigger(), true);
+  }
+
+  // operations filter handlers
+  protected onOperationsTreasuryChange(value: string): void {
+    this.oTreasuryFilter.set(value === '' ? '' : Number(value));
+    this.resetOperationsPage();
+  }
+
+  protected onOperationsFromDate(value: string): void {
+    this.oFromDate.set(value);
+    this.resetOperationsPage();
+  }
+
+  protected onOperationsToDate(value: string): void {
+    this.oToDate.set(value);
+    this.resetOperationsPage();
+  }
+
+  protected clearOperationFilters(): void {
+    this.oTreasuryFilter.set('');
+    this.oFromDate.set('');
+    this.oToDate.set('');
+    this.resetOperationsPage();
+  }
+
+  protected onOperationsPageChange(page: number): void {
+    this.oPageIndex.set(page);
+  }
+
+  protected onOperationsPageSizeChange(size: number): void {
+    this.oPageSize.set(size);
+    this.resetOperationsPage();
+  }
+
+  private resetOperationsPage(): void {
+    if (this.oPageIndex() !== 1) this.oPageIndex.set(1);
+  }
+
+  // operations view helpers
+  protected directionBadge(direction: string): BadgeType {
+    return direction === 'Receipt' ? 'ok' : 'bad';
+  }
+
+  protected directionLabel(direction: string): string {
+    return direction === 'Receipt' ? 'إيراد' : 'صرف';
+  }
+
+  protected signedAmountClass(signedAmount: number): string {
+    return signedAmount >= 0 ? 'trf-amount-positive' : 'trf-amount-negative';
+  }
+
+  // ─────────────── monthly profits ───────────────
+
+  protected loadMonthlyProfits(): void {
+    this.fetchMonthlyProfits(null, false);
+  }
+
+  private fetchMonthlyProfits(year: number | null, force: boolean): void {
+    this.monthlyProfitsLoading.set(true);
+    const stream$ = force
+      ? this.treasuryService.refreshMonthlyProfits(year ?? undefined)
+      : this.treasuryService.listMonthlyProfits(year ?? undefined);
+
+    stream$.subscribe({
+      next: (data) => {
+        this.monthlyProfits.set(data ?? []);
+        this.monthlyProfitsLoading.set(false);
+      },
+      error: () => {
+        this.monthlyProfits.set([]);
+        this.monthlyProfitsLoading.set(false);
+      },
+    });
+  }
+
+  protected refreshMonthlyProfits(): void {
+    this.fetchMonthlyProfits(this.selectedYear(), true);
+  }
+
+  protected onYearChange(value: string): void {
+    this.selectedYear.set(value === '' ? null : Number(value));
+  }
+
+  protected profitClass(profit: number): string {
+    return profit > 0
+      ? 'mp-positive'
+      : profit < 0
+        ? 'mp-negative'
+        : 'mp-neutral';
+  }
+
+  protected marginClass(margin: number): string {
+    if (margin >= 30) return 'mp-margin-excellent';
+    if (margin >= 20) return 'mp-margin-good';
+    if (margin >= 10) return 'mp-margin-fair';
+    return 'mp-margin-low';
+  }
+
+  protected monthRowClass(isCurrentMonth: boolean): string {
+    return isCurrentMonth ? 'mp-current-month' : '';
   }
 }

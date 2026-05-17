@@ -101,8 +101,6 @@ export class ContractNewComponent implements OnInit {
 
     purchaseDate: [this.todayStr(), [Validators.required]],
 
-    purchasePrice: [0, [Validators.required, Validators.min(0)]],
-
     cashPrice: [0, [Validators.required, Validators.min(1)]],
 
     downPayment: [0, [Validators.required, Validators.min(0)]],
@@ -146,7 +144,6 @@ export class ContractNewComponent implements OnInit {
     const v = this.values();
 
     const cashPrice = Number(v.cashPrice ?? 0);
-    const purchasePrice = Number(v.purchasePrice ?? 0);
     const downPayment = Number(v.downPayment ?? 0);
     const profitRate = Number(v.profitRate ?? 0);
     const count = Math.max(1, Number(v.installmentsCount ?? 1));
@@ -159,9 +156,6 @@ export class ContractNewComponent implements OnInit {
 
     const installmentAmt = totalAmount / count;
 
-    const marginProfit =
-      cashPrice - purchasePrice + profitAmount;
-
     return {
       cashPrice,
       downPayment,
@@ -171,7 +165,6 @@ export class ContractNewComponent implements OnInit {
       totalAmount,
       installmentAmt,
       count,
-      marginProfit,
     };
   });
 
@@ -233,7 +226,6 @@ export class ContractNewComponent implements OnInit {
 
         this.form.patchValue(
           {
-            purchasePrice: product.purchasePrice,
             cashPrice: product.sellingPrice,
           },
           {
@@ -309,8 +301,6 @@ export class ContractNewComponent implements OnInit {
         raw.purchaseDate,
       ).toISOString(),
 
-      purchasePrice: Number(raw.purchasePrice),
-
       cashPrice: Number(raw.cashPrice),
 
       downPayment: Number(raw.downPayment),
@@ -377,7 +367,6 @@ export class ContractNewComponent implements OnInit {
       warehouseId: 'المخزن',
       quantity: 'الكمية',
       purchaseDate: 'تاريخ الشراء',
-      purchasePrice: 'سعر الشراء',
       cashPrice: 'السعر الكاش',
       downPayment: 'المقدم',
       profitRate: 'نسبة الربح',
@@ -397,7 +386,6 @@ export class ContractNewComponent implements OnInit {
   protected reset(): void {
     this.form.reset({
       quantity: 1,
-      purchasePrice: 0,
       cashPrice: 0,
       downPayment: 0,
       profitRate: 20,

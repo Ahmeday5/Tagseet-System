@@ -3,22 +3,6 @@
     <div class="pgt">لوحة التحكم</div>
     <div class="pgs">نظام سليم</div>
   </div>
-  <div class="d-flex gap-2">
-    <button
-      *appHasPermission="PERMS.clientsView"
-      class="btn btn-sm btn-wa"
-      routerLink="/notifications"
-    >
-      🟢 إرسال تذكيرات WhatsApp
-    </button>
-    <button
-      *appHasPermission="PERMS.clientsFullAccess"
-      class="btn btn-sm btn-bl"
-      routerLink="/catalog"
-    >
-      + طلبية جديدة
-    </button>
-  </div>
 </div>
 
 <!-- ── ملخّص الصفحة الرئيسية ── -->
@@ -356,9 +340,6 @@
       <div class="chdr">
         <div class="ct">أقساط مستحقة هذا الأسبوع</div>
         <div style="display:flex;gap:7px">
-          <a routerLink="/notifications" class="btn btn-sm btn-wa">
-            إرسال WhatsApp للمتأخرين
-          </a>
           <a routerLink="/customers" class="btn btn-sm btn-bl">عرض الكل</a>
         </div>
       </div>

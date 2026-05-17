@@ -175,6 +175,10 @@ export class InvoicesListComponent implements OnInit {
     this.router.navigate(['/invoices', inv.id]);
   }
 
+  protected editInvoice(inv: PurchaseInvoiceListItem): void {
+    this.router.navigate(['/invoices', inv.id, 'edit']);
+  }
+
   // ─────────── confirm modal ───────────
 
   protected openConfirm(inv: PurchaseInvoiceListItem): void {

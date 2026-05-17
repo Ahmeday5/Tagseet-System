@@ -1,3 +1,16 @@
+<div class="pgh">
+  <div>
+    <div class="pgt">{{ isEdit() ? 'تعديل فاتورة مشتريات' : 'فاتورة مشتريات جديدة' }}</div>
+    <div class="pgs">
+      @if (isEdit() && loadingInvoice()) {
+        جاري تحميل بيانات الفاتورة...
+      } @else {
+        بيانات المورد والأصناف والدفع
+      }
+    </div>
+  </div>
+</div>
+
 <form [formGroup]="form" (ngSubmit)="saveAndConfirm()" novalidate>
   <div class="iv-grid">
     <!-- ── LEFT: invoice data + items ── -->
@@ -49,8 +62,8 @@
 
           <div class="fl">
             <label>نسبة الضريبة %</label>
-            <input type="number" min="0" max="100" formControlName="taxRatePercent" />
-            <small class="iv-hint">يُطبَّق 15% تلقائياً إن تركت الحقل فارغاً</small>
+            <input type="number" formControlName="taxRatePercent" readonly />
+            <small class="iv-hint">الضريبة معطّلة حالياً — ثابتة 0%</small>
           </div>
 
           <div class="fl">
@@ -164,7 +177,13 @@
             @if (savingFinal()) {
             <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
             }
-            <span>{{ savingFinal() ? 'جاري الحفظ...' : 'حفظ وطباعة الفاتورة' }}</span>
+            <span>{{
+              savingFinal()
+                ? 'جاري الحفظ...'
+                : isEdit()
+                  ? 'حفظ التعديلات'
+                  : 'حفظ وطباعة الفاتورة'
+            }}</span>
           </button>
 
           <button type="button" class="btn iv-btn-grow-1 d-inline-flex align-items-center justify-content-center gap-2"

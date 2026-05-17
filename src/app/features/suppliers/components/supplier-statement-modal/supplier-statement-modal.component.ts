@@ -22,28 +22,6 @@ import {
   SupplierStatementQuery,
 } from '../../models/supplier.model';
 
-/**
- * Supplier account-statement viewer.
- *
- *   <app-supplier-statement-modal
- *     [open]="modalOpen()"
- *     [supplier]="modalSupplier()"
- *     (closed)="closeModal()" />
- *
- * Owns three concerns:
- *
- *   1. Filter form (from / to / includeDrafts). Changes debounce by
- *      300ms so date typing doesn't issue a request per keystroke; the
- *      checkbox refires immediately.
- *
- *   2. Statement fetch — refetches on every committed filter change
- *      and on (re)open. Uses a 1-min cache so re-opening for the same
- *      supplier feels instant.
- *
- *   3. Invoice expansion — items per invoice are revealed on demand
- *      to keep long histories from blowing out the modal height.
- */
-
 const STATUS_BADGE: Record<SupplierStatementInvoiceStatus, BadgeType> = {
   Draft: 'info',
   Pending: 'warn',

@@ -164,20 +164,6 @@
             />
           </div>
 
-          <!-- سعر الشراء -->
-          <div class="col-12 col-sm-6">
-            <label class="form-label">
-              سعر الشراء (ج.م)
-            </label>
-
-            <input
-              type="number"
-              formControlName="purchasePrice"
-              class="form-control"
-              min="0"
-            />
-          </div>
-
           <!-- سعر الكاش -->
           <div class="col-12 col-sm-6">
             <label class="form-label">
@@ -365,17 +351,6 @@
           </span>
         </div>
 
-        <hr class="my-2">
-
-        <div class="cr" style="background:var(--gr-l)">
-          <span style="color:var(--gr)">
-            هامش الربح التقديري
-          </span>
-
-          <span style="color:var(--gr)">
-            {{ summary().marginProfit | currencyAr }}
-          </span>
-        </div>
 
         <div class="d-flex gap-2 mt-3">
 

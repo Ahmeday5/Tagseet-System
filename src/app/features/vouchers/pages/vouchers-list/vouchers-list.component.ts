@@ -37,6 +37,9 @@ import { ApiError } from '../../../../core/models/api-response.model';
 import { ToastService } from '../../../../core/services/toast.service';
 import { HttpCacheService } from '../../../../core/services/http-cache.service';
 import { onInvalidate } from '../../../../core/utils/auto-refresh.util';
+import { HasPermissionDirective } from '../../../../shared/directives/has-permission.directive';
+import { PERMISSIONS } from '../../../../core/constants/permissions.const';
+import { VoucherFormModalComponent } from '../../components/voucher-form-modal/voucher-form-modal.component';
 
 const DEFAULT_PAGE_SIZE = 10;
 const REFETCH_DEBOUNCE_MS = 200;
@@ -57,6 +60,8 @@ const VOUCHER_NUMBER_PREFIX_LEN = 18;
     VoucherTypeLabelPipe,
     ReferenceTypeLabelPipe,
     RelatedPartyTypeLabelPipe,
+    HasPermissionDirective,
+    VoucherFormModalComponent,
   ],
   templateUrl: './vouchers-list.component.html',
   styleUrl: './vouchers-list.component.scss',
@@ -78,6 +83,12 @@ export class VouchersListComponent {
   // ── server pagination meta ──
   protected readonly count = signal(0);
   protected readonly totalPages = signal(0);
+
+  /** Exposed so the template can gate the create button with `*appHasPermission`. */
+  protected readonly PERMS = PERMISSIONS;
+
+  // ── create-voucher modal ──
+  protected readonly showForm = signal(false);
 
   // ── voucher-number detail modal ──
   protected readonly detailOpen = signal(false);
@@ -157,6 +168,24 @@ export class VouchersListComponent {
 
   protected refresh(): void {
     this.fetch(this.fetchTrigger(), true);
+  }
+
+  // ─────────── create-voucher modal ───────────
+
+  protected openForm(): void {
+    this.showForm.set(true);
+  }
+
+  protected closeForm(): void {
+    this.showForm.set(false);
+  }
+
+  protected onVoucherCreated(): void {
+    this.showForm.set(false);
+    // Service invalidated the cache; force a fresh first page so the new
+    // voucher is visible immediately.
+    if (this.pageIndex() !== 1) this.pageIndex.set(1);
+    else this.refresh();
   }
 
   // ─────────── filter handlers ───────────

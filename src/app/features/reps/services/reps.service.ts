@@ -8,9 +8,11 @@ import {
   withCacheInvalidate,
   withInlineHandling,
 } from '../../../core/http/http-context.tokens';
+import { toList } from '../../../core/utils/api-list.util';
 import {
   CreateRepresentativePayload,
   Representative,
+  RepresentativeSubTreasury,
   RepresentativesListResponse,
   RepresentativesQuery,
   UpdateRepresentativePayload,
@@ -54,6 +56,24 @@ export class RepsService {
       API_ENDPOINTS.representatives.byId(id),
       { context: withCache({ ttlMs: REPS_TTL_MS }) },
     );
+  }
+
+  /** Per-representative sub-treasury balances + accumulated commission. */
+  subTreasuries(): Observable<RepresentativeSubTreasury[]> {
+    return this.api
+      .get<unknown>(API_ENDPOINTS.representatives.subTreasuries, {
+        context: withCache({ ttlMs: REPS_TTL_MS }),
+      })
+      .pipe(toList<RepresentativeSubTreasury>());
+  }
+
+  /** Force-refresh sub-treasuries, bypassing any cached entry. */
+  refreshSubTreasuries(): Observable<RepresentativeSubTreasury[]> {
+    return this.api
+      .get<unknown>(API_ENDPOINTS.representatives.subTreasuries, {
+        context: withCacheBypass(withCache({ ttlMs: REPS_TTL_MS })),
+      })
+      .pipe(toList<RepresentativeSubTreasury>());
   }
 
   // ─────────── writes ───────────

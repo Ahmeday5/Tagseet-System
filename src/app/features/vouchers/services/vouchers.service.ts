@@ -5,9 +5,21 @@ import { API_ENDPOINTS } from '../../../core/constants/api-endpoints.const';
 import {
   withCache,
   withCacheBypass,
+  withCacheInvalidate,
+  withInlineHandling,
 } from '../../../core/http/http-context.tokens';
 import { PagedResponse } from '../../../core/models/api-response.model';
-import { VoucherDto, VouchersQuery } from '../models/voucher.model';
+import {
+  CreateVoucherPayload,
+  VoucherDto,
+  VouchersQuery,
+} from '../models/voucher.model';
+
+/**
+ * Creating a voucher moves treasury money, so we invalidate both the
+ * vouchers list and the treasury scope — balances on every page refetch.
+ */
+const VOUCHERS_CACHE_KEYS = ['vouchers', 'treasur'] as const;
 
 /**
  * Vouchers list churns whenever a treasury / invoice / installment payment is
@@ -36,6 +48,19 @@ export class VouchersService {
       {
         params: this.toParams(query),
         context: withCacheBypass(withCache({ ttlMs: VOUCHERS_TTL_MS })),
+      },
+    );
+  }
+
+  /** Creates a receipt/payment voucher. */
+  create(payload: CreateVoucherPayload): Observable<VoucherDto> {
+    return this.api.post<VoucherDto>(
+      API_ENDPOINTS.dashboard.vouchers,
+      payload,
+      {
+        context: withInlineHandling(
+          withCacheInvalidate([...VOUCHERS_CACHE_KEYS]),
+        ),
       },
     );
   }

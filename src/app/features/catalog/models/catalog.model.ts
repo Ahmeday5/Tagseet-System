@@ -79,6 +79,18 @@ export interface ClientOrder {
   items: ClientOrderItem[];
 }
 
+/**
+ * Query parameters for `GET /dashboard/client-orders`.
+ *
+ * The endpoint is server-paginated and (confirmed against the live Swagger)
+ * accepts **only** `PageIndex` / `PageSize` — there is no `Status`/`Search`
+ * filter, so status filtering stays client-side per page.
+ */
+export interface ClientOrdersQuery {
+  pageIndex?: number;
+  pageSize?: number;
+}
+
 /** POST /dashboard/client-orders/{id}/convert-to-contract */
 export interface ConvertToContractPayload {
   warehouseId: number;

@@ -24,6 +24,7 @@ import { ToastService } from '../../../../core/services/toast.service';
 import { HttpCacheService } from '../../../../core/services/http-cache.service';
 import { onInvalidate } from '../../../../core/utils/auto-refresh.util';
 import { HasPermissionDirective } from '../../../../shared/directives/has-permission.directive';
+import { ClientFormModalComponent } from '../../components/client-form-modal/client-form-modal.component';
 import { PERMISSIONS } from '../../../../core/constants/permissions.const';
 
 const DEFAULT_PAGE_SIZE = 10;
@@ -38,6 +39,7 @@ const SEARCH_DEBOUNCE_MS = 300;
     PaginationComponent,
     CurrencyArPipe,
     HasPermissionDirective,
+    ClientFormModalComponent,
   ],
   templateUrl: './customers-list.component.html',
   styleUrl: './customers-list.component.scss',

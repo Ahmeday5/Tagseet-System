@@ -16,12 +16,15 @@ import {
 import { ConvertToContractModalComponent } from '../../components/convert-to-contract-modal/convert-to-contract-modal.component';
 import { ClientOrderDetailsModalComponent } from '../../components/client-order-details-modal/client-order-details-modal.component';
 import { HasPermissionDirective } from '../../../../shared/directives/has-permission.directive';
+import { PaginationComponent } from '../../../../shared/components/pagination/pagination.component';
 import { PERMISSIONS } from '../../../../core/constants/permissions.const';
 
 interface InstallmentRow {
   index: number;
   amount: number;
 }
+
+const DEFAULT_PAGE_SIZE = 10;
 
 @Component({
   selector: 'app-catalog-home',
@@ -32,6 +35,7 @@ interface InstallmentRow {
     ConvertToContractModalComponent,
     ClientOrderDetailsModalComponent,
     HasPermissionDirective,
+    PaginationComponent,
   ],
   templateUrl: './catalog-home.component.html',
   styleUrl: './catalog-home.component.scss',
@@ -46,11 +50,20 @@ export class CatalogHomeComponent implements OnInit {
 
   // ── data ──
   protected readonly products       = signal<Product[]>([]);
+  /** Current page of orders only — the list is server-paginated. */
   protected readonly clientOrders   = signal<ClientOrder[]>([]);
   protected readonly cart           = signal<CartItem[]>([]);
   protected readonly searchTerm     = signal('');
   protected readonly loadingOrders  = signal(false);
   protected readonly rejectingId    = signal<number | null>(null);
+
+  // ── server pagination ──
+  protected readonly pageIndex  = signal(1);
+  protected readonly pageSize   = signal(DEFAULT_PAGE_SIZE);
+  protected readonly count      = signal(0);
+  protected readonly totalPages = signal(0);
+  /** Total `Pending` across all pages — drives the alert banner/badges. */
+  protected readonly pendingCount = signal(0);
 
   // ── manual order form ──
   protected readonly customerName   = signal('');
@@ -69,10 +82,6 @@ export class CatalogHomeComponent implements OnInit {
   protected readonly detailsOrderRef  = signal<ClientOrder | null>(null);
 
   // ── derived ──
-  protected readonly pendingOrders = computed(() =>
-    this.clientOrders().filter((o) => o.status === 'Pending'),
-  );
-
   protected readonly filteredProducts = computed(() => {
     const term = this.searchTerm().trim().toLowerCase();
     if (!term) return this.products();
@@ -126,19 +135,47 @@ export class CatalogHomeComponent implements OnInit {
 
   protected loadClientOrders(force = false): void {
     this.loadingOrders.set(true);
+    const query = {
+      pageIndex: this.pageIndex(),
+      pageSize: this.pageSize(),
+    };
     const stream$ = force
-      ? this.svc.refreshClientOrders()
-      : this.svc.listClientOrders();
+      ? this.svc.refreshClientOrders(query)
+      : this.svc.listClientOrders(query);
     stream$.subscribe({
-      next: (list) => {
-        this.clientOrders.set(list ?? []);
+      next: (page) => {
+        this.clientOrders.set(page.data ?? []);
+        this.count.set(page.count ?? 0);
+        this.totalPages.set(page.totalPages ?? 0);
         this.loadingOrders.set(false);
       },
       error: () => {
         this.clientOrders.set([]);
+        this.count.set(0);
+        this.totalPages.set(0);
         this.loadingOrders.set(false);
       },
     });
+    this.refreshPendingCount(force);
+  }
+
+  /** Keeps the pending alert badge accurate independently of the page view. */
+  private refreshPendingCount(force = false): void {
+    this.svc.pendingClientOrdersCount(force).subscribe({
+      next: (n) => this.pendingCount.set(n),
+      error: () => {},
+    });
+  }
+
+  protected onPageChange(page: number): void {
+    this.pageIndex.set(page);
+    this.loadClientOrders();
+  }
+
+  protected onPageSizeChange(size: number): void {
+    this.pageSize.set(size);
+    this.pageIndex.set(1);
+    this.loadClientOrders();
   }
 
   protected openConvertModal(order: ClientOrder): void {
@@ -162,13 +199,21 @@ export class CatalogHomeComponent implements OnInit {
 
   protected onConverted(order: ClientOrder): void {
     this.convertModalOpen.set(false);
-    // Optimistically drop the converted order from the list — the cache
-    // was also invalidated in the service, so a manual refresh is honest.
+    // Optimistically flip the converted order — the cache was also
+    // invalidated in the service, so a manual refresh is honest.
     this.clientOrders.update((list) =>
       list.map((o) =>
         o.id === order.id ? { ...o, status: 'Converted' } : o,
       ),
     );
+    this.decrementPendingIf(order);
+  }
+
+  /** An order leaving `Pending` shrinks the alert badge by one. */
+  private decrementPendingIf(order: ClientOrder): void {
+    if (order.status === 'Pending') {
+      this.pendingCount.update((n) => Math.max(0, n - 1));
+    }
   }
 
   protected async confirmReject(order: ClientOrder): Promise<void> {
@@ -190,6 +235,7 @@ export class CatalogHomeComponent implements OnInit {
             o.id === order.id ? { ...o, status: 'Rejected' } : o,
           ),
         );
+        this.decrementPendingIf(order);
         this.toast.success(res?.message || `تم رفض طلب ${order.clientName}`);
       },
       error: (err: ApiError) => {

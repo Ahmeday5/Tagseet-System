@@ -78,6 +78,22 @@ export interface CreateRepresentativePayload {
  */
 export type UpdateRepresentativePayload = CreateRepresentativePayload;
 
+/**
+ * Row shape of `GET /dashboard/representatives/sub-treasuries` — one entry
+ * per representative with their auto-created sub-treasury balance and the
+ * commission accumulated to date. `lastActivityDate` is `null` when the
+ * representative has had no movement yet.
+ */
+export interface RepresentativeSubTreasury {
+  representativeId: number;
+  representativeName: string;
+  treasuryId: number;
+  treasuryName: string;
+  balance: number;
+  lastActivityDate: string | null;
+  accumulatedCommission: number;
+}
+
 /** Query string for the paginated list — uses the project's shared shape. */
 export type RepresentativesQuery = PagedQuery;
 

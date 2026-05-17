@@ -21,6 +21,7 @@ import {
   AuthTokens,
   LoginRequest,
   LogoutRequest,
+  MePermissionsData,
   RefreshTokenRequest,
   User,
   UserRole,
@@ -157,8 +158,41 @@ export class AuthService {
       })
       .pipe(
         tap((data) => this.persistSession(data, true)),
-        map((data) => this.toUser(data))
+        switchMap((data) => this.hydratePermissions(this.toUser(data)))
       );
+  }
+
+  /**
+   * The login payload's permission list isn't guaranteed, so we follow up
+   * with `GET /dashboard/auth/me/permissions` (the authoritative source) and
+   * merge the role + permissions into the cached user. Best-effort: if the
+   * call fails the login still succeeds with the login-derived user.
+   */
+  private hydratePermissions(baseUser: User): Observable<User> {
+    return this.api
+      .get<MePermissionsData>(API_ENDPOINTS.auth.permissions, {
+        context: withInlineHandling(),
+      })
+      .pipe(
+        map((data) => this.applyPermissions(baseUser, data)),
+        catchError(() => of(baseUser))
+      );
+  }
+
+  private applyPermissions(baseUser: User, data: MePermissionsData): User {
+    const role = data?.role ? this.normalizeRole(data.role) : baseUser.role;
+    const name = data?.userName?.trim() || baseUser.name;
+    const merged: User = {
+      ...baseUser,
+      role,
+      name,
+      email: data?.email || baseUser.email,
+      avatar: this.deriveAvatar(name),
+      permissions: this.resolvePermissions(data?.permissions, role),
+    };
+    this.storage.setJson(USER_KEY, merged);
+    this.currentUserSignal.set(merged);
+    return merged;
   }
 
   logout(opts: LogoutOptions = {}): void {
@@ -338,8 +372,12 @@ export class AuthService {
         context: withInlineHandling(withSkipAuth()),
       })
       .pipe(
-        tap((data) => this.persistSession(data, false)),
-        map((data) => this.extractTokens(data)),
+        // Persist + return the SAME tokens in one step. A 2xx refresh must
+        // never be discarded: if the backend doesn't rotate the refresh
+        // token (returns only a new access token) we keep the existing one
+        // instead of throwing — otherwise the next attempt sends a token the
+        // server already consumed and we get a self-inflicted 401 → logout.
+        map((data) => this.persistSession(data, false)),
         catchError((err) => this.recoverOrFail(err))
       );
   }
@@ -412,8 +450,15 @@ export class AuthService {
    *   `true` for /login (full payload), `false` for /refresh (user fields can
    *   come back empty and would clobber the real values).
    */
-  private persistSession(data: AuthResponseData, updateUser: boolean): void {
-    const tokens = this.extractTokens(data);
+  private persistSession(
+    data: AuthResponseData,
+    updateUser: boolean,
+  ): AuthTokens {
+    // On the refresh path, tolerate a backend that doesn't rotate the
+    // refresh token: fall back to the one already in storage so a
+    // successful 2xx is never thrown away. Login always returns both.
+    const fallbackRefreshToken = updateUser ? null : this.getRefreshToken();
+    const tokens = this.extractTokens(data, fallbackRefreshToken);
     this.storage.set(environment.tokenKey, tokens.accessToken);
     this.storage.set(environment.refreshTokenKey, tokens.refreshToken);
 
@@ -432,6 +477,7 @@ export class AuthService {
     this.sessionDead = false;
     this.broadcast({ type: 'session-updated', from: this.tabId });
     this.scheduleProactiveRefresh();
+    return tokens;
   }
 
   private clearLocalSession(): void {
@@ -454,14 +500,28 @@ export class AuthService {
 
   // ────────────────────── mappers ──────────────────────
 
-  private extractTokens(data: AuthResponseData): AuthTokens {
-    if (!data?.accessToken || !data?.refreshToken) {
-      throw new Error('Auth response missing tokens');
+  /**
+   * @param fallbackRefreshToken used only on the refresh path: when the
+   *   backend returns a new access token but no rotated refresh token, we
+   *   keep the existing one rather than failing the whole session. A missing
+   *   **access** token on a 2xx response is the only unrecoverable case.
+   */
+  private extractTokens(
+    data: AuthResponseData,
+    fallbackRefreshToken?: string | null,
+  ): AuthTokens {
+    const accessToken = data?.accessToken;
+    if (!accessToken) {
+      throw new Error('Auth response missing access token');
+    }
+    const refreshToken = data?.refreshToken || fallbackRefreshToken || null;
+    if (!refreshToken) {
+      throw new Error('Auth response missing refresh token');
     }
     return {
-      accessToken: data.accessToken,
-      refreshToken: data.refreshToken,
-      expiresAt: this.resolveExpiry(data.accessToken, data.expiresAtUtc),
+      accessToken,
+      refreshToken,
+      expiresAt: this.resolveExpiry(accessToken, data.expiresAtUtc),
     };
   }
 

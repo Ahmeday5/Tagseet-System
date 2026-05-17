@@ -122,3 +122,16 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* ── OPERATIONS TABLE ── */
+.trf-amount-positive {
+  color: var(--gr);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.trf-amount-negative {
+  color: var(--re);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}

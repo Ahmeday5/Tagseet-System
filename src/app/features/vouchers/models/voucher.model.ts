@@ -24,6 +24,22 @@ export interface VoucherDto {
   notes: string | null;
 }
 
+/**
+ * POST /dashboard/vouchers body.
+ *
+ * `relatedPartyId` is `null` when `relatedPartyType` is `Other` (no entity
+ * to link). `date` is a calendar date (`yyyy-MM-dd`), not a timestamp.
+ */
+export interface CreateVoucherPayload {
+  type: VoucherType;
+  amount: number;
+  treasuryId: number;
+  date: string;
+  relatedPartyType: RelatedPartyType;
+  relatedPartyId: number | null;
+  notes: string;
+}
+
 /** Query parameters supported by `GET /dashboard/vouchers`. */
 export interface VouchersQuery {
   pageIndex?: number;

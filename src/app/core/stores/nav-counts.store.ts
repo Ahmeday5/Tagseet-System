@@ -153,13 +153,11 @@ export class NavCountsStore {
   }
 
   private refreshClientOrders(force = true): void {
-    const stream$ = force
-      ? this.catalog.refreshClientOrders()
-      : this.catalog.listClientOrders();
-
-    stream$.subscribe({
-      next: (orders) => {
-        const pending = orders.filter((o) => o.status === 'Pending').length;
+    // `/dashboard/client-orders` is server-paginated with no status filter,
+    // so the pending total is scanned server-side by CatalogService rather
+    // than filtered from a single page here.
+    this.catalog.pendingClientOrdersCount(force).subscribe({
+      next: (pending) => {
         this.bumpIfHigher(
           this._pendingClientOrders,
           this._pendingPulse,

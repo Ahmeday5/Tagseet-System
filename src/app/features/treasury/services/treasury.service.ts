@@ -7,6 +7,9 @@ import {
   CreateTreasuryTransferPayload,
   TreasuryTransfer,
   TreasuryTransfersQuery,
+  TreasuryOperation,
+  TreasuryOperationsQuery,
+  MonthlyProfit,
 } from '../models/treasury.model';
 import { PagedResponse } from '../../../core/models/api-response.model';
 import { ApiService } from '../../../core/services/api.service';
@@ -128,5 +131,61 @@ export class TreasuryService {
       from: query.from || undefined,
       to: query.to || undefined,
     };
+  }
+
+  // ─────────────── operations ───────────────
+
+  listOperations(
+    query: TreasuryOperationsQuery = {},
+  ): Observable<PagedResponse<TreasuryOperation>> {
+    return this.api
+      .get<unknown>(API_ENDPOINTS.treasuries.operations, {
+        params: this.toOperationsParams(query),
+        context: withCache({ ttlMs: TREASURY_TTL_MS }),
+      })
+      .pipe(toPaged<TreasuryOperation>());
+  }
+
+  refreshOperations(
+    query: TreasuryOperationsQuery = {},
+  ): Observable<PagedResponse<TreasuryOperation>> {
+    return this.api
+      .get<unknown>(API_ENDPOINTS.treasuries.operations, {
+        params: this.toOperationsParams(query),
+        context: withCacheBypass(withCache({ ttlMs: TREASURY_TTL_MS })),
+      })
+      .pipe(toPaged<TreasuryOperation>());
+  }
+
+  private toOperationsParams(
+    query: TreasuryOperationsQuery,
+  ): Record<string, unknown> {
+    return {
+      PageIndex: query.pageIndex ?? 1,
+      PageSize: query.pageSize ?? 10,
+      treasuryId: query.treasuryId || undefined,
+      from: query.from || undefined,
+      to: query.to || undefined,
+    };
+  }
+
+  // ─────────────── monthly profits ───────────────
+
+  listMonthlyProfits(year?: number): Observable<MonthlyProfit[]> {
+    return this.api
+      .get<unknown>(API_ENDPOINTS.treasuries.monthlyProfits, {
+        params: year ? { year } : {},
+        context: withCache({ ttlMs: TREASURY_TTL_MS }),
+      })
+      .pipe(toList<MonthlyProfit>());
+  }
+
+  refreshMonthlyProfits(year?: number): Observable<MonthlyProfit[]> {
+    return this.api
+      .get<unknown>(API_ENDPOINTS.treasuries.monthlyProfits, {
+        params: year ? { year } : {},
+        context: withCacheBypass(withCache({ ttlMs: TREASURY_TTL_MS })),
+      })
+      .pipe(toList<MonthlyProfit>());
   }
 }

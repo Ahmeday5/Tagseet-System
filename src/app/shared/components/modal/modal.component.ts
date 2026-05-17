@@ -15,31 +15,6 @@ import {
 export type ModalSize = 'sm' | 'md' | 'lg' | 'xl';
 
 let openCount = 0;
-
-/**
- * Reusable modal shell.
- *
- *   <app-modal
- *     [open]="isOpen()"
- *     title="إضافة مستخدم"
- *     size="md"
- *     (closed)="isOpen.set(false)">
- *
- *     <p>Body…</p>
- *
- *     <ng-container modal-footer>
- *       <button class="btn" (click)="cancel()">إلغاء</button>
- *       <button class="btn btn-bl" (click)="save()">حفظ</button>
- *     </ng-container>
- *   </app-modal>
- *
- * Handles:
- *   - body scroll lock (multi-modal aware via shared open counter)
- *   - ESC to close (when `closeOnEsc`)
- *   - backdrop click to close (when `closeOnBackdrop`)
- *   - autofocus on open
- *   - emits `closed` on every dismissal pathway
- */
 @Component({
   selector: 'app-modal',
   standalone: true,

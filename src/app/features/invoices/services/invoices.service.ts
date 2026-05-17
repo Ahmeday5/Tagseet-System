@@ -16,6 +16,7 @@ import {
   PurchaseInvoiceFilters,
   PurchaseInvoiceListItem,
   PurchaseInvoiceSummary,
+  UpdatePurchaseInvoicePayload,
 } from '../models/invoice.model';
 
 const INVOICES_CACHE_KEY = 'supplier-purchase-invoices';
@@ -72,6 +73,21 @@ export class InvoicesService {
   create(payload: CreatePurchaseInvoicePayload): Observable<PurchaseInvoice> {
     return this.api.post<PurchaseInvoice>(
       API_ENDPOINTS.purchaseInvoices.base,
+      payload,
+      {
+        context: withInlineHandling(
+          withCacheInvalidate([INVOICES_CACHE_KEY]),
+        ),
+      },
+    );
+  }
+
+  update(
+    id: number,
+    payload: UpdatePurchaseInvoicePayload,
+  ): Observable<PurchaseInvoice> {
+    return this.api.put<PurchaseInvoice>(
+      API_ENDPOINTS.purchaseInvoices.byId(id),
       payload,
       {
         context: withInlineHandling(

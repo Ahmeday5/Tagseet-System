@@ -4,7 +4,7 @@
   border-bottom: 2px solid var(--brd);
   margin-bottom: 14px;
   overflow-x: auto;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   scrollbar-width: none;
   &::-webkit-scrollbar { display: none; }
 }

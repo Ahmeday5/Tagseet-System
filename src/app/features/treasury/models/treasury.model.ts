@@ -94,6 +94,50 @@ export interface TreasuryTransfersQuery {
   to?: string;
 }
 
+/* ════════════════════════════════════════════════════════════════
+   Treasury operations (all transactions/movements)
+   ════════════════════════════════════════════════════════════════ */
+
+/** Row shape returned by `GET /dashboard/treasuries/operations`. */
+export interface TreasuryOperation {
+  id: number;
+  description: string;
+  amount: number;
+  signedAmount: number; // positive for Receipt, negative for Payment
+  direction: 'Payment' | 'Receipt';
+  date: string; // ISO datetime
+  userName: string;
+  balanceAfter: number;
+  treasuryId: number;
+  treasuryName: string;
+}
+
+/** Query parameters for the paginated operations list. */
+export interface TreasuryOperationsQuery {
+  pageIndex?: number;
+  pageSize?: number;
+  treasuryId?: number | '';
+  /** `yyyy-MM-dd` — inclusive lower bound. */
+  from?: string;
+  /** `yyyy-MM-dd` — inclusive upper bound. */
+  to?: string;
+}
+
+/* ════════════════════════════════════════════════════════════════
+   Monthly profits (revenue, expenses, profit analysis)
+   ════════════════════════════════════════════════════════════════ */
+
+export interface MonthlyProfit {
+  year: number;
+  month: number;
+  monthName: string;
+  revenue: number;
+  expenses: number;
+  profit: number;
+  marginPercent: number;
+  isCurrentMonth: boolean;
+}
+
 export interface Shareholder {
   id: string;
   name: string;

@@ -10,6 +10,8 @@ export const API_ENDPOINTS = {
     logout: 'auth/logout',
     refresh: 'auth/refresh-token',
     me: 'dashboard/auth/me',
+    /** Authoritative role + permission set for the logged-in user. */
+    permissions: 'dashboard/auth/me/permissions',
   },
   appUsers: {
     base: 'dashboard/app-users',
@@ -20,6 +22,8 @@ export const API_ENDPOINTS = {
     base: 'dashboard/treasuries',
     byId: (id: number) => `dashboard/treasuries/${id}`,
     transfers: 'dashboard/treasuries/transfers',
+    operations: 'dashboard/treasuries/operations',
+    monthlyProfits: 'dashboard/treasuries/monthly-profits',
   },
   warehouses: {
     base: 'dashboard/warehouses',
@@ -84,6 +88,8 @@ export const API_ENDPOINTS = {
   representatives: {
     base: 'dashboard/representatives',
     byId: (id: number) => `dashboard/representatives/${id}`,
+    /** Per-representative sub-treasury balances + accumulated commission. */
+    subTreasuries: 'dashboard/representatives/sub-treasuries',
   },
   contracts: {
     base: 'dashboard/contracts',

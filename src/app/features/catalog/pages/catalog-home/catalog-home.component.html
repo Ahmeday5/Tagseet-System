@@ -31,7 +31,7 @@
     </div>
   </div>
   <div class="ord-banner-counter">
-    <div class="ord-banner-counter-num">{{ pendingOrders().length }}</div>
+    <div class="ord-banner-counter-num">{{ pendingCount() }}</div>
     <div class="ord-banner-counter-lbl">طلبات معلقة</div>
   </div>
 </div>
@@ -45,8 +45,8 @@
       <div class="chdr">
         <div class="ct ord-pending-title">
           <span>📱 طلبات واردة من تطبيق العملاء</span>
-          <span class="ord-pending-badge">{{ pendingOrders().length }} معلقة</span>
-          <span class="ord-total-badge">{{ clientOrders().length }} إجمالي</span>
+          <span class="ord-pending-badge">{{ pendingCount() }} معلقة</span>
+          <span class="ord-total-badge">{{ count() }} إجمالي</span>
         </div>
         <button type="button" class="btn btn-sm d-inline-flex align-items-center gap-1" [disabled]="loadingOrders()"
           (click)="loadClientOrders(true)">
@@ -143,9 +143,19 @@
           </tbody>
         </table>
       </div>
+      @if (count() > 0) {
+      <app-pagination
+        [pageIndex]="pageIndex()"
+        [pageSize]="pageSize()"
+        [count]="count()"
+        [totalPages]="totalPages()"
+        [disabled]="loadingOrders()"
+        (pageChange)="onPageChange($event)"
+        (pageSizeChange)="onPageSizeChange($event)" />
+      }
     </div>
   </div>
-  <!-- LEFT: AVAILABLE STOCK -->
+  <!-- LEFT: AVAILABLE STOCK
   <div class="col-lg-6">
     <div class="card">
       <div class="chdr">
@@ -194,9 +204,9 @@
         </table>
       </div>
     </div>
-  </div>
+  </div>-->
 
-  <!-- RIGHT: ORDER BASKET -->
+  <!-- RIGHT: ORDER BASKET
   <div class="col-lg-6">
     <div class="card">
       <div class="chdr">
@@ -294,7 +304,7 @@
         <button class="btn btn-wa ord-btn-grow-1" (click)="sendWhatsapp()">📱 WhatsApp</button>
       </div>
     </div>
-  </div>
+  </div>-->
 </div>
 
 <app-convert-to-contract-modal [open]="convertModalOpen()" [order]="convertOrderRef()" (closed)="closeConvertModal()"

@@ -112,6 +112,12 @@ export interface CreatePurchaseInvoiceItem {
   discountPercent: number;
 }
 
+/**
+ * PUT /dashboard/supplier-purchase-invoices/{id}. The backend accepts the
+ * exact same body as create, so the type is shared rather than duplicated.
+ */
+export type UpdatePurchaseInvoicePayload = CreatePurchaseInvoicePayload;
+
 /** POST /dashboard/supplier-purchase-invoices/{id}/confirm */
 export interface ConfirmPurchaseInvoicePayload {
   treasuryId: number;

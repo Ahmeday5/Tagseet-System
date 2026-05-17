@@ -15,7 +15,7 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { CurrencyArPipe } from '../../../../shared/pipes/currency-ar.pipe';
 import { ToastService } from '../../../../core/services/toast.service';
 import { ApiError } from '../../../../core/models/api-response.model';
@@ -23,6 +23,7 @@ import { InvoicesService } from '../../services/invoices.service';
 import {
   CreatePurchaseInvoicePayload,
   PurchaseInvoice,
+  UpdatePurchaseInvoicePayload,
 } from '../../models/invoice.model';
 import { Warehouse } from '../../../warehouse/models/warehouse.model';
 import { WarehouseService } from '../../../warehouse/services/warehouse.service';
@@ -40,7 +41,12 @@ interface LineFormShape {
   discountPercent: FormControl<number>;
 }
 
-const DEFAULT_TAX_RATE = 15;
+/**
+ * Tax is currently disabled business-wide: the rate is pinned to 0 and the
+ * input is non-editable. Kept as a single constant so re-enabling it later
+ * is a one-line change.
+ */
+const FIXED_TAX_RATE = 0;
 
 @Component({
   selector: 'app-invoice-new',
@@ -59,6 +65,13 @@ export class InvoiceNewComponent implements OnInit {
   private readonly treasuryService  = inject(TreasuryService);
   private readonly toast            = inject(ToastService);
   private readonly router           = inject(Router);
+  private readonly route            = inject(ActivatedRoute);
+
+  /** Set when the route carries an `:id` — switches the form to edit mode. */
+  protected readonly editId = signal<number | null>(null);
+  protected readonly isEdit = computed(() => this.editId() !== null);
+  /** True while the existing invoice is being fetched for edit prefill. */
+  protected readonly loadingInvoice = signal(false);
 
   // ── data ──
   protected readonly suppliers  = signal<Supplier[]>([]);
@@ -92,7 +105,10 @@ export class InvoiceNewComponent implements OnInit {
     treasuryId:   [0, [Validators.required, Validators.min(1)]],
     invoiceDate:  [this.todayISO(), [Validators.required]],
     dueDate:      [this.plusDaysISO(30), [Validators.required]],
-    taxRatePercent: [DEFAULT_TAX_RATE, [Validators.required, Validators.min(0), Validators.max(100)]],
+    // Disabled + pinned to 0: tax is turned off business-wide. A disabled
+    // control is excluded from validity and from user input, but its value
+    // is still emitted by `getRawValue()` for the payload.
+    taxRatePercent: [{ value: FIXED_TAX_RATE, disabled: true }, []],
     paidAmount:   [0, [Validators.required, Validators.min(0)]],
     notes:        [''],
     autoPostInventory: [true],
@@ -165,6 +181,12 @@ export class InvoiceNewComponent implements OnInit {
   // ─────────── lifecycle ───────────
 
   ngOnInit(): void {
+    const idParam = this.route.snapshot.paramMap.get('id');
+    const id = Number(idParam);
+    if (idParam && Number.isFinite(id) && id > 0) {
+      this.editId.set(id);
+    }
+
     this.loadingRefs.set(true);
     this.suppliersService.listAll().subscribe({
       next: (s) => this.suppliers.set(s),
@@ -181,10 +203,15 @@ export class InvoiceNewComponent implements OnInit {
     this.treasuryService.list().subscribe({
       next: (t) => {
         this.treasuries.set(t);
-        // Pre-select the first active treasury so the user doesn't have
-        // to scroll the select before the form is valid.
+        // Create only: pre-select the first active treasury so the form
+        // is valid without scrolling the select. In edit mode the value
+        // comes from the existing invoice and must not be overwritten.
         const first = t.find((tr) => tr.isActive);
-        if (first && this.form.controls.treasuryId.value === 0) {
+        if (
+          !this.isEdit() &&
+          first &&
+          this.form.controls.treasuryId.value === 0
+        ) {
           this.form.controls.treasuryId.setValue(first.id);
         }
         this.loadingRefs.set(false);
@@ -200,8 +227,63 @@ export class InvoiceNewComponent implements OnInit {
     // no manual subscription needed. `linesTick` covers the FormArray
     // (which has no signal equivalent) via `onLineFieldChange`.
 
-    // Start with one blank row.
-    this.addLine();
+    if (this.isEdit()) {
+      this.loadInvoiceForEdit(this.editId()!);
+    } else {
+      // Start with one blank row.
+      this.addLine();
+    }
+  }
+
+  /** Fetches the existing invoice and patches the form for edit mode. */
+  private loadInvoiceForEdit(id: number): void {
+    this.loadingInvoice.set(true);
+    this.svc.getById(id).subscribe({
+      next: (inv) => {
+        this.form.patchValue({
+          supplierId: inv.supplierId,
+          warehouseId: inv.warehouseId,
+          treasuryId: inv.treasuryId ?? 0,
+          invoiceDate: this.isoToDateInput(inv.invoiceDate),
+          dueDate: this.isoToDateInput(inv.dueDate),
+          paidAmount: inv.paidAmount ?? 0,
+          notes: inv.notes ?? '',
+        });
+
+        this.items.clear();
+        for (const line of inv.items ?? []) {
+          this.items.push(
+            this.fb.group<LineFormShape>({
+              productId: this.fb.nonNullable.control(line.productId, [
+                Validators.required,
+                Validators.min(1),
+              ]),
+              unitPrice: this.fb.nonNullable.control(line.unitPrice, [
+                Validators.required,
+                Validators.min(0),
+              ]),
+              quantity: this.fb.nonNullable.control(line.quantity, [
+                Validators.required,
+                Validators.min(1),
+              ]),
+              discountPercent: this.fb.nonNullable.control(
+                line.discountPercent,
+                [Validators.required, Validators.min(0), Validators.max(100)],
+              ),
+            }),
+          );
+        }
+        if (this.items.length === 0) this.addLine();
+
+        this.linesTick.update((v) => v + 1);
+        this.loadingInvoice.set(false);
+      },
+      error: (err: ApiError) => {
+        this.loadingInvoice.set(false);
+        this.toast.error(err.message || 'تعذّر تحميل بيانات الفاتورة');
+        this.router.navigate(['/invoices/list']);
+      },
+    });
   }
 
   // ─────────── line management ───────────
@@ -279,18 +361,14 @@ export class InvoiceNewComponent implements OnInit {
     }
 
     const raw = this.form.getRawValue();
-    // Tax: the business rule is "default to 15% unless the user explicitly
-    // sets another non-zero value". Empty string, null, or 0 → 15.
-    const enteredTax = Number(raw.taxRatePercent);
-    const taxRatePercent =
-      Number.isFinite(enteredTax) && enteredTax > 0 ? enteredTax : DEFAULT_TAX_RATE;
 
     const payload: CreatePurchaseInvoicePayload = {
       supplierId:        Number(raw.supplierId),
       warehouseId:       Number(raw.warehouseId),
       invoiceDate:       this.toIso(raw.invoiceDate),
       dueDate:           this.toIso(raw.dueDate),
-      taxRatePercent,
+      // Tax is disabled business-wide — always sent as a fixed 0.
+      taxRatePercent:    FIXED_TAX_RATE,
       paidAmount:        Number(raw.paidAmount) || 0,
       treasuryId:        Number(raw.treasuryId) || null,
       isDraft:           asDraft,
@@ -308,16 +386,25 @@ export class InvoiceNewComponent implements OnInit {
     if (asDraft) this.savingDraft.set(true);
     else this.savingFinal.set(true);
 
-    this.svc.create(payload).subscribe({
+    const editId = this.editId();
+    const request$ = editId
+      ? this.svc.update(editId, payload as UpdatePurchaseInvoicePayload)
+      : this.svc.create(payload);
+
+    request$.subscribe({
       next: (res: PurchaseInvoice) => {
         this.savingDraft.set(false);
         this.savingFinal.set(false);
         this.toast.success(
-          asDraft
-            ? `تم حفظ المسودة ${res.invoiceNumber}`
-            : `تم إنشاء الفاتورة ${res.invoiceNumber}`,
+          editId
+            ? `تم تعديل الفاتورة ${res.invoiceNumber}`
+            : asDraft
+              ? `تم حفظ المسودة ${res.invoiceNumber}`
+              : `تم إنشاء الفاتورة ${res.invoiceNumber}`,
         );
-        this.router.navigate(['/invoices/list']);
+        this.router.navigate(
+          editId ? ['/invoices', editId] : ['/invoices/list'],
+        );
       },
       error: (err: ApiError) => {
         this.savingDraft.set(false);
@@ -346,5 +433,14 @@ export class InvoiceNewComponent implements OnInit {
     return Number.isNaN(d.getTime())
       ? new Date().toISOString()
       : d.toISOString();
+  }
+
+  /** Converts an API ISO datetime to the `YYYY-MM-DD` a date input expects. */
+  private isoToDateInput(iso: string | null | undefined): string {
+    if (!iso) return this.todayISO();
+    const d = new Date(iso);
+    return Number.isNaN(d.getTime())
+      ? this.todayISO()
+      : d.toISOString().slice(0, 10);
   }
 }

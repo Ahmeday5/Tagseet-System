@@ -74,6 +74,16 @@
     }
     <span>تحديث</span>
   </button>
+
+  <button
+    *appHasPermission="PERMS.treasuryFullAccess"
+    type="button"
+    class="btn btn-sm btn-bl d-inline-flex align-items-center gap-1"
+    (click)="openForm()"
+  >
+    <span aria-hidden="true">+</span>
+    <span>سند جديد</span>
+  </button>
 </div>
 
 <!-- ── TABLE ── -->
@@ -286,3 +296,10 @@
     <button type="button" class="btn btn-sm" (click)="closeDetail()">إغلاق</button>
   </ng-container>
 </app-modal>
+
+<!-- ── CREATE VOUCHER MODAL ── -->
+<app-voucher-form-modal
+  [open]="showForm()"
+  (closed)="closeForm()"
+  (saved)="onVoucherCreated()"
+/>

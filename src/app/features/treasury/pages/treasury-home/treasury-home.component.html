@@ -7,7 +7,7 @@
 
 
 <!-- ملخص الخزينة (LIVE) -->
-<div class="trs-hero d-flex justify-content-between align-items-center"
+<div class="trs-hero d-flex justify-content-between align-items-center flex-wrap"
   style="background:var(--te);color:#fff;border-radius:var(--rl);padding:16px;margin-bottom:12px">
   <div class="flex-grow-1">
     <div style="font-size:11px;opacity:.8;margin-bottom:3px">الخزينة الرئيسية — مجموع كل الخزائن</div>
@@ -36,20 +36,11 @@
   </div>
 
   <div class="actions d-flex gap-2 flex-wrap">
-    <button
-      *appHasPermission="PERMS.treasuryFullAccess"
-      class="btn btn-sm btn-te"
-      [disabled]="treasuries().length < 2"
-      [title]="treasuries().length < 2 ? 'يلزم وجود خزينتين على الأقل لتنفيذ تحويل' : ''"
-      (click)="openTransfer()"
-    >
+    <button *appHasPermission="PERMS.treasuryFullAccess" class="btn btn-sm btn-bl" [disabled]="treasuries().length < 2"
+      [title]="treasuries().length < 2 ? 'يلزم وجود خزينتين على الأقل لتنفيذ تحويل' : ''" (click)="openTransfer()">
       ⇄ تحويل بين خزائن
     </button>
-    <button
-      *appHasPermission="PERMS.treasuryFullAccess"
-      class="btn btn-bl btn-sm"
-      (click)="openCreate()"
-    >
+    <button *appHasPermission="PERMS.treasuryFullAccess" class="btn btn-bl btn-sm" (click)="openCreate()">
       + إضافة خزينة جديدة
     </button>
   </div>
@@ -127,7 +118,7 @@
       </div>
     </div>
     <div class="col-md-6">
-      <div class="card trf-card">
+      <div class="card trf-card h-100">
         <div class="chdr trf-head">
           <div>
             <div class="ct">التحويلات بين الخزائن</div>
@@ -135,18 +126,14 @@
           </div>
           <div class="d-flex gap-1">
             @if (hasTransferFilters()) {
-              <button type="button" class="btn btn-sm trf-clear" (click)="clearTransferFilters()">
-                مسح
-              </button>
+            <button type="button" class="btn btn-sm trf-clear" (click)="clearTransferFilters()">
+              مسح
+            </button>
             }
-            <button
-              type="button"
-              class="btn btn-sm d-inline-flex align-items-center gap-1"
-              [disabled]="transfersLoading()"
-              (click)="refreshTransfers()"
-            >
+            <button type="button" class="btn btn-sm d-inline-flex align-items-center gap-1"
+              [disabled]="transfersLoading()" (click)="refreshTransfers()">
               @if (transfersLoading()) {
-                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+              <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
               }
               <span>تحديث</span>
             </button>
@@ -156,50 +143,35 @@
         <div class="trf-filters">
           <div class="trf-field">
             <label>من خزينة</label>
-            <select
-              class="trf-select"
-              [value]="tFromFilter()"
-              (change)="onTransferFromChange($any($event.target).value)"
-            >
+            <select class="trf-select" [value]="tFromFilter()"
+              (change)="onTransferFromChange($any($event.target).value)">
               <option value="">الكل</option>
               @for (t of treasuries(); track t.id) {
-                <option [value]="t.id">{{ t.name }}</option>
+              <option [value]="t.id">{{ t.name }}</option>
               }
             </select>
           </div>
 
           <div class="trf-field">
             <label>إلى خزينة</label>
-            <select
-              class="trf-select"
-              [value]="tToFilter()"
-              (change)="onTransferToChange($any($event.target).value)"
-            >
+            <select class="trf-select" [value]="tToFilter()" (change)="onTransferToChange($any($event.target).value)">
               <option value="">الكل</option>
               @for (t of treasuries(); track t.id) {
-                <option [value]="t.id">{{ t.name }}</option>
+              <option [value]="t.id">{{ t.name }}</option>
               }
             </select>
           </div>
 
           <div class="trf-field">
             <label>من تاريخ</label>
-            <input
-              type="date"
-              class="trf-select"
-              [value]="tFromDate()"
-              (change)="onTransferFromDate($any($event.target).value)"
-            />
+            <input type="date" class="trf-select" [value]="tFromDate()"
+              (change)="onTransferFromDate($any($event.target).value)" />
           </div>
 
           <div class="trf-field">
             <label>إلى تاريخ</label>
-            <input
-              type="date"
-              class="trf-select"
-              [value]="tToDate()"
-              (change)="onTransferToDate($any($event.target).value)"
-            />
+            <input type="date" class="trf-select" [value]="tToDate()"
+              (change)="onTransferToDate($any($event.target).value)" />
           </div>
         </div>
 
@@ -217,52 +189,138 @@
             </thead>
             <tbody>
               @for (t of transfers(); track t.id) {
-                <tr>
-                  <td class="trf-id">#{{ t.id }}</td>
-                  <td>
-                    <span class="trf-from">{{ t.fromTreasuryName }}</span>
-                  </td>
-                  <td>
-                    <span class="trf-arrow" aria-hidden="true">←</span>
-                    <span class="trf-to">{{ t.toTreasuryName }}</span>
-                  </td>
-                  <td class="trf-amount">{{ t.amount | currencyAr: true }}</td>
-                  <td class="trf-date">{{ t.transferDate | dateAr: 'short' }}</td>
-                  <td class="trf-notes" [title]="t.notes ?? ''">{{ t.notes || '—' }}</td>
-                </tr>
+              <tr>
+                <td class="trf-id">#{{ t.id }}</td>
+                <td>
+                  <span class="trf-from">{{ t.fromTreasuryName }}</span>
+                </td>
+                <td>
+                  <span class="trf-arrow" aria-hidden="true">←</span>
+                  <span class="trf-to">{{ t.toTreasuryName }}</span>
+                </td>
+                <td class="trf-amount">{{ t.amount | currencyAr: true }}</td>
+                <td class="trf-date">{{ t.transferDate | dateAr: 'short' }}</td>
+                <td class="trf-notes" [title]="t.notes ?? ''">{{ t.notes || '—' }}</td>
+              </tr>
               } @empty {
-                <tr>
-                  <td colspan="6" class="text-center py-4" style="color:var(--txt3);font-size:12px">
-                    @if (transfersLoading()) {
-                      جاري التحميل...
-                    } @else if (hasTransferFilters()) {
-                      لا توجد تحويلات مطابقة للفلاتر الحالية.
-                    } @else {
-                      لا توجد تحويلات بعد.
-                    }
-                  </td>
-                </tr>
+              <tr>
+                <td colspan="6" class="text-center py-4" style="color:var(--txt3);font-size:12px">
+                  @if (transfersLoading()) {
+                  جاري التحميل...
+                  } @else if (hasTransferFilters()) {
+                  لا توجد تحويلات مطابقة للفلاتر الحالية.
+                  } @else {
+                  لا توجد تحويلات بعد.
+                  }
+                </td>
+              </tr>
               }
             </tbody>
           </table>
         </div>
 
         @if (tCount() > 0) {
-          <app-pagination
-            [pageIndex]="tPageIndex()"
-            [pageSize]="tPageSize()"
-            [count]="tCount()"
-            [totalPages]="tTotalPages()"
-            [disabled]="transfersLoading()"
-            (pageChange)="onTransfersPageChange($event)"
-            (pageSizeChange)="onTransfersPageSizeChange($event)"
-          />
+        <app-pagination [pageIndex]="tPageIndex()" [pageSize]="tPageSize()" [count]="tCount()"
+          [totalPages]="tTotalPages()" [disabled]="transfersLoading()" (pageChange)="onTransfersPageChange($event)"
+          (pageSizeChange)="onTransfersPageSizeChange($event)" />
         }
       </div>
     </div>
-    <div class="col-md-6">
+    <div class="col-lg-6">
       <div class="card">
-        <div class="ct" style="margin-bottom:8px">أرباح كل شهر</div>
+        <div class="chdr trf-head">
+          <div>
+            <div class="ct">الخزائن الفرعية للمندوبين</div>
+            <div class="trf-sub">رصيد كل مندوب في خزينته الفرعية والعمولة المتراكمة</div>
+          </div>
+          <button type="button" class="btn btn-sm d-inline-flex align-items-center gap-1"
+            [disabled]="subTreasuriesLoading()" (click)="loadSubTreasuries(true)">
+            @if (subTreasuriesLoading()) {
+            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+            }
+            <span>تحديث</span>
+          </button>
+        </div>
+
+        <div class="tw" style="margin-bottom:0">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>المندوب</th>
+                <th>الخزينة</th>
+                <th>الرصيد</th>
+                <th>العمولة المتراكمة</th>
+                <th>آخر نشاط</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (s of subTreasuries(); track s.treasuryId) {
+              <tr>
+                <td style="font-weight:600">{{ s.representativeName }}</td>
+                <td>{{ s.treasuryName }}</td>
+                <td class="trf-amount">{{ s.balance | currencyAr: true }}</td>
+                <td style="color:var(--gr);font-weight:600">
+                  {{ s.accumulatedCommission | currencyAr: true }}
+                </td>
+                <td class="trf-date">
+                  {{ s.lastActivityDate ? (s.lastActivityDate | dateAr: 'short') : '—' }}
+                </td>
+              </tr>
+              } @empty {
+              <tr>
+                <td colspan="5" class="text-center py-4" style="color:var(--txt3);font-size:12px">
+                  @if (subTreasuriesLoading()) {
+                  جاري التحميل...
+                  } @else {
+                  لا توجد خزائن فرعية بعد.
+                  }
+                </td>
+              </tr>
+              }
+            </tbody>
+            @if (subTreasuries().length > 0) {
+            <tfoot>
+              <tr>
+                <td colspan="2" style="font-weight:700">الإجمالي</td>
+                <td class="trf-amount" style="font-weight:700">
+                  {{ subTreasuriesTotalBalance() | currencyAr: true }}
+                </td>
+                <td style="color:var(--gr);font-weight:700">
+                  {{ subTreasuriesTotalCommission() | currencyAr: true }}
+                </td>
+                <td></td>
+              </tr>
+            </tfoot>
+            }
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-6">
+      <div class="card">
+        <div class="chdr trf-head">
+          <div>
+            <div class="ct">الأرباح الشهرية</div>
+            <div class="trf-sub">
+              ملخص الإيرادات والمصروفات وصافي الربح لكل شهر
+            </div>
+          </div>
+
+          <div class="d-flex gap-2 align-items-center">
+            <div class="form-label">السنة</div>
+            <input type="number" class="trf-select" style="min-width:120px" [value]="selectedYear() ?? ''"
+              (change)="onYearChange($any($event.target).value)">
+
+            <button type="button" class="btn btn-sm d-inline-flex align-items-center gap-1"
+              [disabled]="monthlyProfitsLoading()" (click)="refreshMonthlyProfits()">
+              @if (monthlyProfitsLoading()) {
+              <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+              }
+              <span>تحديث</span>
+            </button>
+          </div>
+        </div>
+
         <div class="tw" style="margin-bottom:0">
           <table class="table">
             <thead>
@@ -270,94 +328,156 @@
                 <th>الشهر</th>
                 <th>الإيرادات</th>
                 <th>المصروفات</th>
-                <th>الربح</th>
-                <th>الهامش</th>
+                <th>صافي الربح</th>
+                <th>هامش الربح</th>
+                <th>الحالة</th>
               </tr>
             </thead>
+
             <tbody>
-              <tr>
-                <td>يناير</td>
-                <td>48,400</td>
-                <td>35,200</td>
-                <td style="color:var(--gr)">13,200</td>
-                <td style="color:var(--gr)">27%</td>
+              @for (m of monthlyProfits(); track m.month) {
+              <tr [ngClass]="monthRowClass(m.isCurrentMonth)">
+                <td style="font-weight:700">
+                  {{ m.monthName }}
+                </td>
+
+                <td style="color:var(--gr);font-weight:600">
+                  {{ m.revenue | currencyAr:true }}
+                </td>
+
+                <td style="color:var(--re);font-weight:600">
+                  {{ m.expenses | currencyAr:true }}
+                </td>
+
+                <td [ngClass]="profitClass(m.profit)">
+                  {{ m.profit| currencyAr:true }}
+                </td>
+
+                <td>
+                  <span [ngClass]="marginClass(m.marginPercent)">
+                    {{ m.marginPercent }}%
+                  </span>
+                </td>
+
+                <td>
+                  @if (m.profit > 0) {
+                  <app-badge text="ربح" type="ok" />
+                  } @else if (m.profit
+                  < 0) { <app-badge text="خسارة" type="bad" />
+                  } @else {
+                  <app-badge text="تعادل" type="info" />
+                  }
+                </td>
               </tr>
+              } @empty {
               <tr>
-                <td>فبراير</td>
-                <td>52,000</td>
-                <td>38,400</td>
-                <td style="color:var(--gr)">13,600</td>
-                <td style="color:var(--gr)">26%</td>
+                <td colspan="6" class="text-center py-4" style="color:var(--txt3);font-size:12px">
+                  @if (monthlyProfitsLoading()) {
+                  جاري التحميل...
+                  } @else {
+                  لا توجد بيانات أرباح شهرية.
+                  }
+                </td>
               </tr>
-              <tr>
-                <td>مارس</td>
-                <td>61,200</td>
-                <td>44,800</td>
-                <td style="color:var(--gr)">16,400</td>
-                <td style="color:var(--gr)">27%</td>
-              </tr>
-              <tr>
-                <td>أبريل (حتى الآن)</td>
-                <td>22,400</td>
-                <td>8,200</td>
-                <td style="color:var(--gr)">14,200</td>
-                <td style="color:var(--gr)">63%</td>
-              </tr>
+              }
             </tbody>
           </table>
         </div>
       </div>
     </div>
-    <div class="col-md-6">
+    <div class="col-12">
       <div class="card">
-        <div class="ct" style="margin-bottom:9px">الحسابات الفرعية</div>
-        <div class="sr"><span style="color:var(--txt2)">السلف الممنوحة</span><span style="color:var(--am)">3,200
-            ج.م</span></div>
-        <div class="sr"><span style="color:var(--txt2)">شغل مؤقت</span><span>1,800 ج.م</span></div>
-        <div class="sr"><span style="color:var(--txt2)">مقدمات عملاء</span><span style="color:var(--gr)">4,500
-            ج.م</span></div>
-        <div class="sr"><span style="color:var(--txt2)">مقدمات للموردين</span><span style="color:var(--bl)">2,100
-            ج.م</span></div>
-        <div class="divider"></div>
-        <div class="sr"><span style="font-weight:700">صافي الحسابات الفرعية</span><span style="font-weight:700">−2,600
-            ج.م</span></div>
-      </div>
-    </div>
-    <div class="col-md-6">
-      <div class="card">
-        <div class="ct" style="margin-bottom:8px">الخزائن الفرعية (المندوبون)</div>
+        <div class="chdr trf-head">
+          <div>
+            <div class="ct">العمليات المسجلة</div>
+            <div class="trf-sub">سجل كل العمليات المالية والحركات</div>
+          </div>
+          <div class="d-flex gap-1">
+            @if (hasOperationFilters()) {
+            <button type="button" class="btn btn-sm trf-clear" (click)="clearOperationFilters()">
+              مسح
+            </button>
+            }
+            <button type="button" class="btn btn-sm d-inline-flex align-items-center gap-1"
+              [disabled]="operationsLoading()" (click)="refreshOperations()">
+              @if (operationsLoading()) {
+              <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+              }
+              <span>تحديث</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="trf-filters" style="grid-template-columns: repeat(3, minmax(0, 1fr))">
+          <div class="trf-field">
+            <label>الخزينة</label>
+            <select class="trf-select" [value]="oTreasuryFilter()"
+              (change)="onOperationsTreasuryChange($any($event.target).value)">
+              <option value="">الكل</option>
+              @for (t of treasuries(); track t.id) {
+              <option [value]="t.id">{{ t.name }}</option>
+              }
+            </select>
+          </div>
+        </div>
+
         <div class="tw" style="margin-bottom:0">
           <table class="table">
             <thead>
               <tr>
-                <th>المندوب</th>
-                <th>الرصيد</th>
-                <th>آخر حركة</th>
-                <th>العمولة المتراكمة</th>
+                <th>#</th>
+                <th>الخزينة</th>
+                <th>النوع</th>
+                <th>الوصف</th>
+                <th>المبلغ</th>
+                <th>الرصيد بعد العملية</th>
+                <th>المستخدم</th>
+                <th>التاريخ</th>
               </tr>
             </thead>
             <tbody>
+              @for (op of operations(); track op.id) {
               <tr>
-                <td style="font-weight:600">أحمد سالم</td>
-                <td style="color:var(--bl)">12,400 ج.م</td>
-                <td>8 أبريل</td>
-                <td style="color:var(--gr)">1,420 ج.م</td>
+                <td class="trf-id">#{{ op.id }}</td>
+                <td style="font-weight:600">{{ op.treasuryName }}</td>
+                <td>
+                  <app-badge [text]="directionLabel(op.direction)" [type]="directionBadge(op.direction)" />
+                </td>
+                <td style="font-size:11px;max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
+                  [title]="op.description">
+                  {{ op.description || '—' }}
+                </td>
+                <td [ngClass]="signedAmountClass(op.signedAmount)">
+                  {{ op.signedAmount | currencyAr: true }}
+                </td>
+                <td style="color:var(--bl);font-weight:700">
+                  {{ op.balanceAfter | currencyAr: true }}
+                </td>
+                <td style="font-size:10.5px;color:var(--txt2)">{{ op.userName }}</td>
+                <td class="trf-date">{{ op.date | dateAr: 'short' }}</td>
               </tr>
+              } @empty {
               <tr>
-                <td style="font-weight:600">محمد عبدالله</td>
-                <td style="color:var(--bl)">8,600 ج.م</td>
-                <td>7 أبريل</td>
-                <td style="color:var(--gr)">784 ج.م</td>
+                <td colspan="8" class="text-center py-4" style="color:var(--txt3);font-size:12px">
+                  @if (operationsLoading()) {
+                  جاري التحميل...
+                  } @else if (hasOperationFilters()) {
+                  لا توجد عمليات مطابقة للفلاتر الحالية.
+                  } @else {
+                  لا توجد عمليات بعد.
+                  }
+                </td>
               </tr>
-              <tr>
-                <td style="font-weight:600">عبدالرحمن نصر</td>
-                <td style="color:var(--bl)">3,200 ج.م</td>
-                <td>1 أبريل</td>
-                <td style="color:var(--gr)">336 ج.م</td>
-              </tr>
+              }
             </tbody>
           </table>
         </div>
+
+        @if (oCount() > 0) {
+        <app-pagination [pageIndex]="oPageIndex()" [pageSize]="oPageSize()" [count]="oCount()"
+          [totalPages]="oTotalPages()" [disabled]="operationsLoading()" (pageChange)="onOperationsPageChange($event)"
+          (pageSizeChange)="onOperationsPageSizeChange($event)" />
+        }
       </div>
     </div>
   </div>
@@ -367,9 +487,5 @@
 <app-treasury-form-model [open]="modalOpen()" [mode]="modalMode()" [treasury]="modalTreasury()" (closed)="closeModal()"
   (saved)="onSaved($event)" />
 
-<app-treasury-transfer-modal
-  [open]="transferModalOpen()"
-  [treasuries]="treasuries()"
-  (closed)="closeTransfer()"
-  (saved)="onTransferSaved($event)"
-/>
+<app-treasury-transfer-modal [open]="transferModalOpen()" [treasuries]="treasuries()" (closed)="closeTransfer()"
+  (saved)="onTransferSaved($event)" />
