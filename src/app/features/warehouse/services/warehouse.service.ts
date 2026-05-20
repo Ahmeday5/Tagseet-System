@@ -19,6 +19,7 @@ import {
   withInlineHandling,
 } from '../../../core/http/http-context.tokens';
 import { toList } from '../../../core/utils/api-list.util';
+import { LookupItem } from '../../../core/models/lookup.model';
 
 const WAREHOUSE_CACHE_KEY = 'warehouse';
 const WAREHOUSE_TTL_MS = 15 * 60 * 1000; // 15 minutes
@@ -46,6 +47,15 @@ export class WarehouseService {
         context: withCacheBypass(withCache({ ttlMs: WAREHOUSE_TTL_MS })),
       })
       .pipe(toList<Warehouse>());
+  }
+
+  /** Lightweight `{id,name}` list for the warehouse picker. */
+  lookup(): Observable<LookupItem[]> {
+    return this.api
+      .get<unknown>(API_ENDPOINTS.warehouses.lookup, {
+        context: withCache({ ttlMs: WAREHOUSE_TTL_MS }),
+      })
+      .pipe(toList<LookupItem>());
   }
 
   getById(id: number): Observable<Warehouse> {

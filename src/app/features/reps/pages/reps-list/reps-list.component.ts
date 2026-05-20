@@ -7,6 +7,7 @@ import {
   OnInit,
   signal,
 } from '@angular/core';
+import { forkJoin } from 'rxjs';
 import { CurrencyArPipe } from '../../../../shared/pipes/currency-ar.pipe';
 import { BadgeComponent } from '../../../../shared/components/badge/badge.component';
 import { PaginationComponent } from '../../../../shared/components/pagination/pagination.component';
@@ -21,8 +22,12 @@ import {
   Representative,
   RepresentativePermission,
   RepresentativeStatus,
+  RepresentativeSubTreasury,
 } from '../../models/rep.model';
 import { RepFormModalComponent } from '../../components/rep-form-modal/rep-form-modal.component';
+import { RepStatementModalComponent } from '../../components/rep-statement-modal/rep-statement-modal.component';
+import { CommissionPayoutModalComponent } from '../../components/commission-payout-modal/commission-payout-modal.component';
+import { CommissionPayoutsModalComponent } from '../../components/commission-payouts-modal/commission-payouts-modal.component';
 import {
   REP_PERMISSION_BADGE,
   REP_PERMISSION_LABELS,
@@ -30,6 +35,11 @@ import {
   REP_STATUS_LABELS,
 } from '../../constants/rep-meta';
 import { BadgeType } from '../../../../shared/components/badge/badge.component';
+import { PERMISSIONS } from '../../../../core/constants/permissions.const';
+import { CommonModule } from '@angular/common';
+import { HasPermissionDirective } from '../../../../shared/directives/has-permission.directive';
+import { PrintService } from '../../../../core/services/print.service';
+import { fetchAllPages } from '../../../../core/utils/api-list.util';
 
 const DEFAULT_PAGE_SIZE = 10;
 
@@ -42,6 +52,11 @@ const DEFAULT_PAGE_SIZE = 10;
     BadgeComponent,
     PaginationComponent,
     RepFormModalComponent,
+    RepStatementModalComponent,
+    CommissionPayoutModalComponent,
+    CommissionPayoutsModalComponent,
+    CommonModule,
+    HasPermissionDirective,
   ],
   templateUrl: './reps-list.component.html',
   styleUrl: './reps-list.component.scss',
@@ -51,6 +66,9 @@ export class RepsListComponent implements OnInit {
   private readonly dialog = inject(DialogService);
   private readonly toast = inject(ToastService);
   private readonly cache = inject(HttpCacheService);
+  private readonly printer = inject(PrintService);
+
+  protected readonly isPrinting = signal(false);
 
   // ── data ──
   protected readonly reps = signal<Representative[]>([]);
@@ -72,6 +90,15 @@ export class RepsListComponent implements OnInit {
 
   /** Tracks which row is currently being deleted, for inline button state. */
   protected readonly deletingId = signal<number | null>(null);
+
+  // ── statement/payout modals ──
+  protected readonly PERMS = PERMISSIONS;
+  protected readonly statementOpen = signal(false);
+  protected readonly statementRepId = signal<number | null>(null);
+  protected readonly statementRepName = signal('');
+  protected readonly payoutOpen = signal(false);
+  protected readonly payoutRep = signal<Representative | null>(null);
+  protected readonly payoutsHistoryOpen = signal(false);
 
   // ── derived ──
   protected readonly hasReps = computed(() => this.reps().length > 0);
@@ -131,14 +158,27 @@ export class RepsListComponent implements OnInit {
     force = false,
   ): void {
     this.loading.set(true);
-    const stream$ = force
+    const list$ = force
       ? this.service.refreshList(trigger)
       : this.service.list(trigger);
-    stream$.subscribe({
+    const subs$ = force
+      ? this.service.refreshSubTreasuries()
+      : this.service.subTreasuries();
+
+    forkJoin({ reps: list$, subs: subs$ }).subscribe({
       next: (res) => {
-        this.reps.set(res?.data ?? []);
-        this.count.set(res?.count ?? 0);
-        this.totalPages.set(res?.totalPages ?? 0);
+        const mapped = (res.reps?.data ?? []).map(rep => {
+          const sub = (res.subs ?? []).find(s => s.representativeId === rep.id);
+          return {
+            ...rep,
+            outstandingCommission: sub ? sub.outstandingCommission : 0,
+            accumulatedCommission: sub ? sub.accumulatedCommission : 0,
+            paidCommission: sub ? sub.paidCommission : 0,
+          };
+        });
+        this.reps.set(mapped);
+        this.count.set(res.reps?.count ?? 0);
+        this.totalPages.set(res.reps?.totalPages ?? 0);
         this.loading.set(false);
       },
       error: () => {
@@ -152,6 +192,80 @@ export class RepsListComponent implements OnInit {
 
   protected refresh(): void {
     this.fetch(this.fetchTrigger(), true);
+  }
+
+  /**
+   * Exports the full representatives roster matching the active search, with
+   * the sub-treasury aggregates joined in. Server returns paged data, so we
+   * walk every page before invoking the print service.
+   */
+  protected printReps(): void {
+    if (this.isPrinting()) return;
+    this.isPrinting.set(true);
+    const search = this.searchTerm().trim();
+
+    forkJoin({
+      reps: fetchAllPages<Representative>((pageIndex, pageSize) =>
+        this.service.refreshList({ search, pageIndex, pageSize }),
+      ),
+      subs: this.service.refreshSubTreasuries(),
+    }).subscribe({
+      next: ({ reps, subs }) => {
+        const subsById = new Map<number, RepresentativeSubTreasury>();
+        for (const s of subs ?? []) subsById.set(s.representativeId, s);
+        const enriched = reps.map((rep) => {
+          const sub = subsById.get(rep.id);
+          return {
+            ...rep,
+            outstandingCommission: sub?.outstandingCommission ?? 0,
+            accumulatedCommission: sub?.accumulatedCommission ?? 0,
+            paidCommission: sub?.paidCommission ?? 0,
+          };
+        });
+
+        this.isPrinting.set(false);
+        this.printer.print<Representative>({
+          title: 'قائمة المندوبين',
+          subtitle: 'الأداء والعمولات وأرصدة الخزائن الفرعية',
+          meta: search ? [{ label: 'بحث', value: search }] : undefined,
+          orientation: 'landscape',
+          columns: [
+            { key: 'id',                header: '#',             align: 'center', width: '46px' },
+            { key: 'fullName',          header: 'الاسم',         align: 'start', bold: true },
+            { key: 'phoneNumber',       header: 'الهاتف',        align: 'start' },
+            {
+              key: 'permissions',
+              header: 'الصلاحية',
+              align: 'center',
+              format: (v) => REP_PERMISSION_LABELS[v as RepresentativePermission] ?? String(v),
+            },
+            { key: 'profitRatePercent',     header: 'نسبة الربح', align: 'center', format: 'percent' },
+            { key: 'performanceRating',    header: 'التقييم',    align: 'center', format: 'number' },
+            {
+              key: (r) => r.treasury?.currentBalance ?? 0,
+              header: 'رصيد الخزينة',
+              align: 'end',
+              format: 'currency',
+              bold: true,
+            },
+            { key: 'accumulatedCommission', header: 'عمولة مستحقة', align: 'end', format: 'currency' },
+            { key: 'paidCommission',        header: 'المدفوع',       align: 'end', format: 'currency' },
+            { key: 'outstandingCommission', header: 'المتبقي',       align: 'end', format: 'currency', bold: true },
+            {
+              key: 'status',
+              header: 'الحالة',
+              align: 'center',
+              format: (v) => REP_STATUS_LABELS[v as RepresentativeStatus] ?? String(v),
+            },
+          ],
+          rows: enriched,
+        });
+      },
+      error: () => {
+        this.isPrinting.set(false);
+        this.toast.error('تعذر تجهيز ملف الطباعة');
+      },
+    });
   }
 
   // ─────────── filter handlers ───────────
@@ -252,6 +366,28 @@ export class RepsListComponent implements OnInit {
         this.toast.error(err.message || 'تعذّر حذف المندوب');
       },
     });
+  }
+
+  // ─────────── statement & payout modals ───────────
+
+  protected openStatement(rep: Representative): void {
+    this.statementRepId.set(rep.id);
+    this.statementRepName.set(rep.fullName);
+    this.statementOpen.set(true);
+  }
+
+  protected openPayout(rep: Representative): void {
+    this.payoutRep.set(rep);
+    this.payoutOpen.set(true);
+  }
+
+  protected openPayoutsHistory(): void {
+    this.payoutsHistoryOpen.set(true);
+  }
+
+  protected onCommissionPaid(): void {
+    this.payoutOpen.set(false);
+    this.refresh();
   }
 
   // ─────────── view helpers ───────────

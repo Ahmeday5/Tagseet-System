@@ -21,14 +21,8 @@ import {
   withInlineHandling,
 } from '../../../core/http/http-context.tokens';
 import { toList, toPaged } from '../../../core/utils/api-list.util';
+import { LookupItem } from '../../../core/models/lookup.model';
 
-/**
- * Cache invalidation pattern for treasury-scoped GETs.
- *
- * Use `'treasur'` (NOT `'treasury'`) so the pattern matches both
- * `/treasuries` (the list) AND `/treasuries/transfers` — the y/ies plural
- * difference would otherwise let either URL drift out of sync after a write.
- */
 const TREASURY_CACHE_KEY = 'treasur';
 const TREASURY_TTL_MS = 15 * 60 * 1000;
 
@@ -51,6 +45,15 @@ export class TreasuryService {
         context: withCacheBypass(withCache({ ttlMs: TREASURY_TTL_MS })),
       })
       .pipe(toList<Treasury>());
+  }
+
+
+  lookup(): Observable<LookupItem[]> {
+    return this.api
+      .get<unknown>(API_ENDPOINTS.treasuries.lookup, {
+        context: withCache({ ttlMs: TREASURY_TTL_MS }),
+      })
+      .pipe(toList<LookupItem>());
   }
 
   getById(id: number): Observable<Treasury> {

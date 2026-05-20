@@ -26,6 +26,9 @@ import { onInvalidate } from '../../../../core/utils/auto-refresh.util';
 import { HasPermissionDirective } from '../../../../shared/directives/has-permission.directive';
 import { ClientFormModalComponent } from '../../components/client-form-modal/client-form-modal.component';
 import { PERMISSIONS } from '../../../../core/constants/permissions.const';
+import { PrintService } from '../../../../core/services/print.service';
+import { map } from 'rxjs/operators';
+import { fetchAllPages } from '../../../../core/utils/api-list.util';
 
 const DEFAULT_PAGE_SIZE = 10;
 const SEARCH_DEBOUNCE_MS = 300;
@@ -48,6 +51,9 @@ export class CustomersListComponent {
   private readonly service = inject(CustomersService);
   private readonly toast = inject(ToastService);
   private readonly cache = inject(HttpCacheService);
+  private readonly printer = inject(PrintService);
+
+  protected readonly isPrinting = signal(false);
 
   /** Exposed so the template can gate write actions with `*appHasPermission`. */
   protected readonly PERMS = PERMISSIONS;
@@ -138,6 +144,66 @@ export class CustomersListComponent {
 
   protected refresh(): void {
     this.fetch(this.fetchTrigger(), true);
+  }
+
+  /**
+   * Exports every client matching the active search/overdue filter — paging
+   * through the dashboard endpoint server-side so the printed list isn't
+   * truncated to the current visible page.
+   */
+  protected printClients(): void {
+    if (this.isPrinting()) return;
+    this.isPrinting.set(true);
+    const search = this.searchTerm().trim();
+    const onlyOverdue = this.onlyOverdue();
+
+    fetchAllPages<DashboardClient>((pageIndex, pageSize) =>
+      this.service
+        .refreshDashboard({ search, onlyOverdue, pageIndex, pageSize })
+        .pipe(map((r) => r.clients)),
+    ).subscribe({
+      next: (rows) => {
+        this.isPrinting.set(false);
+        const meta: Array<{ label: string; value: string }> = [];
+        if (search) meta.push({ label: 'بحث', value: search });
+        if (onlyOverdue) meta.push({ label: 'الفلتر', value: 'المتأخرون فقط' });
+
+        this.printer.print<DashboardClient>({
+          title: 'قائمة العملاء',
+          subtitle: 'كشف عملاء النظام والتزاماتهم',
+          meta,
+          orientation: 'landscape',
+          columns: [
+            { key: 'id',                  header: '#',              align: 'center', width: '46px' },
+            { key: 'fullName',            header: 'الاسم',          align: 'start',  bold: true },
+            { key: 'phoneNumber',         header: 'الهاتف',         align: 'start' },
+            { key: 'goods',               header: 'المشتريات',      align: 'start' },
+            { key: 'installmentProgress', header: 'تقدّم السداد',   align: 'center' },
+            { key: 'installmentAmount',   header: 'قيمة القسط',     align: 'end',    format: 'currency' },
+            {
+              key: 'paymentFrequency',
+              header: 'الدورية',
+              align: 'center',
+              format: (v) => this.paymentFrequencyLabel(v as string | null),
+            },
+            { key: 'totalContractAmount', header: 'إجمالي العقد',  align: 'end', format: 'currency' },
+            { key: 'remainingAmount',     header: 'المتبقي',        align: 'end', format: 'currency', bold: true },
+            { key: 'rating',              header: 'التقييم',        align: 'center' },
+            {
+              key: 'status',
+              header: 'الحالة',
+              align: 'center',
+              format: (v) => this.statusLabel(v as DashboardClientStatus),
+            },
+          ],
+          rows,
+        });
+      },
+      error: () => {
+        this.isPrinting.set(false);
+        this.toast.error('تعذر تجهيز ملف الطباعة');
+      },
+    });
   }
 
   // ─────────── filter handlers ───────────

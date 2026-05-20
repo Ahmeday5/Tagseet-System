@@ -1,5 +1,5 @@
-import { Observable } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { Observable, EMPTY } from 'rxjs';
+import { map, expand, reduce } from 'rxjs/operators';
 import { PagedResponse } from '../models/api-response.model';
 
 /**
@@ -91,4 +91,62 @@ export function asPaged<T>(value: unknown): PagedResponse<T> {
 export function toPaged<T>() {
   return (source$: Observable<unknown>): Observable<PagedResponse<T>> =>
     source$.pipe(map((v) => asPaged<T>(v)));
+}
+
+/** Default page size used when draining a paginated endpoint. */
+export const FETCH_ALL_PAGE_SIZE = 200;
+/**
+ * Hard ceiling on page requests so a backend that mis-reports `totalPages`
+ * (or `count`) can never spin this into an infinite request loop. 50 pages
+ * × 200 rows = 10k items — well past any picker's realistic dataset.
+ */
+export const FETCH_ALL_MAX_PAGES = 50;
+
+/**
+ * Drains *every* page of a server-paginated endpoint into a single flat
+ * array — the safe replacement for the "one oversized `pageSize: 1000`
+ * page" trick that silently truncates once the real row count grows past
+ * the hard-coded number.
+ *
+ * `fetchPage(pageIndex, pageSize)` must resolve to a canonical
+ * `PagedResponse<T>` (normalize with `asPaged`/`toPaged` inside the
+ * callback when the endpoint nests its page). Iteration walks pages
+ * sequentially from 1 and stops at the first of:
+ *
+ *   - a short page (fewer rows than `pageSize` → last page reached)
+ *   - the reported `totalPages`
+ *   - the `maxPages` safety cap
+ *
+ * so a single tolerant pass works whether the backend reports
+ * `totalPages`, only `count`, or neither.
+ */
+export function fetchAllPages<T>(
+  fetchPage: (pageIndex: number, pageSize: number) => Observable<PagedResponse<T>>,
+  pageSize: number = FETCH_ALL_PAGE_SIZE,
+  maxPages: number = FETCH_ALL_MAX_PAGES,
+): Observable<T[]> {
+  return fetchPage(1, pageSize).pipe(
+    expand((page) => {
+      const rows = page.data?.length ?? 0;
+      const next = (page.pageIndex || 1) + 1;
+      // Detect a server-side page-size cap: if we asked for 200 but the
+      // backend honoured only 50, treat 50 as the threshold for a "short"
+      // (i.e. last) page — otherwise we'd see 50 < 200, declare ourselves
+      // done, and silently drop everything after row 50.
+      const serverPageSize = page.pageSize > 0 ? page.pageSize : pageSize;
+      const effectiveSize = Math.min(pageSize, serverPageSize);
+      // When `count` is reported, trust it: keep going until we've accumulated
+      // every row the server says exists — even if a single page came back
+      // short due to a server quirk.
+      const haveMoreByCount =
+        page.count > 0 && (page.pageIndex || 1) * effectiveSize < page.count;
+      const lastPageReached =
+        rows === 0 ||
+        next > maxPages ||
+        (page.totalPages > 0 && next > page.totalPages) ||
+        (!haveMoreByCount && rows < effectiveSize);
+      return lastPageReached ? EMPTY : fetchPage(next, effectiveSize);
+    }),
+    reduce((acc, page) => acc.concat(page.data ?? []), [] as T[]),
+  );
 }

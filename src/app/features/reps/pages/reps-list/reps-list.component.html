@@ -5,6 +5,7 @@
     <div class="pgs">إدارة بيانات المندوبين، الصلاحيات، الخزائن الفرعية والتقييمات</div>
   </div>
   <div class="d-flex gap-2">
+    <button class="btn btn-sm" (click)="openPayoutsHistory()">سجل صرف العمولات</button>
     <button class="btn btn-sm btn-bl" (click)="openCreate()">+ مندوب جديد</button>
   </div>
 </div>
@@ -78,6 +79,19 @@
     }
     <span>تحديث</span>
   </button>
+
+  <button
+    type="button"
+    class="btn btn-sm btn-bl d-inline-flex align-items-center gap-1"
+    [disabled]="loading() || isPrinting() || count() === 0"
+    (click)="printReps()"
+    title="طباعة قائمة المندوبين"
+  >
+    @if (isPrinting()) {
+      <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+    }
+    <span>🖨 طباعة PDF</span>
+  </button>
 </div>
 
 <!-- ── TABLE ── -->
@@ -133,6 +147,12 @@
                 {{ rep.treasury.currentBalance | currencyAr: true }}
               </div>
               <div class="rep-treasury-name">{{ rep.treasury.name }}</div>
+              <div style="font-size: 10px; margin-top: 4px; color: var(--txt3)">
+                العمولة المتبقية: 
+                <span [style.color]="rep.outstandingCommission ? 'var(--re)' : 'inherit'" style="font-weight: 700">
+                  {{ (rep.outstandingCommission ?? 0) | currencyAr: true }}
+                </span>
+              </div>
             </td>
             <td>
               <app-badge
@@ -154,6 +174,21 @@
                   (click)="openEdit(rep)"
                   title="تعديل"
                 >تعديل</button>
+                <button
+                  type="button"
+                  class="btn btn-sm"
+                  *appHasPermission="PERMS.treasuryView"
+                  (click)="openStatement(rep)"
+                  title="كشف الحساب"
+                >كشف الحساب</button>
+                <button
+                  type="button"
+                  class="btn btn-sm btn-bl"
+                  *appHasPermission="PERMS.treasuryFullAccess"
+                  [disabled]="!rep.outstandingCommission || rep.outstandingCommission <= 0"
+                  (click)="openPayout(rep)"
+                  title="صرف عمولة"
+                >صرف عمولة</button>
                 <button
                   type="button"
                   class="btn btn-sm btn-re d-inline-flex align-items-center gap-1"
@@ -230,4 +265,28 @@
   [representative]="modalRep()"
   (closed)="closeModal()"
   (saved)="onSaved($event)"
+/>
+
+<!-- Statement Modal -->
+<app-rep-statement-modal
+  [open]="statementOpen()"
+  [representativeId]="statementRepId()"
+  [representativeName]="statementRepName()"
+  (closed)="statementOpen.set(false)"
+/>
+
+<!-- Commission Payout Modal -->
+<app-commission-payout-modal
+  [open]="payoutOpen()"
+  [representativeId]="payoutRep()?.id ?? null"
+  [representativeName]="payoutRep()?.fullName ?? ''"
+  [outstanding]="payoutRep()?.outstandingCommission ?? 0"
+  (closed)="payoutOpen.set(false)"
+  (paid)="onCommissionPaid()"
+/>
+
+<!-- Commission Payouts History Modal -->
+<app-commission-payouts-modal
+  [open]="payoutsHistoryOpen()"
+  (closed)="payoutsHistoryOpen.set(false)"
 />

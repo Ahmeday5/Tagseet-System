@@ -60,6 +60,19 @@
   </button>
 
   <button
+    type="button"
+    class="btn btn-sm btn-bl d-inline-flex align-items-center gap-1"
+    [disabled]="loading() || isPrinting() || count() === 0"
+    (click)="printClients()"
+    title="طباعة قائمة العملاء"
+  >
+    @if (isPrinting()) {
+      <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+    }
+    <span>🖨 طباعة PDF</span>
+  </button>
+
+  <button
     *appHasPermission="PERMS.clientsFullAccess"
     type="button"
     class="btn btn-sm btn-bl d-inline-flex align-items-center gap-1"

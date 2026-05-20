@@ -35,7 +35,7 @@
             <select formControlName="warehouseId">
               <option [ngValue]="0" disabled>— اختر —</option>
               @for (w of activeWarehouses(); track w.id) {
-              <option [ngValue]="w.id">{{ w.name }} — {{ w.location }}</option>
+              <option [ngValue]="w.id">{{ w.name }}</option>
               }
             </select>
           </div>

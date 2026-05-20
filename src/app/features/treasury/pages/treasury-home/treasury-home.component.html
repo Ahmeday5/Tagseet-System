@@ -117,6 +117,7 @@
         </div>
       </div>
     </div>
+    @if (!isRep()) {
     <div class="col-md-6">
       <div class="card trf-card h-100">
         <div class="chdr trf-head">
@@ -136,6 +137,14 @@
               <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
               }
               <span>تحديث</span>
+            </button>
+            <button type="button" class="btn btn-sm btn-bl d-inline-flex align-items-center gap-1"
+              [disabled]="transfers().length === 0 || transfersLoading() || isPrintingTransfers()"
+              (click)="printTransfers()">
+              @if (isPrintingTransfers()) {
+              <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+              }
+              <span>🖨 طباعة PDF</span>
             </button>
           </div>
         </div>
@@ -226,20 +235,31 @@
         }
       </div>
     </div>
-    <div class="col-lg-6">
+    }
+    <div class="col-12">
       <div class="card">
         <div class="chdr trf-head">
           <div>
             <div class="ct">الخزائن الفرعية للمندوبين</div>
-            <div class="trf-sub">رصيد كل مندوب في خزينته الفرعية والعمولة المتراكمة</div>
+            <div class="trf-sub">المبيعات والتكلفة والأرباح والعمولات لكل مندوب على خزينته الفرعية</div>
           </div>
-          <button type="button" class="btn btn-sm d-inline-flex align-items-center gap-1"
-            [disabled]="subTreasuriesLoading()" (click)="loadSubTreasuries(true)">
-            @if (subTreasuriesLoading()) {
-            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-            }
-            <span>تحديث</span>
-          </button>
+          <div class="d-flex gap-2">
+            <button type="button" class="btn btn-sm d-inline-flex align-items-center gap-1"
+              [disabled]="subTreasuriesLoading()" (click)="loadSubTreasuries(true)">
+              @if (subTreasuriesLoading()) {
+              <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+              }
+              <span>تحديث</span>
+            </button>
+            <button type="button" class="btn btn-sm btn-bl d-inline-flex align-items-center gap-1"
+              [disabled]="subTreasuries().length === 0 || subTreasuriesLoading() || isPrintingSubTreasuries()"
+              (click)="printSubTreasuries()">
+              @if (isPrintingSubTreasuries()) {
+              <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+              }
+              <span>🖨 طباعة PDF</span>
+            </button>
+          </div>
         </div>
 
         <div class="tw" style="margin-bottom:0">
@@ -249,7 +269,12 @@
                 <th>المندوب</th>
                 <th>الخزينة</th>
                 <th>الرصيد</th>
+                <th>المبيعات</th>
+                <th>التكلفة</th>
+                <th>الربح</th>
                 <th>العمولة المتراكمة</th>
+                <th>المدفوع</th>
+                <th>المتبقي</th>
                 <th>آخر نشاط</th>
               </tr>
             </thead>
@@ -259,8 +284,15 @@
                 <td style="font-weight:600">{{ s.representativeName }}</td>
                 <td>{{ s.treasuryName }}</td>
                 <td class="trf-amount">{{ s.balance | currencyAr: true }}</td>
+                <td>{{ s.totalSales | currencyAr: true }}</td>
+                <td>{{ s.totalCost | currencyAr: true }}</td>
                 <td style="color:var(--gr);font-weight:600">
-                  {{ s.accumulatedCommission | currencyAr: true }}
+                  {{ s.totalProfit | currencyAr: true }}
+                </td>
+                <td>{{ s.accumulatedCommission | currencyAr: true }}</td>
+                <td>{{ s.paidCommission | currencyAr: true }}</td>
+                <td style="color:var(--re,#c0392b);font-weight:600">
+                  {{ s.outstandingCommission | currencyAr: true }}
                 </td>
                 <td class="trf-date">
                   {{ s.lastActivityDate ? (s.lastActivityDate | dateAr: 'short') : '—' }}
@@ -268,7 +300,7 @@
               </tr>
               } @empty {
               <tr>
-                <td colspan="5" class="text-center py-4" style="color:var(--txt3);font-size:12px">
+                <td colspan="10" class="text-center py-4" style="color:var(--txt3);font-size:12px">
                   @if (subTreasuriesLoading()) {
                   جاري التحميل...
                   } @else {
@@ -285,10 +317,24 @@
                 <td class="trf-amount" style="font-weight:700">
                   {{ subTreasuriesTotalBalance() | currencyAr: true }}
                 </td>
+                <td style="font-weight:700">
+                  {{ subTreasuriesTotalSales() | currencyAr: true }}
+                </td>
+                <td style="font-weight:700">
+                  {{ subTreasuriesTotalCost() | currencyAr: true }}
+                </td>
                 <td style="color:var(--gr);font-weight:700">
+                  {{ subTreasuriesTotalProfit() | currencyAr: true }}
+                </td>
+                <td style="font-weight:700">
                   {{ subTreasuriesTotalCommission() | currencyAr: true }}
                 </td>
-                <td></td>
+                <td style="font-weight:700">
+                  {{ subTreasuriesTotalPaid() | currencyAr: true }}
+                </td>
+                <td style="color:var(--re,#c0392b);font-weight:700">
+                  {{ subTreasuriesTotalOutstanding() | currencyAr: true }}
+                </td>
               </tr>
             </tfoot>
             }
@@ -296,6 +342,7 @@
         </div>
       </div>
     </div>
+    @if (!isRep()) {
     <div class="col-lg-6">
       <div class="card">
         <div class="chdr trf-head">
@@ -317,6 +364,14 @@
               <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
               }
               <span>تحديث</span>
+            </button>
+            <button type="button" class="btn btn-sm btn-bl d-inline-flex align-items-center gap-1"
+              [disabled]="monthlyProfits().length === 0 || monthlyProfitsLoading() || isPrintingMonthlyProfits()"
+              (click)="printMonthlyProfits()">
+              @if (isPrintingMonthlyProfits()) {
+              <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+              }
+              <span>🖨 طباعة PDF</span>
             </button>
           </div>
         </div>
@@ -385,6 +440,7 @@
         </div>
       </div>
     </div>
+    }
     <div class="col-12">
       <div class="card">
         <div class="chdr trf-head">
@@ -405,6 +461,14 @@
               }
               <span>تحديث</span>
             </button>
+            <button type="button" class="btn btn-sm btn-bl d-inline-flex align-items-center gap-1"
+              [disabled]="operations().length === 0 || operationsLoading() || isPrintingOps()"
+              (click)="printOperations()">
+              @if (isPrintingOps()) {
+              <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+              }
+              <span>🖨 طباعة PDF</span>
+            </button>
           </div>
         </div>
 
@@ -421,56 +485,58 @@
           </div>
         </div>
 
-        <div class="tw" style="margin-bottom:0">
-          <table class="table">
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>الخزينة</th>
-                <th>النوع</th>
-                <th>الوصف</th>
-                <th>المبلغ</th>
-                <th>الرصيد بعد العملية</th>
-                <th>المستخدم</th>
-                <th>التاريخ</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (op of operations(); track op.id) {
-              <tr>
-                <td class="trf-id">#{{ op.id }}</td>
-                <td style="font-weight:600">{{ op.treasuryName }}</td>
-                <td>
-                  <app-badge [text]="directionLabel(op.direction)" [type]="directionBadge(op.direction)" />
-                </td>
-                <td style="font-size:11px;max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
-                  [title]="op.description">
-                  {{ op.description || '—' }}
-                </td>
-                <td [ngClass]="signedAmountClass(op.signedAmount)">
-                  {{ op.signedAmount | currencyAr: true }}
-                </td>
-                <td style="color:var(--bl);font-weight:700">
-                  {{ op.balanceAfter | currencyAr: true }}
-                </td>
-                <td style="font-size:10.5px;color:var(--txt2)">{{ op.userName }}</td>
-                <td class="trf-date">{{ op.date | dateAr: 'short' }}</td>
-              </tr>
-              } @empty {
-              <tr>
-                <td colspan="8" class="text-center py-4" style="color:var(--txt3);font-size:12px">
-                  @if (operationsLoading()) {
-                  جاري التحميل...
-                  } @else if (hasOperationFilters()) {
-                  لا توجد عمليات مطابقة للفلاتر الحالية.
-                  } @else {
-                  لا توجد عمليات بعد.
-                  }
-                </td>
-              </tr>
-              }
-            </tbody>
-          </table>
+        <div>
+          <div class="tw" style="margin-bottom:0">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>الخزينة</th>
+                  <th>النوع</th>
+                  <th>الوصف</th>
+                  <th>المبلغ</th>
+                  <th>الرصيد بعد العملية</th>
+                  <th>المستخدم</th>
+                  <th>التاريخ</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (op of operations(); track op.id) {
+                <tr>
+                  <td class="trf-id">#{{ op.id }}</td>
+                  <td style="font-weight:600">{{ op.treasuryName }}</td>
+                  <td>
+                    <app-badge [text]="directionLabel(op.direction)" [type]="directionBadge(op.direction)" />
+                  </td>
+                  <td style="font-size:11px;max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
+                    [title]="op.description">
+                    {{ op.description || '—' }}
+                  </td>
+                  <td [ngClass]="signedAmountClass(op.signedAmount)">
+                    {{ op.signedAmount | currencyAr: true }}
+                  </td>
+                  <td style="color:var(--bl);font-weight:700">
+                    {{ op.balanceAfter | currencyAr: true }}
+                  </td>
+                  <td style="font-size:10.5px;color:var(--txt2)">{{ op.userName }}</td>
+                  <td class="trf-date">{{ op.date | dateAr: 'short' }}</td>
+                </tr>
+                } @empty {
+                <tr>
+                  <td colspan="8" class="text-center py-4" style="color:var(--txt3);font-size:12px">
+                    @if (operationsLoading()) {
+                    جاري التحميل...
+                    } @else if (hasOperationFilters()) {
+                    لا توجد عمليات مطابقة للفلاتر الحالية.
+                    } @else {
+                    لا توجد عمليات بعد.
+                    }
+                  </td>
+                </tr>
+                }
+              </tbody>
+            </table>
+          </div>
         </div>
 
         @if (oCount() > 0) {
@@ -489,3 +555,4 @@
 
 <app-treasury-transfer-modal [open]="transferModalOpen()" [treasuries]="treasuries()" (closed)="closeTransfer()"
   (saved)="onTransferSaved($event)" />
+

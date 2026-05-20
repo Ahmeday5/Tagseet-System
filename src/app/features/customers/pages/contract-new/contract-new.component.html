@@ -25,21 +25,12 @@
               <span class="text-danger">*</span>
             </label>
 
-            <select
+            <app-searchable-select
               formControlName="clientId"
-              class="form-select"
-              [class.is-invalid]="isInvalid('clientId')"
-            >
-              <option [ngValue]="null" disabled>
-                اختر العميل
-              </option>
-
-              @for (c of clients(); track c.id) {
-                <option [value]="c.id">
-                  {{ c.fullName }}
-                </option>
-              }
-            </select>
+              placeholder="اختر العميل"
+              searchPlaceholder="ابحث بالاسم أو رقم الجوال…"
+              [options]="clientOptions()"
+            />
 
             <app-form-error
               [control]="form.controls.clientId"
@@ -52,20 +43,12 @@
               المندوب (اختياري)
             </label>
 
-            <select
+            <app-searchable-select
               formControlName="representativeId"
-              class="form-select"
-            >
-              <option [ngValue]="null">
-                بدون مندوب
-              </option>
-
-              @for (r of representatives(); track r.id) {
-                <option [value]="r.id">
-                  {{ r.fullName }}
-                </option>
-              }
-            </select>
+              placeholder="بدون مندوب"
+              searchPlaceholder="ابحث باسم المندوب…"
+              [options]="representativeOptions()"
+            />
           </div>
 
         </div>
@@ -86,21 +69,12 @@
               <span class="text-danger">*</span>
             </label>
 
-            <select
+            <app-searchable-select
               formControlName="productId"
-              class="form-select"
-              [class.is-invalid]="isInvalid('productId')"
-            >
-              <option [ngValue]="null" disabled>
-                اختر المنتج
-              </option>
-
-              @for (p of products(); track p.id) {
-                <option [value]="p.id">
-                  {{ p.name }}
-                </option>
-              }
-            </select>
+              placeholder="اختر المنتج"
+              searchPlaceholder="ابحث باسم المنتج…"
+              [options]="productOptions()"
+            />
 
             <app-form-error
               [control]="form.controls.productId"
@@ -115,21 +89,12 @@
               <span class="text-danger">*</span>
             </label>
 
-            <select
+            <app-searchable-select
               formControlName="warehouseId"
-              class="form-select"
-              [class.is-invalid]="isInvalid('warehouseId')"
-            >
-              <option [ngValue]="null" disabled>
-                اختر المخزن
-              </option>
-
-              @for (w of warehouses(); track w.id) {
-                <option [value]="w.id">
-                  {{ w.name }}
-                </option>
-              }
-            </select>
+              placeholder="اختر المخزن"
+              searchPlaceholder="ابحث باسم المخزن…"
+              [options]="warehouseOptions()"
+            />
 
             <app-form-error
               [control]="form.controls.warehouseId"
@@ -259,20 +224,12 @@
               الخزنة
             </label>
 
-            <select
+            <app-searchable-select
               formControlName="treasuryId"
-              class="form-select"
-            >
-              <option [ngValue]="null" disabled>
-                اختر الخزنة
-              </option>
-
-              @for (t of treasuries(); track t.id) {
-                <option [value]="t.id">
-                  {{ t.name }}
-                </option>
-              }
-            </select>
+              placeholder="اختر الخزنة"
+              searchPlaceholder="ابحث باسم الخزنة…"
+              [options]="treasuryOptions()"
+            />
           </div>
 
           <!-- ملاحظات -->

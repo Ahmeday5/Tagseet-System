@@ -425,37 +425,3 @@
   font-size: 12px;
 }
 
-/* ── PRINT ── */
-@media print {
-  :host { display: block; }
-
-  // Hide everything outside the modal printable region.
-  body * { visibility: hidden !important; }
-  #ss-printable, #ss-printable * { visibility: visible !important; }
-  #ss-printable {
-    position: absolute;
-    inset: 0;
-    padding: 0;
-  }
-
-  // The dark hero is hard on toner — strip the gradient for print.
-  .ss-hero {
-    background: #fff !important;
-    color: #000 !important;
-    border: 1px solid #ccc;
-    box-shadow: none;
-  }
-  .ss-hero-eyebrow,
-  .ss-hero-meta-label,
-  .ss-hero-stat-label { color: #555 !important; }
-  .ss-hero-name,
-  .ss-hero-meta-val,
-  .ss-hero-stat-val { color: #000 !important; }
-
-  .ss-progress { background: #eee; }
-  .ss-progress-bar { background: #666 !important; }
-  .ss-progress-label { color: #000 !important; text-shadow: none; }
-
-  .ss-invoice { break-inside: avoid; box-shadow: none !important; }
-  .ss-invoice-toggle, .ss-filter, .app-modal-footer { display: none !important; }
-}

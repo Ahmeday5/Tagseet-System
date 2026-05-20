@@ -22,13 +22,17 @@ import {
 import {
   DashboardClient,
 } from '../../models/dashboard-client.model';
-import { Treasury } from '../../../treasury/models/treasury.model';
+import { LookupItem } from '../../../../core/models/lookup.model';
 import {
   BadgeComponent,
   BadgeType,
 } from '../../../../shared/components/badge/badge.component';
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';
 import { PaginationComponent } from '../../../../shared/components/pagination/pagination.component';
+import {
+  SearchableSelectComponent,
+  SearchableSelectOption,
+} from '../../../../shared/components/searchable-select/searchable-select.component';
 import { CurrencyArPipe } from '../../../../shared/pipes/currency-ar.pipe';
 import { ToastService } from '../../../../core/services/toast.service';
 import { ApiError } from '../../../../core/models/api-response.model';
@@ -36,9 +40,10 @@ import { apiErrorToMessage } from '../../../../core/utils/api-error.util';
 import { HttpCacheService } from '../../../../core/services/http-cache.service';
 import { onInvalidate } from '../../../../core/utils/auto-refresh.util';
 import { todayIsoDate } from '../../../../shared/utils/date-iso.util';
+import { PrintService } from '../../../../core/services/print.service';
+import { fetchAllPages } from '../../../../core/utils/api-list.util';
 
 const DEFAULT_PAGE_SIZE = 10;
-const CLIENT_PICKER_PAGE_SIZE = 200;
 
 type PaymentMethodKey = 'Cash' | 'Transfer' | 'Card' | 'STCPay' | 'ApplePay';
 
@@ -60,6 +65,7 @@ interface PaymentForm {
     ModalComponent,
     PaginationComponent,
     CurrencyArPipe,
+    SearchableSelectComponent,
   ],
   templateUrl: './statement.component.html',
   styleUrl: './statement.component.scss',
@@ -71,6 +77,9 @@ export class StatementComponent {
   private readonly treasuryService = inject(TreasuryService);
   private readonly toast = inject(ToastService);
   private readonly cache = inject(HttpCacheService);
+  private readonly printer = inject(PrintService);
+
+  protected readonly isPrinting = signal(false);
 
   // ── client picker ──────────────────────────────────────────────────
   protected readonly clients = signal<DashboardClient[]>([]);
@@ -79,6 +88,15 @@ export class StatementComponent {
 
   protected readonly selectedClient = computed(() =>
     this.clients().find((c) => c.id === this.selectedClientId()) ?? null,
+  );
+
+  /** Client list shaped for the searchable select (name + phone search). */
+  protected readonly clientOptions = computed<SearchableSelectOption[]>(() =>
+    this.clients().map((c) => ({
+      value: c.id,
+      label: c.fullName,
+      hint: c.phoneNumber,
+    })),
   );
 
   // ── contracts table ────────────────────────────────────────────────
@@ -98,7 +116,7 @@ export class StatementComponent {
   // ── payment modal ──────────────────────────────────────────────────
   protected readonly payOpen = signal(false);
   protected readonly paySubmitting = signal(false);
-  protected readonly treasuries = signal<Treasury[]>([]);
+  protected readonly treasuries = signal<LookupItem[]>([]);
 
   protected readonly payForm = signal<PaymentForm>(this.emptyPaymentForm());
 
@@ -143,23 +161,22 @@ export class StatementComponent {
 
   private loadClients(): void {
     this.clientsLoading.set(true);
-    this.customersService
-      .listDashboard({ pageIndex: 1, pageSize: CLIENT_PICKER_PAGE_SIZE })
-      .subscribe({
-        next: (res) => {
-          this.clients.set(res?.clients?.data ?? []);
-          this.clientsLoading.set(false);
-        },
-        error: () => {
-          this.clients.set([]);
-          this.clientsLoading.set(false);
-        },
-      });
+    this.customersService.listAllClients().subscribe({
+      next: (list) => {
+        this.clients.set(list);
+        this.clientsLoading.set(false);
+      },
+      error: () => {
+        this.clients.set([]);
+        this.clientsLoading.set(false);
+      },
+    });
   }
 
   private loadTreasuries(): void {
-    this.treasuryService.list().subscribe({
-      next: (list) => this.treasuries.set(list.filter((t) => t.isActive)),
+    // Lookup is role-scoped + active-only server-side — used verbatim.
+    this.treasuryService.lookup().subscribe({
+      next: (list) => this.treasuries.set(list),
       error: () => this.treasuries.set([]),
     });
   }
@@ -211,9 +228,9 @@ export class StatementComponent {
 
   // ─────────── client picker handlers ───────────
 
-  protected onClientChange(value: string): void {
-    const id = value ? Number(value) : null;
-    this.selectedClientId.set(Number.isFinite(id) ? id : null);
+  protected onClientChange(value: number | string | null): void {
+    const id = value === null || value === '' ? null : Number(value);
+    this.selectedClientId.set(id !== null && Number.isFinite(id) ? id : null);
     this.pageIndex.set(1);
   }
 
@@ -221,6 +238,77 @@ export class StatementComponent {
     const id = this.selectedClientId();
     if (id === null) return;
     this.fetchContracts(id, this.pageIndex(), this.pageSize(), true);
+  }
+
+  /**
+   * Exports every contract for the selected client as a single PDF. Always
+   * paginates through every server page so the printed document is complete
+   * — the visible table may only be showing the first 10 rows.
+   */
+  protected printStatement(): void {
+    const client = this.selectedClient();
+    if (!client || this.isPrinting()) return;
+    this.isPrinting.set(true);
+
+    fetchAllPages<ClientContractRow>((pageIndex, pageSize) =>
+      this.customersService.refreshClientContracts(client.id, {
+        pageIndex,
+        pageSize,
+      }),
+    ).subscribe({
+      next: (rows) => {
+        this.isPrinting.set(false);
+        const totalSale = rows.reduce((s, r) => s + (r.totalContractAmount ?? 0), 0);
+        const totalPaid = rows.reduce((s, r) => s + (r.totalPaid ?? 0), 0);
+        const totalRemaining = rows.reduce((s, r) => s + (r.remainingAmount ?? 0), 0);
+
+        this.printer.print<ClientContractRow>({
+          title: 'كشف حساب العميل',
+          subtitle: client.fullName,
+          meta: [
+            { label: 'العميل', value: client.fullName },
+            ...(client.phoneNumber ? [{ label: 'الهاتف', value: client.phoneNumber }] : []),
+            { label: 'عدد العقود', value: String(rows.length) },
+          ],
+          orientation: 'landscape',
+          columns: [
+            { key: 'id',                  header: 'العقد',         align: 'center', width: '52px', format: (v) => `#${v}` },
+            { key: 'productName',         header: 'المنتج',         align: 'start',  bold: true },
+            { key: 'quantity',            header: 'الكمية',         align: 'center', format: 'number' },
+            { key: 'purchaseDate',        header: 'تاريخ الشراء',  align: 'center', format: 'shortDate' },
+            { key: 'cashPrice',           header: 'سعر النقد',     align: 'end',    format: 'currency' },
+            { key: 'downPayment',         header: 'المقدم',         align: 'end',    format: 'currency' },
+            { key: 'installmentsCount',   header: 'عدد الأقساط',    align: 'center', format: 'number' },
+            { key: 'installmentAmount',   header: 'قيمة القسط',     align: 'end',    format: 'currency' },
+            { key: 'totalContractAmount', header: 'إجمالي العقد',  align: 'end',    format: 'currency', bold: true },
+            { key: 'totalPaid',           header: 'المدفوع',        align: 'end',    format: 'currency' },
+            { key: 'remainingAmount',     header: 'المتبقي',        align: 'end',    format: 'currency', bold: true },
+            {
+              key: 'status',
+              header: 'الحالة',
+              align: 'center',
+              format: (v) => this.contractStatusLabel(String(v)),
+            },
+          ],
+          totals: {
+            label: 'الإجمالي',
+            labelColSpan: 8,
+            cells: [
+              null,
+              `${Math.round(totalSale).toLocaleString('ar-EG')} ج.م`,
+              `${Math.round(totalPaid).toLocaleString('ar-EG')} ج.م`,
+              `${Math.round(totalRemaining).toLocaleString('ar-EG')} ج.م`,
+              null,
+            ],
+          },
+          rows,
+        });
+      },
+      error: () => {
+        this.isPrinting.set(false);
+        this.toast.error('تعذر تجهيز ملف الطباعة');
+      },
+    });
   }
 
   // ─────────── pagination ───────────

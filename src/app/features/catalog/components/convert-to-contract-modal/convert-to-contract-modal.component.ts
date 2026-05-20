@@ -14,17 +14,15 @@ import { FormErrorComponent } from '../../../../shared/components/form-error/for
 import { CurrencyArPipe } from '../../../../shared/pipes/currency-ar.pipe';
 import { ApiError } from '../../../../core/models/api-response.model';
 import { ToastService } from '../../../../core/services/toast.service';
-import { Warehouse } from '../../../warehouse/models/warehouse.model';
 import { WarehouseService } from '../../../warehouse/services/warehouse.service';
-import { Treasury } from '../../../treasury/models/treasury.model';
 import { TreasuryService } from '../../../treasury/services/treasury.service';
+import { LookupItem } from '../../../../core/models/lookup.model';
 import {
   ClientOrder,
   ConvertToContractPayload,
 } from '../../models/catalog.model';
 import { CatalogService } from '../../services/catalog.service';
 import { RepsService } from '../../../reps/services/reps.service';
-import { Representative } from '../../../reps/models/rep.model';
 
 @Component({
   selector: 'app-convert-to-contract-modal',
@@ -60,18 +58,15 @@ export class ConvertToContractModalComponent {
   protected readonly submitting = signal(false);
   protected readonly serverError = signal<string | null>(null);
 
-  protected readonly warehouses = signal<Warehouse[]>([]);
-  protected readonly treasuries = signal<Treasury[]>([]);
+  protected readonly warehouses = signal<LookupItem[]>([]);
+  protected readonly treasuries = signal<LookupItem[]>([]);
   protected readonly loadingRefs = signal(false);
   // ── data ──
-  protected readonly reps = signal<Representative[]>([]);
+  protected readonly reps = signal<LookupItem[]>([]);
 
-  protected readonly activeWarehouses = computed(() =>
-    this.warehouses().filter((w) => w.isActive),
-  );
-  protected readonly activeTreasuries = computed(() =>
-    this.treasuries().filter((t) => t.isActive),
-  );
+  // Lookups are already active-only + role-scoped server-side.
+  protected readonly activeWarehouses = computed(() => this.warehouses());
+  protected readonly activeTreasuries = computed(() => this.treasuries());
 
   protected readonly title = 'تحويل الطلب إلى عقد';
 
@@ -173,11 +168,11 @@ export class ConvertToContractModalComponent {
     if (this.warehouses().length > 0 && this.treasuries().length > 0) return;
 
     this.loadingRefs.set(true);
-    this.warehouseService.list().subscribe({
+    this.warehouseService.lookup().subscribe({
       next: (list) => this.warehouses.set(list ?? []),
       error: () => this.warehouses.set([]),
     });
-    this.treasuryService.list().subscribe({
+    this.treasuryService.lookup().subscribe({
       next: (list) => {
         this.treasuries.set(list ?? []);
         this.loadingRefs.set(false);
@@ -187,9 +182,9 @@ export class ConvertToContractModalComponent {
         this.loadingRefs.set(false);
       },
     });
-    this.repService.list().subscribe({
+    this.repService.lookup().subscribe({
       next: (list) => {
-        this.reps.set(list?.data ?? []);
+        this.reps.set(list ?? []);
         this.loadingRefs.set(false);
       },
       error: () => {

@@ -18,9 +18,13 @@ import {
   ContractDetails,
   PayInstallmentPayload,
 } from '../../models/client-statement.model';
-import { Treasury } from '../../../treasury/models/treasury.model';
+import { LookupItem } from '../../../../core/models/lookup.model';
 import { PaymentRecord } from '../../models/customer.model';
 import { BadgeComponent } from '../../../../shared/components/badge/badge.component';
+import {
+  SearchableSelectComponent,
+  SearchableSelectOption,
+} from '../../../../shared/components/searchable-select/searchable-select.component';
 import { CurrencyArPipe } from '../../../../shared/pipes/currency-ar.pipe';
 import { ToastService } from '../../../../core/services/toast.service';
 import { ApiError } from '../../../../core/models/api-response.model';
@@ -29,14 +33,18 @@ import { todayIsoDate } from '../../../../shared/utils/date-iso.util';
 
 type PaymentMethodKey = 'Cash' | 'Transfer' | 'Card' | 'STCPay' | 'ApplePay';
 
-const CLIENT_PICKER_PAGE_SIZE = 200;
 const CONTRACT_PAGE_SIZE = 100;
 
 @Component({
   selector: 'app-payment',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, BadgeComponent, CurrencyArPipe],
+  imports: [
+    FormsModule,
+    BadgeComponent,
+    CurrencyArPipe,
+    SearchableSelectComponent,
+  ],
   templateUrl: './payment.component.html',
   styleUrl: './payment.component.scss',
 })
@@ -51,9 +59,18 @@ export class PaymentComponent {
   // ── lookup data ──
   protected readonly clients = signal<DashboardClient[]>([]);
   protected readonly contracts = signal<ClientContractRow[]>([]);
-  protected readonly treasuries = signal<Treasury[]>([]);
+  protected readonly treasuries = signal<LookupItem[]>([]);
   protected readonly contractDetails = signal<ContractDetails | null>(null);
   protected readonly recentPayments = signal<PaymentRecord[]>([]);
+
+  /** Client list shaped for the searchable select (name + phone search). */
+  protected readonly clientOptions = computed<SearchableSelectOption[]>(() =>
+    this.clients().map((c) => ({
+      value: c.id,
+      label: c.fullName,
+      hint: c.phoneNumber,
+    })),
+  );
 
   // ── form state ──
   protected readonly selectedClientId = signal<number | null>(null);
@@ -137,21 +154,20 @@ export class PaymentComponent {
   // ─────────── loaders ───────────
 
   private loadClients(): void {
-    this.customersService
-      .listDashboard({ pageIndex: 1, pageSize: CLIENT_PICKER_PAGE_SIZE })
-      .subscribe({
-        next: (res) => this.clients.set(res?.clients?.data ?? []),
-        error: () => this.clients.set([]),
-      });
+    this.customersService.listAllClients().subscribe({
+      next: (list) => this.clients.set(list),
+      error: () => this.clients.set([]),
+    });
   }
 
   private loadTreasuries(): void {
-    this.treasuryService.list().subscribe({
+    // Lookup is already role-scoped + active-only server-side; a rep gets
+    // just their own treasury, so it's used verbatim.
+    this.treasuryService.lookup().subscribe({
       next: (list) => {
-        const active = list.filter((t) => t.isActive);
-        this.treasuries.set(active);
-        if (this.payTreasuryId() === null && active.length) {
-          this.payTreasuryId.set(active[0].id);
+        this.treasuries.set(list);
+        if (this.payTreasuryId() === null && list.length) {
+          this.payTreasuryId.set(list[0].id);
         }
       },
       error: () => this.treasuries.set([]),
@@ -189,9 +205,9 @@ export class PaymentComponent {
 
   // ─────────── handlers ───────────
 
-  protected onClientChange(value: string): void {
-    const id = value ? Number(value) : null;
-    this.selectedClientId.set(Number.isFinite(id) ? id : null);
+  protected onClientChange(value: number | string | null): void {
+    const id = value === null || value === '' ? null : Number(value);
+    this.selectedClientId.set(id !== null && Number.isFinite(id) ? id : null);
     this.payAmount.set(0);
   }
 
@@ -244,7 +260,7 @@ export class PaymentComponent {
       },
     });
   }
-
+  
   // ─────────── view helpers ───────────
 
   protected getStatusLabel(s: PaymentRecord['status']): string {

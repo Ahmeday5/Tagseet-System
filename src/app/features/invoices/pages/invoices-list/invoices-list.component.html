@@ -67,6 +67,16 @@
   </button>
 
   <button
+    type="button"
+    class="btn btn-sm btn-bl d-inline-flex align-items-center gap-1"
+    [disabled]="loading() || invoices().length === 0"
+    (click)="printInvoices()"
+    title="طباعة قائمة الفواتير"
+  >
+    <span>🖨 طباعة PDF</span>
+  </button>
+
+  <button
     *appHasPermission="PERMS.suppliersFullAccess"
     class="btn btn-sm btn-bl"
     (click)="goToNew()"

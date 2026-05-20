@@ -76,7 +76,7 @@
           >
             <option [ngValue]="0" disabled>— اختر المخزن —</option>
             @for (w of activeWarehouses(); track w.id) {
-              <option [ngValue]="w.id">{{ w.name }} — {{ w.location }}</option>
+              <option [ngValue]="w.id">{{ w.name }}</option>
             }
           </select>
           <app-form-error [control]="form.controls.warehouseId" label="المخزن" />
@@ -106,7 +106,7 @@
           >
             <option [ngValue]="0" disabled>— اختر المندوب —</option>
             @for (rep of reps(); track rep.id) {
-              <option [ngValue]="rep.id">{{ rep.fullName }}</option>
+              <option [ngValue]="rep.id">{{ rep.name }}</option>
             }
           </select>
           <app-form-error [control]="form.controls.representativeId" label="المندوب" />

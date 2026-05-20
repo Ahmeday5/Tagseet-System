@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable, of } from 'rxjs';
 import { delay, map } from 'rxjs/operators';
+import { asPaged, fetchAllPages } from '../../../core/utils/api-list.util';
 import {
   CreateClientPayload,
   CreatedClient,
@@ -28,8 +29,6 @@ const CLIENTS_TTL_MS = 2 * 60 * 1000; // 2 min — list churns whenever a paymen
  * matching the looser `onInvalidate('client')` listeners (substring).
  */
 const CLIENTS_CACHE_KEY = 'clients';
-/** One oversized page used to feed entity pickers (e.g. voucher party). */
-const FLAT_LIST_PAGE_SIZE = 500;
 
 // Local pagination shape used by the mock — keep until this feature is wired
 // to the real backend, then migrate to `PaginatedResponse<T>` from api-response.model.
@@ -48,7 +47,7 @@ export interface PaginatedResponse<T> {
 @Injectable({ providedIn: 'root' })
 export class CustomersService {
   private readonly api = inject(ApiService);
-
+  
   listDashboard(
     query: DashboardClientsQuery = {},
   ): Observable<DashboardClientsResponse> {
@@ -70,16 +69,16 @@ export class CustomersService {
 
   /**
    * Flat client list (id + name + phone) for entity pickers — e.g. the
-   * voucher "related party" select. One oversized page; mirrors the
-   * `SuppliersService.listAll()` pattern.
+   * contract/payment client select and the voucher "related party" select.
+   *
+   * Walks every page (see `fetchAllPages`) instead of betting on a single
+   * oversized page, so the picker never silently drops clients once the
+   * roster grows past a hard-coded size.
    */
   listAllClients(): Observable<DashboardClient[]> {
-    return this.listDashboard({
-      pageIndex: 1,
-      pageSize: FLAT_LIST_PAGE_SIZE,
-    }).pipe(
-      map((res) =>
-        Array.isArray(res?.clients?.data) ? res.clients.data : [],
+    return fetchAllPages<DashboardClient>((pageIndex, pageSize) =>
+      this.listDashboard({ pageIndex, pageSize }).pipe(
+        map((res) => asPaged<DashboardClient>(res?.clients)),
       ),
     );
   }

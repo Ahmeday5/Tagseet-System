@@ -8,6 +8,7 @@ import { NavIconComponent, NavIconName } from '../../../shared/components/nav-ic
 import { NavCountsStore } from '../../../core/stores/nav-counts.store';
 import { AuthService } from '../../../core/services/auth.service';
 import { Permission } from '../../../core/constants/permissions.const';
+import { UserRole } from '../../../core/models/auth.model';
 
 /**
  * Keys of `NavCountsStore` signals that nav items can bind to. The
@@ -35,6 +36,12 @@ export interface NavItem {
    * the item visible to everyone.
    */
   requiredAnyPermission?: ReadonlyArray<Permission | string>;
+  /**
+   * Role gate. When set, the item shows only if the current user's role is
+   * one of these — used for role-exclusive entries (e.g. a Representative's
+   * "my account") that no permission string cleanly isolates.
+   */
+  requiredAnyRole?: ReadonlyArray<UserRole>;
 }
 
 export interface NavSection {
@@ -62,13 +69,19 @@ export class SidebarComponent {
    */
   protected readonly visibleSections = computed(() => {
     const set = this.auth.permissionSet();
+    const role = this.auth.currentUser()?.role;
     return NAV_SECTIONS
       .map((section) => ({
         ...section,
-        items: section.items.filter((item) =>
-          !item.requiredAnyPermission?.length ||
-          item.requiredAnyPermission.some((p) => set.has(p)),
-        ),
+        items: section.items.filter((item) => {
+          const permOk =
+            !item.requiredAnyPermission?.length ||
+            item.requiredAnyPermission.some((p) => set.has(p));
+          const roleOk =
+            !item.requiredAnyRole?.length ||
+            (!!role && item.requiredAnyRole.includes(role));
+          return permOk && roleOk;
+        }),
       }))
       .filter((section) => section.items.length > 0);
   });

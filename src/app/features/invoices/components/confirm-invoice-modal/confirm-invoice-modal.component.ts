@@ -14,8 +14,8 @@ import { FormErrorComponent } from '../../../../shared/components/form-error/for
 import { CurrencyArPipe } from '../../../../shared/pipes/currency-ar.pipe';
 import { ApiError } from '../../../../core/models/api-response.model';
 import { ToastService } from '../../../../core/services/toast.service';
-import { Treasury } from '../../../treasury/models/treasury.model';
 import { TreasuryService } from '../../../treasury/services/treasury.service';
+import { LookupItem } from '../../../../core/models/lookup.model';
 import {
   ConfirmPurchaseInvoicePayload,
   PurchaseInvoice,
@@ -67,16 +67,15 @@ export class ConfirmInvoiceModalComponent {
   // ── state ──
   protected readonly submitting = signal(false);
   protected readonly serverError = signal<string | null>(null);
-  protected readonly treasuries = signal<Treasury[]>([]);
+  protected readonly treasuries = signal<LookupItem[]>([]);
   protected readonly loadingTreasuries = signal(false);
   /** Full invoice (with `treasuryId`) — fetched lazily so the modal can
    *  pre-select whatever treasury the user already chose at create-time. */
   protected readonly fullInvoice = signal<PurchaseInvoice | null>(null);
   protected readonly loadingInvoice = signal(false);
 
-  protected readonly activeTreasuries = computed(() =>
-    this.treasuries().filter((t) => t.isActive),
-  );
+  /** Lookup is already active-only + role-scoped server-side. */
+  protected readonly activeTreasuries = computed(() => this.treasuries());
 
   protected readonly title = 'تأكيد الفاتورة';
 
@@ -149,7 +148,7 @@ export class ConfirmInvoiceModalComponent {
   private loadTreasuriesIfNeeded(): void {
     if (this.treasuries().length > 0) return;
     this.loadingTreasuries.set(true);
-    this.treasuryService.list().subscribe({
+    this.treasuryService.lookup().subscribe({
       next: (list) => {
         this.treasuries.set(list ?? []);
         this.loadingTreasuries.set(false);

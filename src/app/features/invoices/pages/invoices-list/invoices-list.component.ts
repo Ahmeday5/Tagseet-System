@@ -26,6 +26,7 @@ import { SuppliersService } from '../../../suppliers/services/suppliers.service'
 import { ConfirmInvoiceModalComponent } from '../../components/confirm-invoice-modal/confirm-invoice-modal.component';
 import { HasPermissionDirective } from '../../../../shared/directives/has-permission.directive';
 import { PERMISSIONS } from '../../../../core/constants/permissions.const';
+import { PrintService } from '../../../../core/services/print.service';
 
 const STATUS_OPTIONS: ReadonlyArray<{
   value: PurchaseInvoiceStatus | '';
@@ -53,6 +54,7 @@ export class InvoicesListComponent implements OnInit {
   private readonly suppliersService = inject(SuppliersService);
   private readonly router           = inject(Router);
   private readonly cache            = inject(HttpCacheService);
+  private readonly printer          = inject(PrintService);
 
   /** Exposed so the template can gate write actions with `*appHasPermission`. */
   protected readonly PERMS = PERMISSIONS;
@@ -149,6 +151,62 @@ export class InvoicesListComponent implements OnInit {
   protected refresh(): void {
     this.fetchList(this.filterPayload(), true);
     this.fetchSummary();
+  }
+
+  /** Exports the current filtered invoice list to a printable A4 PDF. */
+  protected printInvoices(): void {
+    const rows = this.invoices();
+    if (rows.length === 0) return;
+
+    const meta: Array<{ label: string; value: string }> = [];
+    const search = this.searchTerm().trim();
+    if (search) meta.push({ label: 'بحث', value: search });
+    if (this.statusFilter()) {
+      const opt = STATUS_OPTIONS.find((o) => o.value === this.statusFilter());
+      if (opt) meta.push({ label: 'الحالة', value: opt.label });
+    }
+    if (this.supplierFilter() !== '') {
+      const sup = this.suppliers().find((s) => s.id === Number(this.supplierFilter()));
+      if (sup) meta.push({ label: 'المورد', value: sup.fullName });
+    }
+
+    const totalAmount    = rows.reduce((s, r) => s + (r.totalAmount ?? 0), 0);
+    const totalPaid      = rows.reduce((s, r) => s + (r.paidAmount ?? 0), 0);
+    const totalRemaining = rows.reduce((s, r) => s + (r.remainingAmount ?? 0), 0);
+
+    this.printer.print<PurchaseInvoiceListItem>({
+      title: 'قائمة فواتير المشتريات',
+      subtitle: 'سجل فواتير الموردين والحالة المالية لكل فاتورة',
+      meta,
+      orientation: 'landscape',
+      columns: [
+        { key: 'invoiceNumber',   header: 'رقم الفاتورة', align: 'center', bold: true },
+        { key: 'supplierName',    header: 'المورد',        align: 'start', bold: true },
+        { key: 'itemsSummary',    header: 'البنود',        align: 'start' },
+        { key: 'quantity',        header: 'الكمية',        align: 'center', format: 'number' },
+        { key: 'invoiceDate',     header: 'التاريخ',       align: 'center', format: 'shortDate' },
+        { key: 'totalAmount',     header: 'الإجمالي',     align: 'end', format: 'currency', bold: true },
+        { key: 'paidAmount',      header: 'المدفوع',       align: 'end', format: 'currency' },
+        { key: 'remainingAmount', header: 'المتبقي',       align: 'end', format: 'currency', bold: true },
+        {
+          key: 'status',
+          header: 'الحالة',
+          align: 'center',
+          format: (v) => this.statusView(v as PurchaseInvoiceStatus).label,
+        },
+      ],
+      totals: {
+        label: 'الإجمالي',
+        labelColSpan: 5,
+        cells: [
+          `${Math.round(totalAmount).toLocaleString('ar-EG')} ج.م`,
+          `${Math.round(totalPaid).toLocaleString('ar-EG')} ج.م`,
+          `${Math.round(totalRemaining).toLocaleString('ar-EG')} ج.م`,
+          null,
+        ],
+      },
+      rows,
+    });
   }
 
   // ─────────── filter handlers ───────────

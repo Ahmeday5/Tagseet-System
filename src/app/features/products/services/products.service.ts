@@ -10,12 +10,16 @@ import {
   withCacheInvalidate,
   withInlineHandling,
 } from '../../../core/http/http-context.tokens';
+import {
+  asPaged,
+  fetchAllPages,
+  toList,
+} from '../../../core/utils/api-list.util';
+import { LookupItem } from '../../../core/models/lookup.model';
 import { Product, ProductFormInput } from '../models/product.model';
 
 const PRODUCTS_CACHE_KEY = 'product';
 const PRODUCTS_TTL_MS = 5 * 60 * 1000; // 5 min — list changes when stock / price / category edits land
-/** Page size for the flat-list dropdown variant (e.g. invoice form). */
-const FLAT_LIST_PAGE_SIZE = 500;
 
 export interface ProductsListQuery extends PagedQuery {
   categoryId?: number | '' | null;
@@ -41,11 +45,25 @@ export class ProductsService {
     });
   }
 
-  /** Flat list for dropdowns (invoice form, catalog, etc.). */
+  /**
+   * Flat list for dropdowns (invoice form, catalog, etc.). Drains every
+   * page so a growing catalogue is never silently truncated.
+   */
   listAll(): Observable<Product[]> {
-    return this.list({ pageIndex: 1, pageSize: FLAT_LIST_PAGE_SIZE }).pipe(
-      map((res) => Array.isArray(res?.data) ? res.data : []),
+    return fetchAllPages<Product>((pageIndex, pageSize) =>
+      this.list({ pageIndex, pageSize }).pipe(
+        map((res) => asPaged<Product>(res)),
+      ),
     );
+  }
+
+  /** Lightweight `{id,name}` list for the product picker. */
+  lookup(): Observable<LookupItem[]> {
+    return this.api
+      .get<unknown>(API_ENDPOINTS.products.lookup, {
+        context: withCache({ ttlMs: PRODUCTS_TTL_MS }),
+      })
+      .pipe(toList<LookupItem>());
   }
 
   getById(id: number): Observable<Product> {

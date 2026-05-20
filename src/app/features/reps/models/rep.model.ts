@@ -50,6 +50,12 @@ export interface Representative {
   status: RepresentativeStatus;
   appUser: RepresentativeAppUser;
   treasury: RepresentativeTreasury;
+  /** Outstanding commission — optional, populated in list when available. */
+  outstandingCommission?: number;
+  /** Accumulated commission total — optional, populated in list when available. */
+  accumulatedCommission?: number;
+  /** Paid commission total — optional, populated in list when available. */
+  paidCommission?: number;
 }
 
 /**
@@ -80,9 +86,12 @@ export type UpdateRepresentativePayload = CreateRepresentativePayload;
 
 /**
  * Row shape of `GET /dashboard/representatives/sub-treasuries` — one entry
- * per representative with their auto-created sub-treasury balance and the
- * commission accumulated to date. `lastActivityDate` is `null` when the
- * representative has had no movement yet.
+ * per representative with their auto-created sub-treasury balance plus the
+ * full sales / cost / profit / commission breakdown accumulated to date.
+ * `lastActivityDate` is `null` when the representative has had no movement
+ * yet.
+ *
+ *   accumulatedCommission = paidCommission + outstandingCommission
  */
 export interface RepresentativeSubTreasury {
   representativeId: number;
@@ -91,8 +100,104 @@ export interface RepresentativeSubTreasury {
   treasuryName: string;
   balance: number;
   lastActivityDate: string | null;
+  totalSales: number;
+  totalCost: number;
+  totalProfit: number;
   accumulatedCommission: number;
+  paidCommission: number;
+  outstandingCommission: number;
 }
+
+// ── Account statement (admin by id / representative "me") ───────────────
+
+/** Trimmed representative header shown atop a statement. */
+export interface RepStatementRepresentative {
+  id: number;
+  fullName: string;
+  phoneNumber: string;
+  profitRatePercent: number;
+  status: RepresentativeStatus;
+  treasuryBalance: number;
+}
+
+/** Aggregate figures for the whole statement period. */
+export interface RepStatementSummary {
+  contractsCount: number;
+  activeContractsCount: number;
+  totalSales: number;
+  totalCost: number;
+  totalProfit: number;
+  totalCommission: number;
+  paidCommission: number;
+  outstandingCommission: number;
+  firstContractDate: string | null;
+  lastContractDate: string | null;
+}
+
+/** One contract row inside a representative statement. */
+export interface RepStatementContractRow {
+  contractId: number;
+  clientId: number;
+  clientName: string;
+  productId: number;
+  productName: string;
+  quantity: number;
+  cashPrice: number;
+  saleAmount: number;
+  cost: number;
+  profit: number;
+  commission: number;
+  status: string;
+  purchaseDate: string;
+}
+
+/** Wire shape of `data` for both statement endpoints. */
+export interface RepresentativeStatement {
+  representative: RepStatementRepresentative;
+  summary: RepStatementSummary;
+  contracts: PagedResponse<RepStatementContractRow>;
+}
+
+// ── Commission payout ───────────────────────────────────────────────────
+
+/** POST body for `representatives/{id}/commission-payout`. */
+export interface CommissionPayoutPayload {
+  amount: number;
+  treasuryId: number;
+  /** `yyyy-MM-dd`. */
+  date: string;
+  notes: string;
+}
+
+/** `data` returned by a successful commission payout. */
+export interface CommissionPayoutResult {
+  representativeId: number;
+  representativeName: string;
+  voucherNumber: string;
+  amountPaid: number;
+  treasuryId: number;
+  treasuryName: string;
+  treasuryBalanceAfter: number;
+  accruedCommission: number;
+  paidCommission: number;
+  outstandingCommission: number;
+}
+
+/** One row of the commission-payouts history list. */
+export interface CommissionPayoutRow {
+  id: number;
+  voucherNumber: string;
+  representativeId: number;
+  representativeName: string;
+  amount: number;
+  date: string;
+  treasuryId: number;
+  treasuryName: string;
+  notes: string;
+}
+
+/** Query string for the paginated payouts history. */
+export type CommissionPayoutsQuery = PagedQuery;
 
 /** Query string for the paginated list — uses the project's shared shape. */
 export type RepresentativesQuery = PagedQuery;

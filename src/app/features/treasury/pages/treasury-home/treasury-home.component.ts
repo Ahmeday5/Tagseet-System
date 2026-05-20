@@ -31,7 +31,10 @@ import { FormMode } from '../../../../shared/models/form-mode.model';
 import { DialogService } from '../../../../core/services/dialog.service';
 import { ToastService } from '../../../../core/services/toast.service';
 import { HttpCacheService } from '../../../../core/services/http-cache.service';
+import { AuthService } from '../../../../core/services/auth.service';
+import { PrintService } from '../../../../core/services/print.service';
 import { onInvalidate } from '../../../../core/utils/auto-refresh.util';
+import { fetchAllPages } from '../../../../core/utils/api-list.util';
 import { ApiError } from '../../../../core/models/api-response.model';
 import { TreasuryType } from '../../enums/treasury-type.enum';
 import {
@@ -63,9 +66,21 @@ export class TreasuryHomeComponent implements OnInit {
   private readonly dialog = inject(DialogService);
   private readonly toast = inject(ToastService);
   private readonly cache = inject(HttpCacheService);
+  private readonly auth = inject(AuthService);
+  private readonly printer = inject(PrintService);
 
   /** Exposed so the template can gate write actions with `*appHasPermission`. */
   protected readonly PERMS = PERMISSIONS;
+
+  /**
+   * Reps see a stripped-down treasury view: their own sub-treasury card and
+   * the operations log stay, but the cross-treasury transfers and the
+   * company-wide monthly profits are hidden — those are confidential to
+   * management and shouldn't be exposed at the rep level.
+   */
+  protected readonly isRep = computed(
+    () => this.auth.currentUser()?.role === 'Representative',
+  );
 
   // ── data ──
   protected readonly treasuries = signal<Treasury[]>([]);
@@ -127,6 +142,26 @@ export class TreasuryHomeComponent implements OnInit {
       0,
     ),
   );
+  protected readonly subTreasuriesTotalSales = computed(() =>
+    this.subTreasuries().reduce((sum, s) => sum + (s.totalSales ?? 0), 0),
+  );
+  protected readonly subTreasuriesTotalCost = computed(() =>
+    this.subTreasuries().reduce((sum, s) => sum + (s.totalCost ?? 0), 0),
+  );
+  protected readonly subTreasuriesTotalProfit = computed(() =>
+    this.subTreasuries().reduce((sum, s) => sum + (s.totalProfit ?? 0), 0),
+  );
+  protected readonly subTreasuriesTotalPaid = computed(() =>
+    this.subTreasuries().reduce((sum, s) => sum + (s.paidCommission ?? 0), 0),
+  );
+  protected readonly subTreasuriesTotalOutstanding = computed(() =>
+    this.subTreasuries().reduce(
+      (sum, s) => sum + (s.outstandingCommission ?? 0),
+      0,
+    ),
+  );
+
+  // ── representative statement / commission-payout modals ──
 
   /** Combined trigger — any filter / page change refetches. */
   protected readonly transfersTrigger = computed(() => ({
@@ -165,6 +200,8 @@ export class TreasuryHomeComponent implements OnInit {
   // ── operations state ──
   protected readonly operations = signal<TreasuryOperation[]>([]);
   protected readonly operationsLoading = signal(false);
+  /** Set while we fetch the full dataset for a print export. */
+  protected readonly isPrintingOps = signal(false);
   private operationsDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
   // operations filters
@@ -523,6 +560,220 @@ export class TreasuryHomeComponent implements OnInit {
 
   protected signedAmountClass(signedAmount: number): string {
     return signedAmount >= 0 ? 'trf-amount-positive' : 'trf-amount-negative';
+  }
+
+  protected readonly todayDate = new Date();
+
+  /** Background flags for the export-PDF buttons. */
+  protected readonly isPrintingTransfers = signal(false);
+  protected readonly isPrintingSubTreasuries = signal(false);
+  protected readonly isPrintingMonthlyProfits = signal(false);
+
+  protected printOperations(): void {
+    if (this.isPrintingOps()) return;
+    this.isPrintingOps.set(true);
+
+    // Fetch every page for the active filters — print exports always reflect
+    // the *filtered* dataset, never just the visible page.
+    const filters = this.operationsTrigger();
+    fetchAllPages((pageIndex, pageSize) =>
+      this.treasuryService.refreshOperations({
+        ...filters,
+        pageIndex,
+        pageSize,
+      }),
+    ).subscribe({
+      next: (rows) => {
+        this.isPrintingOps.set(false);
+        this.printer.print<TreasuryOperation>({
+          title: 'سجل العمليات المالية في الخزينة',
+          subtitle: 'حركات الإيرادات والمصروفات حسب الفلاتر المطبقة',
+          meta: this.operationsPrintMeta(),
+          orientation: 'landscape',
+          columns: [
+            { key: 'id',           header: '#',          align: 'center', width: '48px', format: (v) => `#${v}` },
+            { key: 'treasuryName', header: 'الخزينة',   align: 'start',  bold: true },
+            { key: 'direction',    header: 'النوع',     align: 'center', format: (v) => (v === 'Receipt' ? 'إيراد' : 'صرف') },
+            { key: 'description',  header: 'الوصف',    align: 'start' },
+            { key: 'signedAmount', header: 'المبلغ',    align: 'end',    format: 'currency', bold: true },
+            { key: 'balanceAfter', header: 'الرصيد بعد', align: 'end',   format: 'currency' },
+            { key: 'userName',     header: 'المستخدم',  align: 'start' },
+            { key: 'date',         header: 'التاريخ',   align: 'center', format: 'shortDate' },
+          ],
+          rows,
+        });
+      },
+      error: () => {
+        this.isPrintingOps.set(false);
+        this.toast.error('تعذر تجهيز ملف الطباعة');
+      },
+    });
+  }
+
+  protected printTransfers(): void {
+    if (this.isPrintingTransfers()) return;
+    this.isPrintingTransfers.set(true);
+
+    const filters = this.transfersTrigger();
+    fetchAllPages((pageIndex, pageSize) =>
+      this.treasuryService.refreshTransfers({
+        ...filters,
+        pageIndex,
+        pageSize,
+      }),
+    ).subscribe({
+      next: (rows) => {
+        this.isPrintingTransfers.set(false);
+        this.printer.print<TreasuryTransfer>({
+          title: 'سجل التحويلات بين الخزائن',
+          subtitle: 'كل التحويلات الواردة والصادرة بين الخزائن',
+          meta: this.transfersPrintMeta(),
+          orientation: 'landscape',
+          columns: [
+            { key: 'id',                header: '#',         align: 'center', width: '48px', format: (v) => `#${v}` },
+            { key: 'fromTreasuryName',  header: 'من خزينة', align: 'start',  bold: true },
+            { key: 'toTreasuryName',    header: 'إلى خزينة', align: 'start', bold: true },
+            { key: 'amount',            header: 'المبلغ',   align: 'end',    format: 'currency', bold: true },
+            { key: 'transferDate',      header: 'التاريخ',  align: 'center', format: 'shortDate' },
+            { key: 'notes',             header: 'ملاحظات', align: 'start' },
+          ],
+          totals: {
+            label: 'إجمالي التحويلات',
+            labelColSpan: 3,
+            cells: [
+              this.formatCurrencyTotal(rows.reduce((s, r) => s + (r.amount ?? 0), 0)),
+              '',
+              '',
+            ],
+          },
+          rows,
+        });
+      },
+      error: () => {
+        this.isPrintingTransfers.set(false);
+        this.toast.error('تعذر تجهيز ملف الطباعة');
+      },
+    });
+  }
+
+  protected printSubTreasuries(): void {
+    if (this.isPrintingSubTreasuries()) return;
+    const rows = this.subTreasuries();
+    if (rows.length === 0) return;
+    this.isPrintingSubTreasuries.set(true);
+
+    this.printer.print<RepresentativeSubTreasury>({
+      title: 'الخزائن الفرعية للمندوبين',
+      subtitle: 'المبيعات والتكلفة والأرباح والعمولات لكل مندوب',
+      orientation: 'landscape',
+      columns: [
+        { key: 'representativeName',    header: 'المندوب',          align: 'start',  bold: true },
+        { key: 'treasuryName',          header: 'الخزينة',          align: 'start' },
+        { key: 'balance',               header: 'الرصيد',           align: 'end',    format: 'currency' },
+        { key: 'totalSales',            header: 'المبيعات',         align: 'end',    format: 'currency' },
+        { key: 'totalCost',             header: 'التكلفة',          align: 'end',    format: 'currency' },
+        { key: 'totalProfit',           header: 'الربح',           align: 'end',    format: 'currency', bold: true },
+        { key: 'accumulatedCommission', header: 'العمولة المتراكمة', align: 'end',  format: 'currency' },
+        { key: 'paidCommission',        header: 'المدفوع',         align: 'end',    format: 'currency' },
+        { key: 'outstandingCommission', header: 'المتبقي',         align: 'end',    format: 'currency', bold: true },
+        { key: 'lastActivityDate',      header: 'آخر نشاط',         align: 'center', format: 'shortDate' },
+      ],
+      totals: {
+        label: 'الإجمالي',
+        labelColSpan: 2,
+        cells: [
+          this.formatCurrencyTotal(this.subTreasuriesTotalBalance()),
+          this.formatCurrencyTotal(this.subTreasuriesTotalSales()),
+          this.formatCurrencyTotal(this.subTreasuriesTotalCost()),
+          this.formatCurrencyTotal(this.subTreasuriesTotalProfit()),
+          this.formatCurrencyTotal(this.subTreasuriesTotalCommission()),
+          this.formatCurrencyTotal(this.subTreasuriesTotalPaid()),
+          this.formatCurrencyTotal(this.subTreasuriesTotalOutstanding()),
+          '',
+        ],
+      },
+      rows,
+    });
+    this.isPrintingSubTreasuries.set(false);
+  }
+
+  protected printMonthlyProfits(): void {
+    if (this.isPrintingMonthlyProfits()) return;
+    const rows = this.monthlyProfits();
+    if (rows.length === 0) return;
+    this.isPrintingMonthlyProfits.set(true);
+
+    const totalRevenue  = rows.reduce((s, r) => s + (r.revenue ?? 0), 0);
+    const totalExpenses = rows.reduce((s, r) => s + (r.expenses ?? 0), 0);
+    const totalProfit   = totalRevenue - totalExpenses;
+    const margin = totalRevenue > 0
+      ? Math.round((totalProfit / totalRevenue) * 1000) / 10
+      : 0;
+
+    this.printer.print<MonthlyProfit>({
+      title: 'الأرباح الشهرية',
+      subtitle: this.selectedYear()
+        ? `بيانات سنة ${this.selectedYear()}`
+        : 'ملخص الإيرادات والمصروفات وصافي الربح لكل شهر',
+      columns: [
+        { key: 'monthName',     header: 'الشهر',      align: 'start',  bold: true },
+        { key: 'revenue',       header: 'الإيرادات',  align: 'end',    format: 'currency' },
+        { key: 'expenses',      header: 'المصروفات', align: 'end',    format: 'currency' },
+        { key: 'profit',        header: 'صافي الربح', align: 'end',   format: 'currency', bold: true },
+        { key: 'marginPercent', header: 'هامش الربح', align: 'center', format: 'percent' },
+        {
+          key: (m) => m,
+          header: 'الحالة',
+          align: 'center',
+          format: (_v, m) => (m.profit > 0 ? 'ربح' : m.profit < 0 ? 'خسارة' : 'تعادل'),
+        },
+      ],
+      totals: {
+        label: 'الإجمالي',
+        cells: [
+          this.formatCurrencyTotal(totalRevenue),
+          this.formatCurrencyTotal(totalExpenses),
+          this.formatCurrencyTotal(totalProfit),
+          `${margin}%`,
+          totalProfit > 0 ? 'ربح' : totalProfit < 0 ? 'خسارة' : 'تعادل',
+        ],
+      },
+      rows,
+    });
+    this.isPrintingMonthlyProfits.set(false);
+  }
+
+  // ─────────────── print helpers ───────────────
+
+  private operationsPrintMeta(): Array<{ label: string; value: string }> {
+    const items: Array<{ label: string; value: string }> = [];
+    const treasuryId = this.oTreasuryFilter();
+    if (treasuryId) {
+      const t = this.treasuries().find((x) => x.id === Number(treasuryId));
+      if (t) items.push({ label: 'الخزينة', value: t.name });
+    }
+    if (this.oFromDate()) items.push({ label: 'من تاريخ', value: this.oFromDate() });
+    if (this.oToDate())   items.push({ label: 'إلى تاريخ', value: this.oToDate() });
+    return items;
+  }
+
+  private transfersPrintMeta(): Array<{ label: string; value: string }> {
+    const items: Array<{ label: string; value: string }> = [];
+    if (this.tFromFilter()) {
+      const t = this.treasuries().find((x) => x.id === Number(this.tFromFilter()));
+      if (t) items.push({ label: 'من خزينة', value: t.name });
+    }
+    if (this.tToFilter()) {
+      const t = this.treasuries().find((x) => x.id === Number(this.tToFilter()));
+      if (t) items.push({ label: 'إلى خزينة', value: t.name });
+    }
+    if (this.tFromDate()) items.push({ label: 'من تاريخ', value: this.tFromDate() });
+    if (this.tToDate())   items.push({ label: 'إلى تاريخ', value: this.tToDate() });
+    return items;
+  }
+
+  private formatCurrencyTotal(value: number): string {
+    return `${Math.round(value).toLocaleString('ar-EG')} ج.م`;
   }
 
   // ─────────────── monthly profits ───────────────

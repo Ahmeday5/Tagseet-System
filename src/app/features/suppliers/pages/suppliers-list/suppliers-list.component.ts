@@ -24,6 +24,9 @@ import { onInvalidate } from '../../../../core/utils/auto-refresh.util';
 import { ApiError } from '../../../../core/models/api-response.model';
 import { HasPermissionDirective } from '../../../../shared/directives/has-permission.directive';
 import { PERMISSIONS } from '../../../../core/constants/permissions.const';
+import { PrintService } from '../../../../core/services/print.service';
+import { map } from 'rxjs/operators';
+import { fetchAllPages } from '../../../../core/utils/api-list.util';
 
 const DEFAULT_PAGE_SIZE = 10;
 
@@ -55,6 +58,9 @@ export class SuppliersListComponent implements OnInit {
   private readonly dialog  = inject(DialogService);
   private readonly toast   = inject(ToastService);
   private readonly cache   = inject(HttpCacheService);
+  private readonly printer = inject(PrintService);
+
+  protected readonly isPrinting = signal(false);
 
   /** Exposed so the template can gate write actions with `*appHasPermission`. */
   protected readonly PERMS = PERMISSIONS;
@@ -147,6 +153,60 @@ export class SuppliersListComponent implements OnInit {
 
   protected refresh(): void {
     this.fetch(this.fetchTrigger(), true);
+  }
+
+  /** Exports every supplier matching the active search to a PDF. */
+  protected printSuppliers(): void {
+    if (this.isPrinting()) return;
+    this.isPrinting.set(true);
+    const search = this.searchTerm().trim();
+
+    fetchAllPages<Supplier>((pageIndex, pageSize) =>
+      this.service
+        .refreshList({ search, pageIndex, pageSize })
+        .pipe(map((r) => r.items)),
+    ).subscribe({
+      next: (rows) => {
+        this.isPrinting.set(false);
+        const totalPurchases = rows.reduce((s, r) => s + (r.totalAmount ?? 0), 0);
+        const totalPaid      = rows.reduce((s, r) => s + (r.paidAmount ?? 0), 0);
+        const totalRemaining = rows.reduce((s, r) => s + (r.remainingAmount ?? 0), 0);
+
+        this.printer.print<Supplier>({
+          title: 'قائمة الموردين',
+          subtitle: 'سجل الموردين وإجمالي التعاملات المالية',
+          meta: search ? [{ label: 'بحث', value: search }] : undefined,
+          orientation: 'landscape',
+          columns: [
+            { key: 'id',              header: '#',           align: 'center', width: '46px' },
+            { key: 'fullName',        header: 'الاسم',       align: 'start', bold: true },
+            { key: 'phoneNumber',     header: 'الهاتف',      align: 'start' },
+            { key: 'address',         header: 'العنوان',     align: 'start' },
+            { key: 'goods',           header: 'البضاعة',     align: 'start' },
+            { key: 'quantity',        header: 'الكمية',       align: 'center', format: 'number' },
+            { key: 'totalAmount',     header: 'إجمالي المشتريات', align: 'end', format: 'currency', bold: true },
+            { key: 'paidAmount',      header: 'المدفوع',       align: 'end', format: 'currency' },
+            { key: 'remainingAmount', header: 'المتبقي',       align: 'end', format: 'currency', bold: true },
+            { key: 'lastSupplyDate',  header: 'آخر توريد',    align: 'center', format: 'shortDate' },
+          ],
+          totals: {
+            label: 'الإجمالي',
+            labelColSpan: 6,
+            cells: [
+              `${Math.round(totalPurchases).toLocaleString('ar-EG')} ج.م`,
+              `${Math.round(totalPaid).toLocaleString('ar-EG')} ج.م`,
+              `${Math.round(totalRemaining).toLocaleString('ar-EG')} ج.م`,
+              null,
+            ],
+          },
+          rows,
+        });
+      },
+      error: () => {
+        this.isPrinting.set(false);
+        this.toast.error('تعذر تجهيز ملف الطباعة');
+      },
+    });
   }
 
   // ─────────── filter handlers ───────────

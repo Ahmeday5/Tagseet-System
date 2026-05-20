@@ -2,21 +2,31 @@
 <div class="st-toolbar">
   <div class="st-pick">
     <label class="st-pick-label">العميل</label>
-    <select
-      class="form-select form-select-sm"
-      [disabled]="clientsLoading()"
-      [ngModel]="selectedClientId() ?? ''"
-      (ngModelChange)="onClientChange($event)">
-      <option value="">-- اختر العميل لعرض كشف الحساب --</option>
-      @for (c of clients(); track c.id) {
-        <option [value]="c.id">{{ c.fullName }} — {{ c.phoneNumber }}</option>
-      }
-    </select>
+    <app-searchable-select
+      [ngModel]="selectedClientId()"
+      (ngModelChange)="onClientChange($event)"
+      [isDisabled]="clientsLoading()"
+      placeholder="-- اختر العميل لعرض كشف الحساب --"
+      searchPlaceholder="ابحث بالاسم أو رقم الجوال…"
+      [options]="clientOptions()"
+    />
   </div>
 
   @if (selectedClientId() !== null) {
     <button class="btn btn-sm" (click)="refreshContracts()" [disabled]="contractsLoading()">
       تحديث
+    </button>
+    <button
+      type="button"
+      class="btn btn-sm btn-bl d-inline-flex align-items-center gap-1"
+      [disabled]="contractsLoading() || isPrinting() || count() === 0"
+      (click)="printStatement()"
+      title="طباعة كشف العميل"
+    >
+      @if (isPrinting()) {
+        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+      }
+      <span>🖨 طباعة PDF</span>
     </button>
   }
 </div>
@@ -349,9 +359,7 @@
           (ngModelChange)="updatePayForm('treasuryId', $event ? +$event : null)">
           <option value="">-- اختر الخزينة --</option>
           @for (t of treasuries(); track t.id) {
-            <option [value]="t.id">
-              {{ t.name }} ({{ t.currentBalance | currencyAr : true }})
-            </option>
+            <option [value]="t.id">{{ t.name }}</option>
           }
         </select>
       </div>

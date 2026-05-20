@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   FormBuilder,
@@ -7,7 +7,7 @@ import {
   Validators,
 } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
-import { forkJoin, finalize } from 'rxjs';
+import { forkJoin, finalize, of, catchError } from 'rxjs';
 
 import { ContractsService } from '../../services/contracts.service';
 import { CustomersService } from '../../../customers/services/customers.service';
@@ -21,13 +21,14 @@ import {
   ContractPaymentFrequency,
 } from '../../models/contract.model';
 import { DashboardClient } from '../../../customers/models/dashboard-client.model';
-import { Product } from '../../../products/models/product.model';
-import { Warehouse } from '../../../warehouse/models/warehouse.model';
-import { Treasury } from '../../../treasury/models/treasury.model';
-import { Representative } from '../../../reps/models/rep.model';
+import { LookupItem } from '../../../../core/models/lookup.model';
 
 import { FormErrorComponent } from '../../../../shared/components/form-error/form-error.component';
 import { LoaderComponent } from '../../../../shared/components/loader/loader.component';
+import {
+  SearchableSelectComponent,
+  SearchableSelectOption,
+} from '../../../../shared/components/searchable-select/searchable-select.component';
 import { ToastService } from '../../../../core/services/toast.service';
 import { CurrencyArPipe } from '../../../../shared/pipes/currency-ar.pipe';
 import { ApiError } from '../../../../core/models/api-response.model';
@@ -43,6 +44,7 @@ import { apiErrorToMessage } from '../../../../core/utils/api-error.util';
     FormErrorComponent,
     LoaderComponent,
     CurrencyArPipe,
+    SearchableSelectComponent,
   ],
   templateUrl: './create-contract.component.html',
   styleUrl: './create-contract.component.scss',
@@ -60,10 +62,37 @@ export class CreateContractComponent implements OnInit {
 
   // --- Signals for Lookups ---
   clients = signal<DashboardClient[]>([]);
-  products = signal<Product[]>([]);
-  warehouses = signal<Warehouse[]>([]);
-  treasuries = signal<Treasury[]>([]);
-  representatives = signal<Representative[]>([]);
+  products = signal<LookupItem[]>([]);
+  warehouses = signal<LookupItem[]>([]);
+  treasuries = signal<LookupItem[]>([]);
+  representatives = signal<LookupItem[]>([]);
+
+  /** Client list shaped for the searchable select (name + phone search). */
+  protected readonly clientOptions = computed<SearchableSelectOption[]>(() =>
+    this.clients().map((c) => ({
+      value: c.id,
+      label: c.fullName,
+      hint: c.phoneNumber,
+    })),
+  );
+
+  /** `{id,name}` lookups → searchable-select options (shared shape). */
+  protected readonly productOptions = computed<SearchableSelectOption[]>(() =>
+    this.toOptions(this.products()),
+  );
+  protected readonly warehouseOptions = computed<SearchableSelectOption[]>(() =>
+    this.toOptions(this.warehouses()),
+  );
+  protected readonly treasuryOptions = computed<SearchableSelectOption[]>(() =>
+    this.toOptions(this.treasuries()),
+  );
+  protected readonly representativeOptions = computed<SearchableSelectOption[]>(
+    () => this.toOptions(this.representatives()),
+  );
+
+  private toOptions(items: LookupItem[]): SearchableSelectOption[] {
+    return items.map((i) => ({ value: i.id, label: i.name }));
+  }
 
   // --- UI State ---
   loading = signal(true);
@@ -110,24 +139,41 @@ export class CreateContractComponent implements OnInit {
     });
   }
 
+  /**
+   * Loads every picker source independently. `forkJoin` is all-or-nothing —
+   * one rejected call (e.g. a Representative has no `Treasury.View` and
+   * cannot list reps) would otherwise blank *every* dropdown. Wrapping each
+   * stream in `catchError` degrades that source to an empty list while the
+   * ones the user is allowed to see still populate.
+   */
   private loadLookups(): void {
     this.loading.set(true);
 
     forkJoin({
-      clients: this.customersService.listDashboard({ pageSize: 1000 }),
-      products: this.productsService.listAll(),
-      warehouses: this.warehouseService.list(),
-      treasuries: this.treasuryService.list(),
-      reps: this.repsService.list({ pageSize: 1000 }),
+      clients: this.customersService
+        .listAllClients()
+        .pipe(catchError(() => of([] as DashboardClient[]))),
+      products: this.productsService
+        .lookup()
+        .pipe(catchError(() => of([] as LookupItem[]))),
+      warehouses: this.warehouseService
+        .lookup()
+        .pipe(catchError(() => of([] as LookupItem[]))),
+      treasuries: this.treasuryService
+        .lookup()
+        .pipe(catchError(() => of([] as LookupItem[]))),
+      reps: this.repsService
+        .lookup()
+        .pipe(catchError(() => of([] as LookupItem[]))),
     })
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
         next: (res) => {
-          this.clients.set(res.clients.clients.data);
+          this.clients.set(res.clients);
           this.products.set(res.products);
           this.warehouses.set(res.warehouses);
           this.treasuries.set(res.treasuries);
-          this.representatives.set(res.reps.data);
+          this.representatives.set(res.reps);
         },
         error: () => this.toast.error('حدث خطأ أثناء تحميل البيانات'),
       });
@@ -139,18 +185,25 @@ export class CreateContractComponent implements OnInit {
       this.calculateInstallment();
     });
 
-    // Auto-fill prices when product changes
+    // Auto-fill prices when product changes. The picker now carries only
+    // `{id,name}` (lookup endpoint), so prices come from the cached detail.
     this.form.get('productId')?.valueChanges.subscribe((id) => {
-      const product = this.products().find((p) => p.id === Number(id));
-      if (product) {
-        this.form.patchValue(
-          {
-            purchasePrice: product.purchasePrice,
-            cashPrice: product.sellingPrice,
-          },
-          { emitEvent: true }
-        );
-      }
+      const productId = Number(id);
+      if (!productId) return;
+
+      this.productsService.getById(productId).subscribe({
+        next: (product) =>
+          this.form.patchValue(
+            {
+              purchasePrice: product.purchasePrice,
+              cashPrice: product.sellingPrice,
+            },
+            { emitEvent: true }
+          ),
+        error: () => {
+          /* leave prices for manual entry */
+        },
+      });
     });
   }
 

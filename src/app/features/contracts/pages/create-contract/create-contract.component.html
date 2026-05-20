@@ -35,36 +35,36 @@
             <!-- العميل -->
             <div class="col-12 col-md-6">
               <label class="form-label required">العميل</label>
-              <select class="form-select" formControlName="clientId">
-                <option [ngValue]="null" disabled>اختر العميل</option>
-                @for (c of clients(); track c.id) {
-                  <option [value]="c.id">{{ c.fullName }}</option>
-                }
-              </select>
+              <app-searchable-select
+                formControlName="clientId"
+                placeholder="اختر العميل"
+                searchPlaceholder="ابحث بالاسم أو رقم الجوال…"
+                [options]="clientOptions()"
+              />
               <app-form-error [control]="form.controls['clientId']" label="العميل" />
             </div>
 
             <!-- المنتج -->
             <div class="col-12 col-md-6">
               <label class="form-label required">المنتج</label>
-              <select class="form-select" formControlName="productId">
-                <option [ngValue]="null" disabled>اختر المنتج</option>
-                @for (p of products(); track p.id) {
-                  <option [value]="p.id">{{ p.name }}</option>
-                }
-              </select>
+              <app-searchable-select
+                formControlName="productId"
+                placeholder="اختر المنتج"
+                searchPlaceholder="ابحث باسم المنتج…"
+                [options]="productOptions()"
+              />
               <app-form-error [control]="form.controls['productId']" label="المنتج" />
             </div>
 
             <!-- المخزن -->
             <div class="col-12 col-md-6">
               <label class="form-label required">المخزن</label>
-              <select class="form-select" formControlName="warehouseId">
-                <option [ngValue]="null" disabled>اختر المخزن</option>
-                @for (w of warehouses(); track w.id) {
-                  <option [value]="w.id">{{ w.name }}</option>
-                }
-              </select>
+              <app-searchable-select
+                formControlName="warehouseId"
+                placeholder="اختر المخزن"
+                searchPlaceholder="ابحث باسم المخزن…"
+                [options]="warehouseOptions()"
+              />
               <app-form-error [control]="form.controls['warehouseId']" label="المخزن" />
             </div>
 
@@ -169,24 +169,24 @@
             <!-- الخزنة -->
             <div class="col-12">
               <label class="form-label required">الخزنة (لإيداع المقدم)</label>
-              <select class="form-select" formControlName="treasuryId">
-                <option [ngValue]="null" disabled>اختر الخزنة</option>
-                @for (t of treasuries(); track t.id) {
-                  <option [value]="t.id">{{ t.name }} ({{ t.currentBalance| currencyAr }})</option>
-                }
-              </select>
+              <app-searchable-select
+                formControlName="treasuryId"
+                placeholder="اختر الخزنة"
+                searchPlaceholder="ابحث باسم الخزنة…"
+                [options]="treasuryOptions()"
+              />
               <app-form-error [control]="form.controls['treasuryId']" label="الخزنة" />
             </div>
 
             <!-- المندوب -->
             <div class="col-12">
               <label class="form-label">المندوب (اختياري)</label>
-              <select class="form-select" formControlName="representativeId">
-                <option [ngValue]="null">بدون مندوب</option>
-                @for (r of representatives(); track r.id) {
-                  <option [value]="r.id">{{ r.fullName }}</option>
-                }
-              </select>
+              <app-searchable-select
+                formControlName="representativeId"
+                placeholder="بدون مندوب"
+                searchPlaceholder="ابحث باسم المندوب…"
+                [options]="representativeOptions()"
+              />
             </div>
           </div>
         </div>

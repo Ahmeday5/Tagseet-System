@@ -24,11 +24,6 @@ const EG_PHONE = /^01[0125][0-9]{8}$/;
 /** Egyptian national id: exactly 14 digits. */
 const EG_NATIONAL_ID = /^[0-9]{14}$/;
 
-/**
- * Create-client modal. Mirrors the app-user form-modal conventions
- * (signals for template state, reactive form, inline server error) but
- * is create-only — there is no edit/view path for this entry point.
- */
 @Component({
   selector: 'app-client-form-modal',
   standalone: true,
@@ -62,7 +57,7 @@ export class ClientFormModalComponent {
   // ── form ──
   protected readonly form = this.fb.nonNullable.group({
     fullName: ['', [Validators.required, Validators.minLength(3)]],
-    email: ['', [Validators.required, Validators.email]],
+    email: ['', [Validators.email]],
     nationalId: ['', [Validators.required, Validators.pattern(EG_NATIONAL_ID)]],
     address: ['', [Validators.required, Validators.minLength(2)]],
     phoneNumber: ['', [Validators.required, Validators.pattern(EG_PHONE)]],

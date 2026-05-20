@@ -3,60 +3,49 @@
   <!-- Mobile: hamburger to open sidebar drawer -->
   <button class="t-hamburger" (click)="layout.toggleMobile()" aria-label="القائمة">
     @if (layout.mobileOpen()) {
-      <!-- X icon when open -->
-      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-        <path d="M3 3l12 12M15 3L3 15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-      </svg>
+    <!-- X icon when open -->
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+      <path d="M3 3l12 12M15 3L3 15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+    </svg>
     } @else {
-      <!-- hamburger icon when closed -->
-      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-        <path d="M2 5h14M2 9h14M2 13h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-      </svg>
+    <!-- hamburger icon when closed -->
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+      <path d="M2 5h14M2 9h14M2 13h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+    </svg>
     }
   </button>
 
   <!-- Logo -->
   <a class="logo" routerLink="/dashboard">
-    <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
-      <rect width="11" height="11" rx="2" fill="#1B5FA8"/>
-      <rect x="15" width="11" height="11" rx="2" fill="#85B7EB"/>
-      <rect y="15" width="11" height="11" rx="2" fill="#85B7EB"/>
-      <rect x="15" y="15" width="11" height="11" rx="2" fill="#1B5FA8"/>
-    </svg>
-    <span class="logo-text">امان</span>
+    <img src="/assets/icons/logo.webp" alt="logo" class="img-fluid" style="max-width: 50px; max-height: 50px;">
+    <span class="logo-text">الإيمان</span>
   </a>
 
   <div class="tright">
     <!-- Quick pills — hidden on tablet/below. Live from NavCountsStore. -->
     @if (counts.lowStockProducts() > 0) {
-      <button class="tpill tpill-re tpill-live"
-              [attr.data-pulse]="counts.lowStockPulse()"
-              routerLink="/warehouse/alerts"
-              title="منتجات بمخزون منخفض">
-        <span class="tpill-dot"></span>
-        {{ counts.lowStockProducts() }} {{ counts.lowStockProducts() === 1 ? 'صنف سينفد' : 'أصناف ستنفد' }}
-      </button>
+    <button class="tpill tpill-re tpill-live" [attr.data-pulse]="counts.lowStockPulse()" routerLink="/warehouse/alerts"
+      title="منتجات بمخزون منخفض">
+      <span class="tpill-dot"></span>
+      {{ counts.lowStockProducts() }} {{ counts.lowStockProducts() === 1 ? 'صنف سينفد' : 'أصناف ستنفد' }}
+    </button>
     }
     @if (counts.overdueClients() > 0) {
-      <button class="tpill tpill-am tpill-live"
-              [attr.data-pulse]="counts.overduePulse()"
-              routerLink="/customers"
-              title="عملاء متأخرون عن السداد">
-        <span class="tpill-dot"></span>
-        {{ counts.overdueClients() }} {{ counts.overdueClients() === 1 ? 'عميل متأخر' : 'متأخرون' }}
-      </button>
+    <button class="tpill tpill-am tpill-live" [attr.data-pulse]="counts.overduePulse()" routerLink="/customers"
+      title="عملاء متأخرون عن السداد">
+      <span class="tpill-dot"></span>
+      {{ counts.overdueClients() }} {{ counts.overdueClients() === 1 ? 'عميل متأخر' : 'متأخرون' }}
+    </button>
     }
     @if (counts.pendingClientOrders() > 0) {
-      <button class="tpill tpill-bl tpill-live"
-              [attr.data-pulse]="counts.pendingPulse()"
-              routerLink="/catalog"
-              title="طلبات لم تتم مراجعتها">
-        <span class="tpill-dot"></span>
-        {{ counts.pendingClientOrders() }} {{ counts.pendingClientOrders() === 1 ? 'طلبية جديدة' : 'طلبيات جديدة' }}
-      </button>
+    <button class="tpill tpill-bl tpill-live" [attr.data-pulse]="counts.pendingPulse()" routerLink="/catalog"
+      title="طلبات لم تتم مراجعتها">
+      <span class="tpill-dot"></span>
+      {{ counts.pendingClientOrders() }} {{ counts.pendingClientOrders() === 1 ? 'طلبية جديدة' : 'طلبيات جديدة' }}
+    </button>
     }
     @if (!counts.hasAlerts() && !counts.loading()) {
-      <button class="tpill tpill-gr" title="لا توجد تنبيهات حالياً">نظام سليم</button>
+    <button class="tpill tpill-gr" title="لا توجد تنبيهات حالياً">نظام سليم</button>
     }
 
     <!-- User avatar -->

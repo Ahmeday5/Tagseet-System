@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
 import { guestGuard } from './core/guards/guest.guard';
 import { permissionGuard } from './core/guards/permission.guard';
+import { roleGuard } from './core/guards/role.guard';
 import { PERMISSIONS } from './core/constants/permissions.const';
 
 export const routes: Routes = [
@@ -156,6 +157,15 @@ export const routes: Routes = [
         canActivate: [permissionGuard(PERMISSIONS.userManagement)],
         loadChildren: () =>
           import('./features/reps/reps.routes').then((m) => m.repsRoutes),
+      },
+      {
+        // Representative-only self-service account statement.
+        path: 'my-account',
+        canActivate: [roleGuard(['Representative'])],
+        loadComponent: () =>
+          import('./features/reps/pages/my-account/my-account.component').then(
+            (m) => m.MyAccountComponent,
+          ),
       },
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
     ],

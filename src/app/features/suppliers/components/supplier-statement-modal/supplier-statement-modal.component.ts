@@ -18,9 +18,11 @@ import { SuppliersService } from '../../services/suppliers.service';
 import {
   Supplier,
   SupplierStatement,
+  SupplierStatementInvoice,
   SupplierStatementInvoiceStatus,
   SupplierStatementQuery,
 } from '../../models/supplier.model';
+import { PrintService } from '../../../../core/services/print.service';
 
 const STATUS_BADGE: Record<SupplierStatementInvoiceStatus, BadgeType> = {
   Draft: 'info',
@@ -65,6 +67,7 @@ export class SupplierStatementModalComponent {
   // ── deps ──
   private readonly fb = inject(FormBuilder);
   private readonly service = inject(SuppliersService);
+  private readonly printer = inject(PrintService);
 
   // ── reactive state ──
   protected readonly statement = signal<SupplierStatement | null>(null);
@@ -196,9 +199,56 @@ export class SupplierStatementModalComponent {
     return items.reduce((sum, it) => sum + (it.lineTotal ?? 0), 0);
   }
 
-  /** Opens the OS print dialog scoped to the printable region. */
+  /**
+   * Exports the supplier statement as a professional PDF via the unified
+   * {@link PrintService}. The statement is already fully loaded in memory
+   * (no extra fetch needed), so this is a synchronous render.
+   */
   protected print(): void {
-    window.print();
+    const s = this.statement();
+    const supplier = this.supplier();
+    if (!s || !supplier) return;
+
+    const meta: Array<{ label: string; value: string }> = [
+      { label: 'المورد', value: supplier.fullName },
+    ];
+    if (s.period.from) meta.push({ label: 'من تاريخ', value: this.formatDate(s.period.from) });
+    if (s.period.to)   meta.push({ label: 'إلى تاريخ', value: this.formatDate(s.period.to) });
+    meta.push({ label: 'عدد الفواتير', value: String(s.summary.invoicesCount) });
+
+    this.printer.print<SupplierStatementInvoice>({
+      title: 'كشف حساب المورد',
+      subtitle: supplier.fullName,
+      meta,
+      orientation: 'landscape',
+      columns: [
+        { key: 'invoiceNumber',  header: 'رقم الفاتورة', align: 'center', bold: true },
+        { key: 'invoiceDate',    header: 'تاريخ الفاتورة', align: 'center', format: 'shortDate' },
+        { key: 'dueDate',        header: 'الاستحقاق',     align: 'center', format: 'shortDate' },
+        {
+          key: 'status',
+          header: 'الحالة',
+          align: 'center',
+          format: (v) => STATUS_LABEL[v as SupplierStatementInvoiceStatus] ?? String(v),
+        },
+        { key: 'subtotal',        header: 'الصافي',      align: 'end', format: 'currency' },
+        { key: 'discountAmount',  header: 'الخصم',       align: 'end', format: 'currency' },
+        { key: 'taxAmount',       header: 'الضريبة',     align: 'end', format: 'currency' },
+        { key: 'totalAmount',     header: 'الإجمالي',    align: 'end', format: 'currency', bold: true },
+        { key: 'paidAmount',      header: 'المدفوع',     align: 'end', format: 'currency' },
+        { key: 'remainingAmount', header: 'المتبقي',     align: 'end', format: 'currency', bold: true },
+      ],
+      totals: {
+        label: 'الإجمالي',
+        labelColSpan: 7,
+        cells: [
+          `${Math.round(s.summary.totalPurchases).toLocaleString('ar-EG')} ج.م`,
+          `${Math.round(s.summary.totalPaid).toLocaleString('ar-EG')} ج.م`,
+          `${Math.round(s.summary.totalRemaining).toLocaleString('ar-EG')} ج.م`,
+        ],
+      },
+      rows: s.invoices,
+    });
   }
 
   // ─────────── internals ───────────

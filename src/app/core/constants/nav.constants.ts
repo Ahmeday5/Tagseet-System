@@ -51,6 +51,14 @@ export const NAV_SECTIONS: NavSection[] = [
         icon: 'user-tie',
         requiredAnyPermission: [PERMISSIONS.userManagement],
       },
+      {
+        id: 'my-account',
+        label: 'كشف حسابي',
+        route: '/my-account',
+        icon: 'user-tie',
+        // Role-exclusive: only a logged-in Representative sees this.
+        requiredAnyRole: ['Representative'],
+      },
     ],
   },
   {

@@ -10,6 +10,7 @@ import {
   withCacheInvalidate,
   withInlineHandling,
 } from '../../../core/http/http-context.tokens';
+import { asPaged, fetchAllPages } from '../../../core/utils/api-list.util';
 import {
   Category,
   CreateCategoryPayload,
@@ -18,8 +19,6 @@ import {
 
 const CATEGORIES_CACHE_KEY = 'categories';
 const CATEGORIES_TTL_MS = 10 * 60 * 1000; // 10 min — categories rarely change
-/** Page size for the flat-list dropdown variant. */
-const FLAT_LIST_PAGE_SIZE = 500;
 
 /**
  * `/dashboard/categories` facade.
@@ -49,10 +48,12 @@ export class CategoriesService {
     });
   }
 
-  /** Flat list for dropdowns. */
+  /** Flat list for dropdowns — drains every page. */
   listAll(): Observable<Category[]> {
-    return this.list({ pageIndex: 1, pageSize: FLAT_LIST_PAGE_SIZE }).pipe(
-      map((res) => Array.isArray(res?.data) ? res.data : []),
+    return fetchAllPages<Category>((pageIndex, pageSize) =>
+      this.list({ pageIndex, pageSize }).pipe(
+        map((res) => asPaged<Category>(res)),
+      ),
     );
   }
 

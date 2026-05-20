@@ -25,14 +25,12 @@ import {
   PurchaseInvoice,
   UpdatePurchaseInvoicePayload,
 } from '../../models/invoice.model';
-import { Warehouse } from '../../../warehouse/models/warehouse.model';
 import { WarehouseService } from '../../../warehouse/services/warehouse.service';
-import { Product } from '../../../products/models/product.model';
 import { ProductsService } from '../../../products/services/products.service';
 import { Supplier } from '../../../suppliers/models/supplier.model';
 import { SuppliersService } from '../../../suppliers/services/suppliers.service';
-import { Treasury } from '../../../treasury/models/treasury.model';
 import { TreasuryService } from '../../../treasury/services/treasury.service';
+import { LookupItem } from '../../../../core/models/lookup.model';
 
 interface LineFormShape {
   productId: FormControl<number>;
@@ -75,20 +73,15 @@ export class InvoiceNewComponent implements OnInit {
 
   // ── data ──
   protected readonly suppliers  = signal<Supplier[]>([]);
-  protected readonly warehouses = signal<Warehouse[]>([]);
-  protected readonly products   = signal<Product[]>([]);
-  protected readonly treasuries = signal<Treasury[]>([]);
+  protected readonly warehouses = signal<LookupItem[]>([]);
+  protected readonly products   = signal<LookupItem[]>([]);
+  protected readonly treasuries = signal<LookupItem[]>([]);
   protected readonly loadingRefs = signal(false);
 
-  protected readonly activeWarehouses = computed(() =>
-    this.warehouses().filter((w) => w.isActive),
-  );
-  protected readonly activeProducts = computed(() =>
-    this.products().filter((p) => p.isActive),
-  );
-  protected readonly activeTreasuries = computed(() =>
-    this.treasuries().filter((t) => t.isActive),
-  );
+  // Lookups are already active-only + role-scoped server-side.
+  protected readonly activeWarehouses = computed(() => this.warehouses());
+  protected readonly activeProducts = computed(() => this.products());
+  protected readonly activeTreasuries = computed(() => this.treasuries());
 
   // ── submit state ──
   protected readonly savingDraft = signal(false);
@@ -192,21 +185,21 @@ export class InvoiceNewComponent implements OnInit {
       next: (s) => this.suppliers.set(s),
       error: () => this.suppliers.set([]),
     });
-    this.warehouseService.list().subscribe({
+    this.warehouseService.lookup().subscribe({
       next: (w) => this.warehouses.set(w ?? []),
       error: () => this.warehouses.set([]),
     });
-    this.productsService.listAll().subscribe({
-      next: (p) => this.products.set(p),
+    this.productsService.lookup().subscribe({
+      next: (p) => this.products.set(p ?? []),
       error: () => this.products.set([]),
     });
-    this.treasuryService.list().subscribe({
+    this.treasuryService.lookup().subscribe({
       next: (t) => {
-        this.treasuries.set(t);
-        // Create only: pre-select the first active treasury so the form
-        // is valid without scrolling the select. In edit mode the value
-        // comes from the existing invoice and must not be overwritten.
-        const first = t.find((tr) => tr.isActive);
+        this.treasuries.set(t ?? []);
+        // Create only: pre-select the first treasury so the form is valid
+        // without scrolling the select. In edit mode the value comes from
+        // the existing invoice and must not be overwritten.
+        const first = t[0];
         if (
           !this.isEdit() &&
           first &&
@@ -320,12 +313,20 @@ export class InvoiceNewComponent implements OnInit {
    */
   protected onProductChange(idx: number): void {
     const ctrl = this.items.at(idx);
-    const productId = ctrl.controls.productId.value;
-    const product = this.products().find((p) => p.id === productId);
-    if (product && (Number(ctrl.controls.unitPrice.value) || 0) === 0) {
-      ctrl.controls.unitPrice.setValue(product.purchasePrice ?? 0);
-    }
+    const productId = Number(ctrl.controls.productId.value);
     this.linesTick.update((v) => v + 1);
+    if (!productId || (Number(ctrl.controls.unitPrice.value) || 0) !== 0) {
+      return;
+    }
+    // The picker carries only `{id,name}` (lookup) — pull the purchase
+    // price from the cached product detail to pre-fill the line.
+    this.productsService.getById(productId).subscribe({
+      next: (product) =>
+        ctrl.controls.unitPrice.setValue(product.purchasePrice ?? 0),
+      error: () => {
+        /* leave the unit price for manual entry */
+      },
+    });
   }
 
   protected onLineFieldChange(idx: number, field: keyof LineFormShape, raw: string): void {

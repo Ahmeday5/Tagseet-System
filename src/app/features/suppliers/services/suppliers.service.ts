@@ -10,6 +10,7 @@ import {
   withCacheInvalidate,
   withInlineHandling,
 } from '../../../core/http/http-context.tokens';
+import { asPaged, fetchAllPages } from '../../../core/utils/api-list.util';
 import {
   CreateSupplierPayload,
   Supplier,
@@ -22,8 +23,6 @@ import {
 const SUPPLIERS_CACHE_KEY = 'suppliers';
 const SUPPLIERS_TTL_MS = 5 * 60 * 1000; // 5 min — list churns whenever a supplier is added/edited
 const STATEMENT_TTL_MS = 60 * 1000; // 1 min — figures move with every payment/draft
-
-const FLAT_LIST_PAGE_SIZE = 500;
 
 @Injectable({ providedIn: 'root' })
 export class SuppliersService {
@@ -45,9 +44,12 @@ export class SuppliersService {
     });
   }
 
+  /** Flat list for dropdowns — drains every page. */
   listAll(): Observable<Supplier[]> {
-    return this.list({ pageIndex: 1, pageSize: FLAT_LIST_PAGE_SIZE }).pipe(
-      map((res) => Array.isArray(res?.items?.data) ? res.items.data : []),
+    return fetchAllPages<Supplier>((pageIndex, pageSize) =>
+      this.list({ pageIndex, pageSize }).pipe(
+        map((res) => asPaged<Supplier>(res?.items)),
+      ),
     );
   }
 

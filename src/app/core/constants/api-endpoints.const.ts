@@ -24,16 +24,22 @@ export const API_ENDPOINTS = {
     transfers: 'dashboard/treasuries/transfers',
     operations: 'dashboard/treasuries/operations',
     monthlyProfits: 'dashboard/treasuries/monthly-profits',
+    /** Lightweight `{id,name}` list for pickers (role-scoped server-side). */
+    lookup: 'dashboard/treasuries/lookup',
   },
   warehouses: {
     base: 'dashboard/warehouses',
     byId: (id: number) => `dashboard/warehouses/${id}`,
     summary: 'dashboard/warehouses/summary',
     inventory: 'dashboard/warehouses/inventory',
+    /** Lightweight `{id,name}` list for pickers (role-scoped server-side). */
+    lookup: 'dashboard/warehouses/lookup',
   },
   products: {
     base: 'dashboard/products',
     byId: (id: number) => `dashboard/products/${id}`,
+    /** Lightweight `{id,name}` list for pickers. */
+    lookup: 'dashboard/products/lookup',
   },
   categories: {
     base: 'dashboard/categories',
@@ -90,6 +96,17 @@ export const API_ENDPOINTS = {
     byId: (id: number) => `dashboard/representatives/${id}`,
     /** Per-representative sub-treasury balances + accumulated commission. */
     subTreasuries: 'dashboard/representatives/sub-treasuries',
+    /** Lightweight `{id,name}` list for pickers (role-scoped server-side). */
+    lookup: 'dashboard/representatives/lookup',
+    /** Admin: full account statement for a given representative. */
+    statement: (id: number) => `dashboard/representatives/${id}/statement`,
+    /** Representative: own account statement (forbidden for admins). */
+    myStatement: 'dashboard/representatives/me/statement',
+    /** Admin: pay (part of) a representative's outstanding commission. */
+    commissionPayout: (id: number) =>
+      `dashboard/representatives/${id}/commission-payout`,
+    /** Admin: paginated history of commission payouts. */
+    commissionPayouts: 'dashboard/representatives/commission-payouts',
   },
   contracts: {
     base: 'dashboard/contracts',

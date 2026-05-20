@@ -17,8 +17,11 @@ import {
 } from '../../enums/voucher.enums';
 import {
   REFERENCE_TYPE_BADGE,
+  REFERENCE_TYPE_LABELS,
   RELATED_PARTY_TYPE_BADGE,
+  RELATED_PARTY_TYPE_LABELS,
   VOUCHER_TYPE_BADGE,
+  VOUCHER_TYPE_LABELS,
   VOUCHER_TYPE_OPTIONS,
 } from '../../constants/voucher-labels';
 import { VoucherTypeLabelPipe } from '../../pipes/voucher-type-label.pipe';
@@ -40,6 +43,8 @@ import { onInvalidate } from '../../../../core/utils/auto-refresh.util';
 import { HasPermissionDirective } from '../../../../shared/directives/has-permission.directive';
 import { PERMISSIONS } from '../../../../core/constants/permissions.const';
 import { VoucherFormModalComponent } from '../../components/voucher-form-modal/voucher-form-modal.component';
+import { PrintService } from '../../../../core/services/print.service';
+import { fetchAllPages } from '../../../../core/utils/api-list.util';
 
 const DEFAULT_PAGE_SIZE = 10;
 const REFETCH_DEBOUNCE_MS = 200;
@@ -70,6 +75,9 @@ export class VouchersListComponent {
   private readonly svc = inject(VouchersService);
   private readonly toast = inject(ToastService);
   private readonly cache = inject(HttpCacheService);
+  private readonly printer = inject(PrintService);
+
+  protected readonly isPrinting = signal(false);
 
   // ── data ──
   protected readonly vouchers = signal<VoucherDto[]>([]);
@@ -168,6 +176,80 @@ export class VouchersListComponent {
 
   protected refresh(): void {
     this.fetch(this.fetchTrigger(), true);
+  }
+
+  /** Exports every voucher matching the active type filter to a PDF. */
+  protected printVouchers(): void {
+    if (this.isPrinting()) return;
+    this.isPrinting.set(true);
+    const type = this.typeFilter();
+
+    fetchAllPages<VoucherDto>((pageIndex, pageSize) =>
+      this.svc.refresh({ pageIndex, pageSize, type }),
+    ).subscribe({
+      next: (rows) => {
+        this.isPrinting.set(false);
+        const total = rows.reduce((s, r) => s + (r.amount ?? 0), 0);
+        const meta: Array<{ label: string; value: string }> = [];
+        if (type) meta.push({ label: 'النوع', value: VOUCHER_TYPE_LABELS[type] });
+
+        this.printer.print<VoucherDto>({
+          title: 'سجل السندات المالية',
+          subtitle: 'سندات القبض والصرف',
+          meta,
+          orientation: 'landscape',
+          columns: [
+            { key: 'voucherNumber', header: 'رقم السند', align: 'center', bold: true },
+            {
+              key: 'type',
+              header: 'النوع',
+              align: 'center',
+              format: (v) => VOUCHER_TYPE_LABELS[v as VoucherType] ?? String(v),
+            },
+            { key: 'amount', header: 'المبلغ', align: 'end', format: 'currency', bold: true },
+            { key: 'treasuryName', header: 'الخزينة', align: 'start' },
+            {
+              key: 'relatedPartyType',
+              header: 'الطرف',
+              align: 'center',
+              format: (v) => RELATED_PARTY_TYPE_LABELS[v as RelatedPartyType] ?? String(v),
+            },
+            { key: 'relatedPartyName', header: 'اسم الطرف', align: 'start', bold: true },
+            {
+              key: 'referenceType',
+              header: 'المرجع',
+              align: 'center',
+              format: (v) => REFERENCE_TYPE_LABELS[v as ReferenceType] ?? String(v),
+            },
+            { key: 'date', header: 'التاريخ', align: 'center', format: 'shortDate' },
+            {
+              key: 'notes',
+              header: 'ملاحظات',
+              align: 'start',
+              format: (v) => this.cleanNotes(v as string | null),
+            },
+          ],
+          totals: {
+            label: 'الإجمالي',
+            labelColSpan: 2,
+            cells: [
+              `${Math.round(total).toLocaleString('ar-EG')} ج.م`,
+              '',
+              '',
+              '',
+              '',
+              '',
+              '',
+            ],
+          },
+          rows,
+        });
+      },
+      error: () => {
+        this.isPrinting.set(false);
+        this.toast.error('تعذر تجهيز ملف الطباعة');
+      },
+    });
   }
 
   // ─────────── create-voucher modal ───────────

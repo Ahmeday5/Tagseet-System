@@ -24,7 +24,7 @@ import {
 } from '../../constants/voucher-labels';
 
 import { TreasuryService } from '../../../treasury/services/treasury.service';
-import { Treasury } from '../../../treasury/models/treasury.model';
+import { LookupItem } from '../../../../core/models/lookup.model';
 import { CustomersService } from '../../../customers/services/customers.service';
 import { SuppliersService } from '../../../suppliers/services/suppliers.service';
 
@@ -73,7 +73,7 @@ export class VoucherFormModalComponent {
   protected readonly submitting = signal(false);
   protected readonly serverError = signal<string | null>(null);
 
-  protected readonly treasuries = signal<Treasury[]>([]);
+  protected readonly treasuries = signal<LookupItem[]>([]);
   protected readonly clients = signal<PartyOption[]>([]);
   protected readonly suppliers = signal<PartyOption[]>([]);
   protected readonly partyLoading = signal(false);
@@ -82,9 +82,8 @@ export class VoucherFormModalComponent {
     RelatedPartyType.Customer,
   );
 
-  protected readonly activeTreasuries = computed(() =>
-    this.treasuries().filter((t) => t.isActive),
-  );
+  /** Lookup is already active-only + role-scoped server-side. */
+  protected readonly activeTreasuries = computed(() => this.treasuries());
 
   protected readonly needsParty = computed(
     () => this.partyType() !== RelatedPartyType.Other,
@@ -188,7 +187,7 @@ export class VoucherFormModalComponent {
   // ─────────────── internals ───────────────
 
   private loadTreasuries(): void {
-    this.treasuryService.list().subscribe({
+    this.treasuryService.lookup().subscribe({
       next: (list) => this.treasuries.set(list ?? []),
       error: () => this.treasuries.set([]),
     });

@@ -43,9 +43,7 @@
       >
         <option [ngValue]="0" disabled>— اختر الخزنة —</option>
         @for (t of activeTreasuries(); track t.id) {
-          <option [ngValue]="t.id">
-            {{ t.name }} — {{ t.currentBalance | currencyAr: true }}
-          </option>
+          <option [ngValue]="t.id">{{ t.name }}</option>
         }
       </select>
       <app-form-error [control]="form.controls.treasuryId" label="الخزنة" />

@@ -94,6 +94,19 @@
     }
     <span>تحديث</span>
   </button>
+
+  <button
+    type="button"
+    class="btn btn-sm btn-bl d-inline-flex align-items-center gap-1"
+    [disabled]="loading() || isPrinting() || count() === 0"
+    (click)="printSuppliers()"
+    title="طباعة قائمة الموردين"
+  >
+    @if (isPrinting()) {
+      <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+    }
+    <span>🖨 طباعة PDF</span>
+  </button>
 </div>
 
 <!-- ── TABLE ── -->

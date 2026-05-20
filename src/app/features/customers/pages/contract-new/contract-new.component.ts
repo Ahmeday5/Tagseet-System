@@ -8,18 +8,18 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
-import {
-  FormBuilder,
-  ReactiveFormsModule,
-  Validators,
-} from '@angular/forms';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { forkJoin, finalize } from 'rxjs';
+import { forkJoin, finalize, of, catchError } from 'rxjs';
 
 import { CurrencyArPipe } from '../../../../shared/pipes/currency-ar.pipe';
 import { ToastService } from '../../../../core/services/toast.service';
 import { FormErrorComponent } from '../../../../shared/components/form-error/form-error.component';
 import { LoaderComponent } from '../../../../shared/components/loader/loader.component';
+import {
+  SearchableSelectComponent,
+  SearchableSelectOption,
+} from '../../../../shared/components/searchable-select/searchable-select.component';
 import { ApiError } from '../../../../core/models/api-response.model';
 import { apiErrorToMessage } from '../../../../core/utils/api-error.util';
 
@@ -36,10 +36,7 @@ import {
 } from '../../../contracts/models/contract.model';
 
 import { DashboardClient } from '../../models/dashboard-client.model';
-import { Product } from '../../../products/models/product.model';
-import { Warehouse } from '../../../warehouse/models/warehouse.model';
-import { Treasury } from '../../../treasury/models/treasury.model';
-import { Representative } from '../../../reps/models/rep.model';
+import { LookupItem } from '../../../../core/models/lookup.model';
 
 @Component({
   selector: 'app-contract-new',
@@ -51,6 +48,7 @@ import { Representative } from '../../../reps/models/rep.model';
     CurrencyArPipe,
     FormErrorComponent,
     LoaderComponent,
+    SearchableSelectComponent,
   ],
   templateUrl: './contract-new.component.html',
   styleUrl: './contract-new.component.scss',
@@ -75,10 +73,37 @@ export class ContractNewComponent implements OnInit {
 
   // ───────────────── lookup data ─────────────────
   protected readonly clients = signal<DashboardClient[]>([]);
-  protected readonly products = signal<Product[]>([]);
-  protected readonly warehouses = signal<Warehouse[]>([]);
-  protected readonly treasuries = signal<Treasury[]>([]);
-  protected readonly representatives = signal<Representative[]>([]);
+  protected readonly products = signal<LookupItem[]>([]);
+  protected readonly warehouses = signal<LookupItem[]>([]);
+  protected readonly treasuries = signal<LookupItem[]>([]);
+  protected readonly representatives = signal<LookupItem[]>([]);
+
+  /** Client list shaped for the searchable select (name + phone search). */
+  protected readonly clientOptions = computed<SearchableSelectOption[]>(() =>
+    this.clients().map((c) => ({
+      value: c.id,
+      label: c.fullName,
+      hint: c.phoneNumber,
+    })),
+  );
+
+  /** `{id,name}` lookups → searchable-select options (shared shape). */
+  protected readonly productOptions = computed<SearchableSelectOption[]>(() =>
+    this.toOptions(this.products()),
+  );
+  protected readonly warehouseOptions = computed<SearchableSelectOption[]>(() =>
+    this.toOptions(this.warehouses()),
+  );
+  protected readonly treasuryOptions = computed<SearchableSelectOption[]>(() =>
+    this.toOptions(this.treasuries()),
+  );
+  protected readonly representativeOptions = computed<SearchableSelectOption[]>(
+    () => this.toOptions(this.representatives()),
+  );
+
+  private toOptions(items: LookupItem[]): SearchableSelectOption[] {
+    return items.map((i) => ({ value: i.id, label: i.name }));
+  }
 
   // ───────────────── payment frequencies ─────────────────
   protected readonly frequencies: {
@@ -105,27 +130,24 @@ export class ContractNewComponent implements OnInit {
 
     downPayment: [0, [Validators.required, Validators.min(0)]],
 
-    profitRate: [20, [Validators.required, Validators.min(0), Validators.max(100)]],
+    profitRate: [
+      20,
+      [Validators.required, Validators.min(0), Validators.max(100)],
+    ],
 
     installmentsCount: [
       12,
       [Validators.required, Validators.min(1), Validators.max(120)],
     ],
 
-    installmentAmount: [
-      { value: 0, disabled: true },
-      [Validators.required],
-    ],
+    installmentAmount: [{ value: 0, disabled: true }, [Validators.required]],
 
     paymentFrequency: [
       'Monthly' as ContractPaymentFrequency,
       [Validators.required],
     ],
 
-    firstInstallmentDate: [
-      this.nextMonthStr(),
-      [Validators.required],
-    ],
+    firstInstallmentDate: [this.nextMonthStr(), [Validators.required]],
 
     treasuryId: [null as number | null, [Validators.required]],
 
@@ -143,7 +165,7 @@ export class ContractNewComponent implements OnInit {
   protected readonly summary = computed(() => {
     const v = this.values();
 
-    const cashPrice = Number(v.cashPrice ?? 0);
+    const cashPrice = Number(v.cashPrice ?? 0) * Number(v.quantity ?? 1);
     const downPayment = Number(v.downPayment ?? 0);
     const profitRate = Number(v.profitRate ?? 0);
     const count = Math.max(1, Number(v.installmentsCount ?? 1));
@@ -174,33 +196,38 @@ export class ContractNewComponent implements OnInit {
     this.setupFormEffects();
   }
 
-  // ───────────────── lookups ─────────────────
   private loadLookups(): void {
     this.loading.set(true);
 
     forkJoin({
-      clients: this.customersService.listDashboard({
-        pageSize: 1000,
-      }),
+      clients: this.customersService
+        .listAllClients()
+        .pipe(catchError(() => of([] as DashboardClient[]))),
 
-      products: this.productsService.listAll(),
+      products: this.productsService
+        .lookup()
+        .pipe(catchError(() => of([] as LookupItem[]))),
 
-      warehouses: this.warehouseService.list(),
+      warehouses: this.warehouseService
+        .lookup()
+        .pipe(catchError(() => of([] as LookupItem[]))),
 
-      treasuries: this.treasuryService.list(),
+      treasuries: this.treasuryService
+        .lookup()
+        .pipe(catchError(() => of([] as LookupItem[]))),
 
-      reps: this.repsService.list({
-        pageSize: 1000,
-      }),
+      reps: this.repsService
+        .lookup()
+        .pipe(catchError(() => of([] as LookupItem[]))),
     })
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
         next: (res) => {
-          this.clients.set(res.clients.clients.data);
+          this.clients.set(res.clients);
           this.products.set(res.products);
           this.warehouses.set(res.warehouses);
           this.treasuries.set(res.treasuries);
-          this.representatives.set(res.reps.data);
+          this.representatives.set(res.reps);
         },
 
         error: () => {
@@ -215,72 +242,62 @@ export class ContractNewComponent implements OnInit {
       this.calculateInstallment();
     });
 
-    this.form
-      .get('productId')
-      ?.valueChanges.subscribe((id) => {
-        const product = this.products().find(
-          (p) => p.id === Number(id),
-        );
+    // The product picker now carries only `{id,name}` (lookup endpoint), so
+    // the selling price is pulled on demand from the cached product detail.
+    this.form.get('productId')?.valueChanges.subscribe((id) => {
+      const productId = Number(id);
+      if (!productId) return;
 
-        if (!product) return;
-
-        this.form.patchValue(
-          {
-            cashPrice: product.sellingPrice,
-          },
-          {
-            emitEvent: true,
-          },
-        );
+      this.productsService.getById(productId).subscribe({
+        next: (product) =>
+          this.form.patchValue(
+            { cashPrice: product.sellingPrice },
+            { emitEvent: true },
+          ),
+        error: () => {
+          /* leave the price for the operator to enter manually */
+        },
       });
+    });
   }
 
   private calculateInstallment(): void {
-    const cashPrice =
-      Number(this.form.get('cashPrice')?.value) || 0;
+    const cashPrice = Number(this.form.get('cashPrice')?.value) || 0;
 
-    const downPayment =
-      Number(this.form.get('downPayment')?.value) || 0;
+    const downPayment = Number(this.form.get('downPayment')?.value) || 0;
 
-    const profitRate =
-      Number(this.form.get('profitRate')?.value) || 0;
+    const profitRate = Number(this.form.get('profitRate')?.value) || 0;
 
-    const count =
-      Number(this.form.get('installmentsCount')?.value) || 1;
+    const count = Number(this.form.get('installmentsCount')?.value) || 1;
 
     const remaining = cashPrice - downPayment;
 
     if (remaining <= 0) {
-      this.form
-        .get('installmentAmount')
-        ?.setValue(0, {
-          emitEvent: false,
-        });
+      this.form.get('installmentAmount')?.setValue(0, {
+        emitEvent: false,
+      });
 
       return;
     }
 
-    const totalWithProfit =
-      remaining * (1 + profitRate / 100);
+    const totalWithProfit = remaining * (1 + profitRate / 100);
 
-    const installmentAmount =
-      totalWithProfit / count;
+    const installmentAmount = totalWithProfit / count;
 
     this.form
       .get('installmentAmount')
-      ?.setValue(
-        Number(installmentAmount.toFixed(2)),
-        {
-          emitEvent: false,
-        },
-      );
+      ?.setValue(Number(installmentAmount.toFixed(2)), {
+        emitEvent: false,
+      });
   }
 
   // ───────────────── submit ─────────────────
   protected save(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
-      this.toast.error(this.firstInvalidFieldMessage() || 'يرجى تعبئة الحقول المطلوبة');
+      this.toast.error(
+        this.firstInvalidFieldMessage() || 'يرجى تعبئة الحقول المطلوبة',
+      );
       return;
     }
 
@@ -297,9 +314,7 @@ export class ContractNewComponent implements OnInit {
 
       quantity: Number(raw.quantity),
 
-      purchaseDate: new Date(
-        raw.purchaseDate,
-      ).toISOString(),
+      purchaseDate: new Date(raw.purchaseDate).toISOString(),
 
       cashPrice: Number(raw.cashPrice),
 
@@ -307,20 +322,13 @@ export class ContractNewComponent implements OnInit {
 
       profitRate: Number(raw.profitRate),
 
-      installmentsCount: Number(
-        raw.installmentsCount,
-      ),
+      installmentsCount: Number(raw.installmentsCount),
 
-      installmentAmount: Number(
-        raw.installmentAmount,
-      ),
+      installmentAmount: Number(raw.installmentAmount),
 
-      paymentFrequency:
-        raw.paymentFrequency as ContractPaymentFrequency,
+      paymentFrequency: raw.paymentFrequency as ContractPaymentFrequency,
 
-      firstInstallmentDate: new Date(
-        raw.firstInstallmentDate,
-      ).toISOString(),
+      firstInstallmentDate: new Date(raw.firstInstallmentDate).toISOString(),
 
       treasuryId: Number(raw.treasuryId),
 
@@ -340,13 +348,9 @@ export class ContractNewComponent implements OnInit {
       )
       .subscribe({
         next: () => {
-          this.toast.success(
-            'تم إنشاء العقد بنجاح',
-          );
+          this.toast.success('تم إنشاء العقد بنجاح');
 
-          this.router.navigate([
-            '/customers/customer-list',
-          ]);
+          this.router.navigate(['/customers/customer-list']);
         },
 
         error: (err: ApiError) => {
@@ -400,15 +404,11 @@ export class ContractNewComponent implements OnInit {
   protected isInvalid(field: string): boolean {
     const control = this.form.get(field);
 
-    return !!control &&
-      control.invalid &&
-      control.touched;
+    return !!control && control.invalid && control.touched;
   }
 
   private todayStr(): string {
-    return new Date()
-      .toISOString()
-      .split('T')[0];
+    return new Date().toISOString().split('T')[0];
   }
 
   private nextMonthStr(): string {
@@ -416,8 +416,6 @@ export class ContractNewComponent implements OnInit {
 
     date.setMonth(date.getMonth() + 1);
 
-    return date
-      .toISOString()
-      .split('T')[0];
+    return date.toISOString().split('T')[0];
   }
 }
