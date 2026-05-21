@@ -72,6 +72,7 @@ export class VouchersService {
       type: query.type || undefined,
       referenceType: query.referenceType || undefined,
       relatedPartyType: query.relatedPartyType || undefined,
+      search: query.search?.trim() || undefined,
     };
   }
 }

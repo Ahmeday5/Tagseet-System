@@ -228,7 +228,7 @@ export class CatalogHomeComponent implements OnInit {
 
     this.rejectingId.set(order.id);
     this.svc.rejectClientOrder(order.id).subscribe({
-      next: (res) => {
+      next: () => {
         this.rejectingId.set(null);
         this.clientOrders.update((list) =>
           list.map((o) =>
@@ -236,7 +236,7 @@ export class CatalogHomeComponent implements OnInit {
           ),
         );
         this.decrementPendingIf(order);
-        this.toast.success(res?.message || `تم رفض طلب ${order.clientName}`);
+        this.toast.success(`تم رفض طلب ${order.clientName}`);
       },
       error: (err: ApiError) => {
         this.rejectingId.set(null);

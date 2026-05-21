@@ -1,4 +1,8 @@
 import { ApiError } from '../models/api-response.model';
+import {
+  containsArabic,
+  translateApiMessage,
+} from '../constants/api-messages.const';
 
 /**
  * Turns an `ApiError` (already normalized by `errorInterceptor`) into a
@@ -22,9 +26,18 @@ export function apiErrorToMessage(
 ): string {
   if (!err) return fallback;
 
+  // Field errors are the most actionable, but the backend writes them in
+  // English — translate, keep if already Arabic, else fall back.
   const fieldMessage = formatFieldErrors(err.fieldErrors);
-  if (fieldMessage) return fieldMessage;
+  if (fieldMessage) {
+    return (
+      translateApiMessage(fieldMessage) ??
+      (containsArabic(fieldMessage) ? fieldMessage : null) ??
+      fallback
+    );
+  }
 
+  // `err.message` is already Arabic-resolved by the error interceptor.
   return err.message?.trim() || fallback;
 }
 

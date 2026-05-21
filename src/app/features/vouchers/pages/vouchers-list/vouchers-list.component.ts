@@ -85,6 +85,7 @@ export class VouchersListComponent {
 
   // ── filters ──
   protected readonly typeFilter = signal<VoucherType | ''>('');
+  protected readonly searchTerm = signal('');
   protected readonly pageIndex = signal(1);
   protected readonly pageSize = signal(DEFAULT_PAGE_SIZE);
 
@@ -103,7 +104,9 @@ export class VouchersListComponent {
   protected readonly detailVoucher = signal<VoucherDto | null>(null);
 
   // ── derived ──
-  protected readonly hasFilters = computed(() => !!this.typeFilter());
+  protected readonly hasFilters = computed(
+    () => !!this.typeFilter() || this.searchTerm().trim().length > 0,
+  );
 
   protected readonly totalAmount = computed(() =>
     this.vouchers().reduce((sum, v) => sum + (v.amount ?? 0), 0),
@@ -125,6 +128,7 @@ export class VouchersListComponent {
     pageIndex: this.pageIndex(),
     pageSize: this.pageSize(),
     type: this.typeFilter(),
+    search: this.searchTerm().trim(),
   }));
 
   private debounceTimer: ReturnType<typeof setTimeout> | null = null;
@@ -183,15 +187,17 @@ export class VouchersListComponent {
     if (this.isPrinting()) return;
     this.isPrinting.set(true);
     const type = this.typeFilter();
+    const search = this.searchTerm().trim();
 
     fetchAllPages<VoucherDto>((pageIndex, pageSize) =>
-      this.svc.refresh({ pageIndex, pageSize, type }),
+      this.svc.refresh({ pageIndex, pageSize, type, search }),
     ).subscribe({
       next: (rows) => {
         this.isPrinting.set(false);
         const total = rows.reduce((s, r) => s + (r.amount ?? 0), 0);
         const meta: Array<{ label: string; value: string }> = [];
         if (type) meta.push({ label: 'النوع', value: VOUCHER_TYPE_LABELS[type] });
+        if (search) meta.push({ label: 'بحث', value: search });
 
         this.printer.print<VoucherDto>({
           title: 'سجل السندات المالية',
@@ -277,8 +283,20 @@ export class VouchersListComponent {
     this.resetPage();
   }
 
+  protected onSearch(value: string): void {
+    this.searchTerm.set(value);
+    this.resetPage();
+  }
+
+  protected clearSearch(): void {
+    if (!this.searchTerm()) return;
+    this.searchTerm.set('');
+    this.resetPage();
+  }
+
   protected clearFilters(): void {
     this.typeFilter.set('');
+    this.searchTerm.set('');
     this.resetPage();
   }
 

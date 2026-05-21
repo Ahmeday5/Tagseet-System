@@ -404,10 +404,10 @@ export class StatementComponent {
 
     this.paySubmitting.set(true);
     this.installmentsService.pay(payload).subscribe({
-      next: (res) => {
+      next: () => {
         this.paySubmitting.set(false);
         this.payOpen.set(false);
-        this.toast.success(res?.message || 'تم تسجيل الدفعة بنجاح');
+        this.toast.success('تم تسجيل الدفعة بنجاح');
         // The mutation already invalidates cache keys; the effect-driven
         // refresh + the onInvalidate hooks take care of the rest.
       },

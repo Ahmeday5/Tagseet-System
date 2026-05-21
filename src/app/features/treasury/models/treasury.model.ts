@@ -137,14 +137,3 @@ export interface MonthlyProfit {
   marginPercent: number;
   isCurrentMonth: boolean;
 }
-
-export interface Shareholder {
-  id: string;
-  name: string;
-  phone: string;
-  address: string;
-  creditAmount: number; // له (دائن)
-  debitAmount: number; // عليه (مدين)
-  ownershipPct: number; // نسبة الملكية %
-  note: string;
-}

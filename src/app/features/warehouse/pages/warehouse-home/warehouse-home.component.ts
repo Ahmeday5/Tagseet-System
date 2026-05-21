@@ -285,9 +285,9 @@ export class WarehouseHomeComponent implements OnInit {
 
     this.deletingId.set(warehouse.id);
     this.svc.delete(warehouse.id).subscribe({
-      next: (res) => {
+      next: () => {
         this.deletingId.set(null);
-        this.toast.success(res?.message || 'تم حذف المخزن');
+        this.toast.success('تم حذف المخزن بنجاح');
         this.refreshSummary();
         // If the deleted warehouse was selected for inventory, reset.
         if (this.selectedWarehouseId() === warehouse.id) {

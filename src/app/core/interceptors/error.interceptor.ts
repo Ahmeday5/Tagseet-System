@@ -5,6 +5,10 @@ import { ToastService } from '../services/toast.service';
 import { SKIP_ERROR_TOAST } from '../http/http-context.tokens';
 import { ApiError, ApiFieldErrors } from '../models/api-response.model';
 import { API_ENDPOINTS } from '../constants/api-endpoints.const';
+import {
+  containsArabic,
+  translateApiMessage,
+} from '../constants/api-messages.const';
 import { environment } from '../../../environments/environment';
 
 /**
@@ -39,12 +43,9 @@ function normalizeError(err: HttpErrorResponse): ApiError {
   const status = err.status ?? 0;
   const body = err.error ?? {};
 
-  const message =
-    body?.message ||
-    body?.error ||
-    body?.detail ||
-    body?.title ||
-    statusMessage(status, err);
+  const rawMessage: string =
+    body?.message || body?.error || body?.detail || body?.title || '';
+  const message = resolveArabicMessage(rawMessage, status, err);
 
   const fieldErrors: ApiFieldErrors | undefined =
     body?.errors && typeof body.errors === 'object' ? body.errors : undefined;
@@ -56,6 +57,25 @@ function normalizeError(err: HttpErrorResponse): ApiError {
     fieldErrors,
     raw: body,
   };
+}
+
+/**
+ * Resolves the user-facing message to Arabic. Known backend strings are
+ * translated; unknown Arabic text is kept as-is; unknown English text degrades
+ * to a clean status-based Arabic message so raw English never reaches the user.
+ */
+function resolveArabicMessage(
+  raw: string,
+  status: number,
+  err: HttpErrorResponse,
+): string {
+  const trimmed = raw.trim();
+  if (!trimmed) return statusMessage(status, err);
+
+  const translated = translateApiMessage(trimmed);
+  if (translated) return translated;
+
+  return containsArabic(trimmed) ? trimmed : statusMessage(status, err);
 }
 
 function statusMessage(status: number, err: HttpErrorResponse): string {

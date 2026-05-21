@@ -103,6 +103,59 @@
   }
 }
 
+/* ── SEARCH ── */
+.vc-search {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex: 1;
+  max-width: 300px;
+  min-width: 180px;
+
+  svg {
+    position: absolute;
+    inset-inline-start: 10px;
+    color: var(--txt3);
+    pointer-events: none;
+  }
+
+  input {
+    width: 100%;
+    font-family: inherit;
+    font-size: 11px;
+    padding: 7px 32px 7px 32px;
+    border-radius: var(--r);
+    border: 1px solid var(--brd2);
+    background: var(--bg2);
+    color: var(--txt);
+
+    &:focus {
+      outline: none;
+      border-color: var(--bl);
+      box-shadow: 0 0 0 3px rgba(27, 95, 168, 0.12);
+    }
+  }
+}
+
+.vc-search-clear {
+  position: absolute;
+  inset-inline-end: 6px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: none;
+  background: var(--bg3);
+  color: var(--txt2);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--brd);
+    color: var(--txt);
+  }
+}
+
 /* ── TABLE CARD ── */
 .vc-card { padding-bottom: 8px; }
 

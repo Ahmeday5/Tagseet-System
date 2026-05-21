@@ -115,10 +115,10 @@ export class UsersListComponent implements OnInit {
 
     this.deletingId.set(user.id);
     this.service.delete(user.id).subscribe({
-      next: (res) => {
+      next: () => {
         this.users.update((list) => list.filter((u) => u.id !== user.id));
         this.deletingId.set(null);
-        this.toast.success(res?.message || 'تم حذف المستخدم');
+        this.toast.success('تم حذف المستخدم بنجاح');
       },
       error: (_err: ApiError) => this.deletingId.set(null),
     });

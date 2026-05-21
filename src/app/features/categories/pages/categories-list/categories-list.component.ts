@@ -188,9 +188,9 @@ export class CategoriesListComponent implements OnInit {
 
     this.deletingId.set(category.id);
     this.service.delete(category.id).subscribe({
-      next: (res) => {
+      next: () => {
         this.deletingId.set(null);
-        this.toast.success(res?.message || 'تم حذف الفئة');
+        this.toast.success('تم حذف الفئة بنجاح');
         if (this.categories().length === 1 && this.pageIndex() > 1) {
           this.pageIndex.update((p) => p - 1);
         } else {

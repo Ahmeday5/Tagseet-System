@@ -132,6 +132,13 @@ export const NAV_SECTIONS: NavSection[] = [
         icon: 'receipt',
         requiredAnyPermission: [PERMISSIONS.treasuryView],
       },
+      {
+        id: 'shareholders',
+        label: 'المساهمون',
+        route: '/treasury/shareholders',
+        icon: 'hand-coin',
+        requiredAnyPermission: [PERMISSIONS.treasuryView],
+      },
     ],
   },
   {

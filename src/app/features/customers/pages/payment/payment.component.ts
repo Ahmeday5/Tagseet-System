@@ -245,9 +245,9 @@ export class PaymentComponent {
 
     this.submitting.set(true);
     this.installmentsService.pay(payload).subscribe({
-      next: (res) => {
+      next: () => {
         this.submitting.set(false);
-        this.toast.success(res?.message || 'تم تسجيل الدفعة بنجاح');
+        this.toast.success('تم تسجيل الدفعة بنجاح');
         // Refresh the details panel inline so the pay-info card reflects
         // the new totals; the rest of the app updates via cache invalidation.
         this.fetchContractDetails(contract.id);

@@ -27,6 +27,18 @@ export const API_ENDPOINTS = {
     /** Lightweight `{id,name}` list for pickers (role-scoped server-side). */
     lookup: 'dashboard/treasuries/lookup',
   },
+  shareholders: {
+    base: 'dashboard/shareholders',
+    byId: (id: number) => `dashboard/shareholders/${id}`,
+    /** POST: execute a profit distribution across all shareholders. */
+    profitSettlement: 'dashboard/shareholders/profit-settlement',
+    /** GET: preview the pending distribution + the profits treasury to draw from. */
+    profitSettlementPreview: 'dashboard/shareholders/profit-settlement/preview',
+    /** GET (paged): history of executed profit settlements. */
+    profitSettlements: 'dashboard/shareholders/profit-settlements',
+    profitSettlementById: (id: number) =>
+      `dashboard/shareholders/profit-settlements/${id}`,
+  },
   warehouses: {
     base: 'dashboard/warehouses',
     byId: (id: number) => `dashboard/warehouses/${id}`,

@@ -47,4 +47,6 @@ export interface VouchersQuery {
   type?: VoucherType | '';
   referenceType?: ReferenceType | '';
   relatedPartyType?: RelatedPartyType | '';
+  /** Free-text search over the related-party name. */
+  search?: string;
 }

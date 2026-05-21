@@ -248,9 +248,9 @@ export class ProductsListComponent implements OnInit {
 
     this.deletingId.set(product.id);
     this.service.delete(product.id).subscribe({
-      next: (res) => {
+      next: () => {
         this.deletingId.set(null);
-        this.toast.success(res?.message || 'تم حذف المنتج');
+        this.toast.success('تم حذف المنتج بنجاح');
         if (this.products().length === 1 && this.pageIndex() > 1) {
           this.pageIndex.update((p) => p - 1);
         } else {

@@ -313,9 +313,9 @@ export class SuppliersListComponent implements OnInit {
 
     this.deletingId.set(supplier.id);
     this.service.delete(supplier.id).subscribe({
-      next: (res) => {
+      next: () => {
         this.deletingId.set(null);
-        this.toast.success(res?.message || 'تم حذف المورد');
+        this.toast.success('تم حذف المورد بنجاح');
         // If we just emptied the page (and it isn't the first), step back.
         if (this.suppliers().length === 1 && this.pageIndex() > 1) {
           this.pageIndex.update((p) => p - 1);
