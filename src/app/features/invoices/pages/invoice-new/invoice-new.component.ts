@@ -2,11 +2,12 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  DestroyRef,
   inject,
   OnInit,
   signal,
 } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import {
   FormArray,
   FormBuilder,
@@ -17,6 +18,10 @@ import {
 } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CurrencyArPipe } from '../../../../shared/pipes/currency-ar.pipe';
+import {
+  SearchableSelectComponent,
+  SearchableSelectOption,
+} from '../../../../shared/components/searchable-select/searchable-select.component';
 import { ToastService } from '../../../../core/services/toast.service';
 import { ApiError } from '../../../../core/models/api-response.model';
 import { InvoicesService } from '../../services/invoices.service';
@@ -27,10 +32,11 @@ import {
 } from '../../models/invoice.model';
 import { WarehouseService } from '../../../warehouse/services/warehouse.service';
 import { ProductsService } from '../../../products/services/products.service';
-import { Supplier } from '../../../suppliers/models/supplier.model';
 import { SuppliersService } from '../../../suppliers/services/suppliers.service';
 import { TreasuryService } from '../../../treasury/services/treasury.service';
 import { LookupItem } from '../../../../core/models/lookup.model';
+import { AuthService } from '../../../../core/services/auth.service';
+import { PERMISSIONS } from '../../../../core/constants/permissions.const';
 
 interface LineFormShape {
   productId: FormControl<number>;
@@ -50,7 +56,7 @@ const FIXED_TAX_RATE = 0;
   selector: 'app-invoice-new',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, CurrencyArPipe],
+  imports: [ReactiveFormsModule, CurrencyArPipe, SearchableSelectComponent],
   templateUrl: './invoice-new.component.html',
   styleUrl: './invoice-new.component.scss',
 })
@@ -64,6 +70,18 @@ export class InvoiceNewComponent implements OnInit {
   private readonly toast            = inject(ToastService);
   private readonly router           = inject(Router);
   private readonly route            = inject(ActivatedRoute);
+  private readonly destroyRef       = inject(DestroyRef);
+  private readonly auth             = inject(AuthService);
+
+  /**
+   * The product *detail* endpoint (`/dashboard/products/{id}`) is gated by
+   * `Suppliers.View`. A Representative can still pick products from the lookup
+   * (`/products/lookup`, id + name only), so calling getById to prefill the
+   * price would 403 for them — we gate the prefill on this flag instead.
+   */
+  private readonly canReadProductDetails = computed(() =>
+    this.auth.hasPermission(PERMISSIONS.suppliersView),
+  );
 
   /** Set when the route carries an `:id` — switches the form to edit mode. */
   protected readonly editId = signal<number | null>(null);
@@ -72,7 +90,7 @@ export class InvoiceNewComponent implements OnInit {
   protected readonly loadingInvoice = signal(false);
 
   // ── data ──
-  protected readonly suppliers  = signal<Supplier[]>([]);
+  protected readonly suppliers  = signal<LookupItem[]>([]);
   protected readonly warehouses = signal<LookupItem[]>([]);
   protected readonly products   = signal<LookupItem[]>([]);
   protected readonly treasuries = signal<LookupItem[]>([]);
@@ -82,6 +100,20 @@ export class InvoiceNewComponent implements OnInit {
   protected readonly activeWarehouses = computed(() => this.warehouses());
   protected readonly activeProducts = computed(() => this.products());
   protected readonly activeTreasuries = computed(() => this.treasuries());
+
+  /** Picker options — searched in-memory by the searchable selects. */
+  protected readonly supplierOptions = computed<SearchableSelectOption[]>(() =>
+    this.suppliers().map((s) => ({ value: s.id, label: s.name })),
+  );
+  protected readonly warehouseOptions = computed<SearchableSelectOption[]>(() =>
+    this.activeWarehouses().map((w) => ({ value: w.id, label: w.name })),
+  );
+  protected readonly treasuryOptions = computed<SearchableSelectOption[]>(() =>
+    this.activeTreasuries().map((t) => ({ value: t.id, label: t.name })),
+  );
+  protected readonly productOptions = computed<SearchableSelectOption[]>(() =>
+    this.activeProducts().map((p) => ({ value: p.id, label: p.name })),
+  );
 
   // ── submit state ──
   protected readonly savingDraft = signal(false);
@@ -181,8 +213,8 @@ export class InvoiceNewComponent implements OnInit {
     }
 
     this.loadingRefs.set(true);
-    this.suppliersService.listAll().subscribe({
-      next: (s) => this.suppliers.set(s),
+    this.suppliersService.lookup().subscribe({
+      next: (s) => this.suppliers.set(s ?? []),
       error: () => this.suppliers.set([]),
     });
     this.warehouseService.lookup().subscribe({
@@ -245,26 +277,7 @@ export class InvoiceNewComponent implements OnInit {
 
         this.items.clear();
         for (const line of inv.items ?? []) {
-          this.items.push(
-            this.fb.group<LineFormShape>({
-              productId: this.fb.nonNullable.control(line.productId, [
-                Validators.required,
-                Validators.min(1),
-              ]),
-              unitPrice: this.fb.nonNullable.control(line.unitPrice, [
-                Validators.required,
-                Validators.min(0),
-              ]),
-              quantity: this.fb.nonNullable.control(line.quantity, [
-                Validators.required,
-                Validators.min(1),
-              ]),
-              discountPercent: this.fb.nonNullable.control(
-                line.discountPercent,
-                [Validators.required, Validators.min(0), Validators.max(100)],
-              ),
-            }),
-          );
+          this.registerLine(this.createLineGroup(line));
         }
         if (this.items.length === 0) this.addLine();
 
@@ -282,14 +295,36 @@ export class InvoiceNewComponent implements OnInit {
   // ─────────── line management ───────────
 
   protected addLine(): void {
-    this.items.push(
-      this.fb.group<LineFormShape>({
-        productId:       this.fb.nonNullable.control(0, [Validators.required, Validators.min(1)]),
-        unitPrice:       this.fb.nonNullable.control(0, [Validators.required, Validators.min(0)]),
-        quantity:        this.fb.nonNullable.control(1, [Validators.required, Validators.min(1)]),
-        discountPercent: this.fb.nonNullable.control(0, [Validators.required, Validators.min(0), Validators.max(100)]),
-      }),
-    );
+    this.registerLine(this.createLineGroup());
+  }
+
+  /** Builds a line group, optionally prefilled from an existing invoice line. */
+  private createLineGroup(line?: {
+    productId: number;
+    unitPrice: number;
+    quantity: number;
+    discountPercent: number;
+  }): FormGroup<LineFormShape> {
+    return this.fb.group<LineFormShape>({
+      productId:       this.fb.nonNullable.control(line?.productId ?? 0, [Validators.required, Validators.min(1)]),
+      unitPrice:       this.fb.nonNullable.control(line?.unitPrice ?? 0, [Validators.required, Validators.min(0)]),
+      quantity:        this.fb.nonNullable.control(line?.quantity ?? 1, [Validators.required, Validators.min(1)]),
+      discountPercent: this.fb.nonNullable.control(line?.discountPercent ?? 0, [Validators.required, Validators.min(0), Validators.max(100)]),
+    });
+  }
+
+  /**
+   * Appends a line and wires its product picker. The searchable-select is a
+   * ControlValueAccessor, so it emits no DOM `change` event — we react to the
+   * control's `valueChanges` instead to keep the prefill + summary refresh.
+   * `valueChanges` doesn't fire for the initial value, so prefilled edit lines
+   * never get their unit price clobbered.
+   */
+  private registerLine(group: FormGroup<LineFormShape>): void {
+    group.controls.productId.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.onProductChange(group));
+    this.items.push(group);
     this.linesTick.update((v) => v + 1);
   }
 
@@ -307,17 +342,20 @@ export class InvoiceNewComponent implements OnInit {
    * `Number(...)` would land on `NaN` and break both the model and the
    * select's display text.
    *
-   * Side effect: when the user picks a product and the unit price is
-   * still at the default 0, default it to the product's `purchasePrice`
-   * so they don't have to retype it.
+   * Side effect: when the user picks a product, update the unit price to
+   * the product's `purchasePrice` so they don't have to retype it every
+   * time they select a different product. This ensures that changing from
+   * one product to another will update the price.
    */
-  protected onProductChange(idx: number): void {
-    const ctrl = this.items.at(idx);
+  private onProductChange(ctrl: FormGroup<LineFormShape>): void {
     const productId = Number(ctrl.controls.productId.value);
     this.linesTick.update((v) => v + 1);
-    if (!productId || (Number(ctrl.controls.unitPrice.value) || 0) !== 0) {
+    if (!productId) {
       return;
     }
+    // Skip the price prefill for roles without products access (e.g. reps) —
+    // the detail endpoint would 403; they enter the unit price manually.
+    if (!this.canReadProductDetails()) return;
     // The picker carries only `{id,name}` (lookup) — pull the purchase
     // price from the cached product detail to pre-fill the line.
     this.productsService.getById(productId).subscribe({

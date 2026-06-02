@@ -21,10 +21,10 @@ import {
   PurchaseInvoiceStatusView,
   PurchaseInvoiceSummary,
 } from '../../models/invoice.model';
-import { Supplier } from '../../../suppliers/models/supplier.model';
 import { SuppliersService } from '../../../suppliers/services/suppliers.service';
+import { LookupItem } from '../../../../core/models/lookup.model';
 import { ConfirmInvoiceModalComponent } from '../../components/confirm-invoice-modal/confirm-invoice-modal.component';
-import { HasPermissionDirective } from '../../../../shared/directives/has-permission.directive';
+import { AuthService } from '../../../../core/services/auth.service';
 import { PERMISSIONS } from '../../../../core/constants/permissions.const';
 import { PrintService } from '../../../../core/services/print.service';
 
@@ -45,7 +45,7 @@ const STATUS_OPTIONS: ReadonlyArray<{
   selector: 'app-invoices-list',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CurrencyArPipe, ConfirmInvoiceModalComponent, HasPermissionDirective],
+  imports: [CurrencyArPipe, ConfirmInvoiceModalComponent],
   templateUrl: './invoices-list.component.html',
   styleUrl: './invoices-list.component.scss',
 })
@@ -55,14 +55,39 @@ export class InvoicesListComponent implements OnInit {
   private readonly router           = inject(Router);
   private readonly cache            = inject(HttpCacheService);
   private readonly printer          = inject(PrintService);
+  private readonly auth             = inject(AuthService);
 
-  /** Exposed so the template can gate write actions with `*appHasPermission`. */
-  protected readonly PERMS = PERMISSIONS;
+  /**
+   * Write access to invoices: supplier-full-access holders, plus the
+   * Representative role (who owns the purchase workflow but carries no
+   * supplier permission). Reactive — reflows if the session changes.
+   */
+  protected readonly canWrite = computed(
+    () =>
+      this.auth.hasPermission(PERMISSIONS.suppliersFullAccess) ||
+      this.auth.hasAnyRole(['Representative']),
+  );
+
+  /**
+   * Representatives may add/view invoices but must not see the company-wide
+   * financial totals — the summary cards are hidden (and not fetched) for them.
+   */
+  protected readonly isRepresentative = computed(() =>
+    this.auth.hasAnyRole(['Representative']),
+  );
+
+  /**
+   * Editing an existing invoice is owners-only: a Representative may create and
+   * view purchase invoices but must not amend them after the fact.
+   */
+  protected readonly canEdit = computed(
+    () => this.canWrite() && !this.isRepresentative(),
+  );
 
   // ── data ──
   protected readonly invoices  = signal<PurchaseInvoiceListItem[]>([]);
   protected readonly summary   = signal<PurchaseInvoiceSummary | null>(null);
-  protected readonly suppliers = signal<Supplier[]>([]);
+  protected readonly suppliers = signal<LookupItem[]>([]);
   protected readonly loading   = signal(false);
 
   // ── filters ──
@@ -135,6 +160,11 @@ export class InvoicesListComponent implements OnInit {
   }
 
   protected fetchSummary(): void {
+    // Reps don't see the totals cards — skip the (forbidden) summary call.
+    if (this.isRepresentative()) {
+      this.summary.set(null);
+      return;
+    }
     this.svc.getSummary().subscribe({
       next: (s) => this.summary.set(s),
       error: () => this.summary.set(null),
@@ -142,8 +172,8 @@ export class InvoicesListComponent implements OnInit {
   }
 
   private fetchSuppliers(): void {
-    this.suppliersService.listAll().subscribe({
-      next: (list) => this.suppliers.set(list),
+    this.suppliersService.lookup().subscribe({
+      next: (list) => this.suppliers.set(list ?? []),
       error: () => this.suppliers.set([]),
     });
   }
@@ -167,7 +197,7 @@ export class InvoicesListComponent implements OnInit {
     }
     if (this.supplierFilter() !== '') {
       const sup = this.suppliers().find((s) => s.id === Number(this.supplierFilter()));
-      if (sup) meta.push({ label: 'المورد', value: sup.fullName });
+      if (sup) meta.push({ label: 'المورد', value: sup.name });
     }
 
     const totalAmount    = rows.reduce((s, r) => s + (r.totalAmount ?? 0), 0);

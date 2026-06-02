@@ -96,7 +96,7 @@ export interface ConvertToContractPayload {
   warehouseId: number;
   treasuryId: number;
   representativeId?: number;
-  purchaseDate: string;
+  dateOfSale: string;
   firstInstallmentDate: string;
   notes: string;
 }

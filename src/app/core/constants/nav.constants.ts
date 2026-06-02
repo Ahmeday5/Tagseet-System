@@ -76,7 +76,10 @@ export const NAV_SECTIONS: NavSection[] = [
         label: 'فواتير المشتريات',
         route: '/invoices',
         icon: 'file-invoice',
+        // Supplier-permission holders OR the Representative role — the two
+        // gates are OR-ed by the sidebar.
         requiredAnyPermission: [PERMISSIONS.suppliersView],
+        requiredAnyRole: ['Representative'],
       },
     ],
   },
@@ -96,6 +99,7 @@ export const NAV_SECTIONS: NavSection[] = [
         route: '/products',
         icon: 'products',
         requiredAnyPermission: [PERMISSIONS.suppliersView],
+        hideForRoles: ['Representative'],
       },
       {
         id: 'categories',
@@ -103,6 +107,7 @@ export const NAV_SECTIONS: NavSection[] = [
         route: '/categories',
         icon: 'tag',
         requiredAnyPermission: [PERMISSIONS.suppliersView],
+        hideForRoles: ['Representative'],
       },
       {
         id: 'inv-alerts',
@@ -138,6 +143,8 @@ export const NAV_SECTIONS: NavSection[] = [
         route: '/treasury/shareholders',
         icon: 'hand-coin',
         requiredAnyPermission: [PERMISSIONS.treasuryView],
+        // Owners-only — never shown to a Representative.
+        hideForRoles: ['Representative'],
       },
     ],
   },

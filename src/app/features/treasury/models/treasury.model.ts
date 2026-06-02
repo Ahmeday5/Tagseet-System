@@ -16,23 +16,36 @@ export interface Treasury {
   currentBalance: number;
   type: TreasuryType;
   isActive: boolean;
+  /** Set only for `SubRepresentative` treasuries; null otherwise. */
+  representativeId?: number | null;
+  /** Display name of the linked representative (sub-rep treasuries only). */
+  representative?: string | null;
   transactions?: TreasuryTransaction[];
   vouchers?: TreasurySummary[];
 }
 
-/** POST /dashboard/treasuries — `initialBalance` is set ONCE at creation. */
+/**
+ * POST /dashboard/treasuries — `initialBalance` is set ONCE at creation.
+ * `representativeId` is sent ONLY for `SubRepresentative` treasuries and is
+ * `null` for every other type.
+ */
 export interface CreateTreasuryPayload {
   name: string;
   initialBalance: number;
   type: TreasuryType;
   isActive: boolean;
+  representativeId: number | null;
 }
 
-/** PUT /dashboard/treasuries/{id} — balance is server-managed, not editable. */
+/**
+ * PUT /dashboard/treasuries/{id} — balance is server-managed, not editable.
+ * `representativeId` follows the same rule as on create.
+ */
 export interface UpdateTreasuryPayload {
   name: string;
   type: TreasuryType;
   isActive: boolean;
+  representativeId: number | null;
 }
 
 export interface TreasuryTransaction {

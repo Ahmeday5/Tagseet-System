@@ -27,6 +27,16 @@ export const API_ENDPOINTS = {
     /** Lightweight `{id,name}` list for pickers (role-scoped server-side). */
     lookup: 'dashboard/treasuries/lookup',
   },
+  subAccounts: {
+    base: 'dashboard/sub-accounts',
+    byId: (id: number) => `dashboard/sub-accounts/${id}`,
+    /** POST: add a receipt/payment voucher to a given sub-account. */
+    vouchers: (id: number) => `dashboard/sub-accounts/${id}/vouchers`,
+    /** GET (paged): every voucher across all sub-accounts — search + type + subAccount filters. */
+    allVouchers: 'dashboard/sub-accounts/vouchers',
+    /** GET (paged): a single sub-account's full ledger (account header + vouchers page). */
+    statement: (id: number) => `dashboard/sub-accounts/${id}/statement`,
+  },
   shareholders: {
     base: 'dashboard/shareholders',
     byId: (id: number) => `dashboard/shareholders/${id}`,
@@ -61,6 +71,8 @@ export const API_ENDPOINTS = {
     base: 'dashboard/suppliers',
     byId: (id: number) => `dashboard/suppliers/${id}`,
     statement: (id: number) => `dashboard/suppliers/${id}/statement`,
+    /** Lightweight `{id,name}` list for the supplier picker (role-scoped server-side). */
+    lookup: 'dashboard/suppliers/lookup',
   },
   purchaseInvoices: {
     base: 'dashboard/supplier-purchase-invoices',

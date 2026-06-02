@@ -1,6 +1,6 @@
 <app-modal
   [open]="open()"
-  title="إضافة عميل"
+  [title]="isEdit() ? 'تعديل بيانات العميل' : 'إضافة عميل'"
   size="lg"
   [closeOnBackdrop]="!submitting()"
   [closeOnEsc]="!submitting()"
@@ -22,7 +22,7 @@
       </div>
 
       <div class="col-12 col-md-6">
-        <label class="form-label">الرقم القومي</label>
+        <label class="form-label">الرقم القومي <span class="text-muted">(اختياري)</span></label>
         <input
           type="text"
           class="form-control"
@@ -88,15 +88,17 @@
         <app-form-error [control]="form.controls.whatsappNumber" label="رقم الواتساب" />
       </div>
 
-      <div class="col-12 col-md-6">
-        <label class="form-label">كلمة المرور</label>
-        <app-password-input
-          formControlName="password"
-          placeholder="••••••••"
-          autocomplete="new-password"
-        />
-        <app-form-error [control]="form.controls.password" label="كلمة المرور" />
-      </div>
+      @if (!isEdit()) {
+        <div class="col-12 col-md-6">
+          <label class="form-label">كلمة المرور</label>
+          <app-password-input
+            formControlName="password"
+            placeholder="••••••••"
+            autocomplete="new-password"
+          />
+          <app-form-error [control]="form.controls.password" label="كلمة المرور" />
+        </div>
+      }
 
       <div class="col-12">
         <label class="form-label">العنوان</label>
@@ -126,13 +128,21 @@
     <button
       type="button"
       class="btn btn-bl d-inline-flex align-items-center gap-2"
-      [disabled]="submitting() || form.invalid"
+      [disabled]="submitting() || loadingDetail() || form.invalid"
       (click)="onSubmit()"
     >
-      @if (submitting()) {
+      @if (submitting() || loadingDetail()) {
         <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
       }
-      <span>{{ submitting() ? 'جاري الحفظ...' : 'إضافة' }}</span>
+      <span>{{
+        submitting()
+          ? 'جاري الحفظ...'
+          : loadingDetail()
+            ? 'جاري التحميل...'
+            : isEdit()
+              ? 'حفظ التعديلات'
+              : 'إضافة'
+      }}</span>
     </button>
   </ng-container>
 </app-modal>

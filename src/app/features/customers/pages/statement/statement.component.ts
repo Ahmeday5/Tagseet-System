@@ -275,7 +275,7 @@ export class StatementComponent {
             { key: 'id',                  header: 'العقد',         align: 'center', width: '52px', format: (v) => `#${v}` },
             { key: 'productName',         header: 'المنتج',         align: 'start',  bold: true },
             { key: 'quantity',            header: 'الكمية',         align: 'center', format: 'number' },
-            { key: 'purchaseDate',        header: 'تاريخ الشراء',  align: 'center', format: 'shortDate' },
+            { key: 'dateOfSale',          header: 'تاريخ البيع',   align: 'center', format: 'shortDate' },
             { key: 'cashPrice',           header: 'سعر النقد',     align: 'end',    format: 'currency' },
             { key: 'downPayment',         header: 'المقدم',         align: 'end',    format: 'currency' },
             { key: 'installmentsCount',   header: 'عدد الأقساط',    align: 'center', format: 'number' },
@@ -419,6 +419,12 @@ export class StatementComponent {
   }
 
   // ─────────── view helpers ───────────
+
+  /** Notes column fallback — backend may send null/empty. */
+  protected notesLabel(notes: string | null | undefined): string {
+    const trimmed = notes?.trim();
+    return trimmed ? trimmed : 'لا يوجد ملاحظات';
+  }
 
   protected freqLabel(freq: string | null): string {
     if (!freq) return '—';

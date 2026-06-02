@@ -42,6 +42,13 @@ export interface NavItem {
    * "my account") that no permission string cleanly isolates.
    */
   requiredAnyRole?: ReadonlyArray<UserRole>;
+  /**
+   * Role exclusion — takes precedence over every other gate. The item is
+   * hidden for these roles even if their permissions would otherwise grant
+   * it (e.g. hide `shareholders` from a Representative the backend gave
+   * `Treasury.View`).
+   */
+  hideForRoles?: ReadonlyArray<UserRole>;
 }
 
 export interface NavSection {
@@ -74,13 +81,23 @@ export class SidebarComponent {
       .map((section) => ({
         ...section,
         items: section.items.filter((item) => {
-          const permOk =
-            !item.requiredAnyPermission?.length ||
-            item.requiredAnyPermission.some((p) => set.has(p));
-          const roleOk =
-            !item.requiredAnyRole?.length ||
-            (!!role && item.requiredAnyRole.includes(role));
-          return permOk && roleOk;
+          // Role exclusion wins over any grant.
+          if (item.hideForRoles?.length && role && item.hideForRoles.includes(role)) {
+            return false;
+          }
+          const hasPermGate = !!item.requiredAnyPermission?.length;
+          const hasRoleGate = !!item.requiredAnyRole?.length;
+          // No gate at all → visible to everyone.
+          if (!hasPermGate && !hasRoleGate) return true;
+          // Gates are OR-ed: an item declaring both shows when the user
+          // satisfies *either* (e.g. invoices = supplier permission OR the
+          // Representative role). Items with a single gate are unaffected.
+          const permMatch =
+            hasPermGate &&
+            item.requiredAnyPermission!.some((p) => set.has(p));
+          const roleMatch =
+            hasRoleGate && !!role && item.requiredAnyRole!.includes(role);
+          return permMatch || roleMatch;
         }),
       }))
       .filter((section) => section.items.length > 0);

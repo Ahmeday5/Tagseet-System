@@ -22,22 +22,24 @@
         <div class="fg3">
           <div class="fl">
             <label>المورد</label>
-            <select formControlName="supplierId">
-              <option [ngValue]="0" disabled>— اختر —</option>
-              @for (s of suppliers(); track s.id) {
-              <option [ngValue]="s.id">{{ s.fullName }}</option>
-              }
-            </select>
+            <app-searchable-select
+              formControlName="supplierId"
+              [options]="supplierOptions()"
+              [isDisabled]="loadingRefs()"
+              placeholder="— اختر المورد —"
+              searchPlaceholder="ابحث باسم المورد…"
+            />
           </div>
 
           <div class="fl">
             <label>المخزن</label>
-            <select formControlName="warehouseId">
-              <option [ngValue]="0" disabled>— اختر —</option>
-              @for (w of activeWarehouses(); track w.id) {
-              <option [ngValue]="w.id">{{ w.name }}</option>
-              }
-            </select>
+            <app-searchable-select
+              formControlName="warehouseId"
+              [options]="warehouseOptions()"
+              [isDisabled]="loadingRefs()"
+              placeholder="— اختر المخزن —"
+              searchPlaceholder="ابحث باسم المخزن…"
+            />
           </div>
 
           <div class="fl">
@@ -52,12 +54,13 @@
 
           <div class="fl">
             <label>الخزنة</label>
-            <select formControlName="treasuryId">
-              <option [ngValue]="0" disabled>— اختر —</option>
-              @for (t of activeTreasuries(); track t.id) {
-                <option [ngValue]="t.id">{{ t.name }}</option>
-              }
-            </select>
+            <app-searchable-select
+              formControlName="treasuryId"
+              [options]="treasuryOptions()"
+              [isDisabled]="loadingRefs()"
+              placeholder="— اختر الخزنة —"
+              searchPlaceholder="ابحث باسم الخزنة…"
+            />
           </div>
 
           <div class="fl">
@@ -92,12 +95,13 @@
         <div formArrayName="items">
           @for (line of items.controls; track line; let idx = $index) {
           <div class="inv-line-r" [formGroupName]="idx">
-            <select formControlName="productId" (change)="onProductChange(idx)">
-              <option [ngValue]="0" disabled>— اختر —</option>
-              @for (p of activeProducts(); track p.id) {
-              <option [ngValue]="p.id">{{ p.name }}</option>
-              }
-            </select>
+            <app-searchable-select
+              formControlName="productId"
+              [options]="productOptions()"
+              [isDisabled]="loadingRefs()"
+              placeholder="— اختر الصنف —"
+              searchPlaceholder="ابحث باسم الصنف…"
+            />
 
             <input type="number" min="1" formControlName="quantity"
               (input)="onLineFieldChange(idx, 'quantity', $any($event.target).value)" />

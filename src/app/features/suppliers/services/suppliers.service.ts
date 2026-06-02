@@ -10,7 +10,8 @@ import {
   withCacheInvalidate,
   withInlineHandling,
 } from '../../../core/http/http-context.tokens';
-import { asPaged, fetchAllPages } from '../../../core/utils/api-list.util';
+import { asPaged, fetchAllPages, toList } from '../../../core/utils/api-list.util';
+import { LookupItem } from '../../../core/models/lookup.model';
 import {
   CreateSupplierPayload,
   Supplier,
@@ -51,6 +52,20 @@ export class SuppliersService {
         map((res) => asPaged<Supplier>(res?.items)),
       ),
     );
+  }
+
+  /**
+   * Lightweight `{id,name}` list for the supplier picker. Preferred over
+   * {@link listAll} for ID pickers: it's a single role-scoped call (a
+   * Representative gets only the suppliers the backend allows) instead of
+   * draining the paged `Suppliers.View`-gated list endpoint.
+   */
+  lookup(): Observable<LookupItem[]> {
+    return this.api
+      .get<unknown>(API_ENDPOINTS.suppliers.lookup, {
+        context: withCache({ ttlMs: SUPPLIERS_TTL_MS }),
+      })
+      .pipe(toList<LookupItem>());
   }
 
   getById(id: number): Observable<Supplier> {

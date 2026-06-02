@@ -33,6 +33,8 @@ import { ToastService } from '../../../../core/services/toast.service';
 import { CurrencyArPipe } from '../../../../shared/pipes/currency-ar.pipe';
 import { ApiError } from '../../../../core/models/api-response.model';
 import { apiErrorToMessage } from '../../../../core/utils/api-error.util';
+import { AuthService } from '../../../../core/services/auth.service';
+import { PERMISSIONS } from '../../../../core/constants/permissions.const';
 
 @Component({
   selector: 'app-create-contract',
@@ -59,6 +61,7 @@ export class CreateContractComponent implements OnInit {
   private readonly treasuryService = inject(TreasuryService);
   private readonly repsService = inject(RepsService);
   private readonly toast = inject(ToastService);
+  private readonly auth = inject(AuthService);
 
   // --- Signals for Lookups ---
   clients = signal<DashboardClient[]>([]);
@@ -101,10 +104,9 @@ export class CreateContractComponent implements OnInit {
   form!: FormGroup;
 
   frequencies: { value: ContractPaymentFrequency; label: string }[] = [
-    { value: 'Daily', label: 'يومي' },
-    { value: 'Weekly', label: 'أسبوعي' },
     { value: 'Monthly', label: 'شهري' },
-    { value: 'Yearly', label: 'سنوي' },
+    { value: 'Quarterly', label: 'ربع سنوي' },
+    { value: 'SemiAnnual', label: 'نصف سنوي' },
   ];
 
   ngOnInit(): void {
@@ -124,7 +126,7 @@ export class CreateContractComponent implements OnInit {
       productId: [null, [Validators.required]],
       warehouseId: [null, [Validators.required]],
       quantity: [1, [Validators.required, Validators.min(1)]],
-      purchaseDate: [today, [Validators.required]],
+      dateOfSale: [today, [Validators.required]],
       purchasePrice: [0, [Validators.required, Validators.min(0)]],
       cashPrice: [0, [Validators.required, Validators.min(0)]],
       downPayment: [0, [Validators.required, Validators.min(0)]],
@@ -190,6 +192,10 @@ export class CreateContractComponent implements OnInit {
     this.form.get('productId')?.valueChanges.subscribe((id) => {
       const productId = Number(id);
       if (!productId) return;
+      // The product detail endpoint is gated by Suppliers.View; reps pick from
+      // the lookup (id + name) and would 403 here, so skip the price prefill
+      // for them and let them enter the prices manually.
+      if (!this.auth.hasPermission(PERMISSIONS.suppliersView)) return;
 
       this.productsService.getById(productId).subscribe({
         next: (product) =>
@@ -242,7 +248,7 @@ export class CreateContractComponent implements OnInit {
     // The backend expects ISO strings for dates
     const payload: ContractFormState = {
       ...formValue,
-      purchaseDate: new Date(formValue.purchaseDate).toISOString(),
+      dateOfSale: new Date(formValue.dateOfSale).toISOString(),
       firstInstallmentDate: new Date(
         formValue.firstInstallmentDate
       ).toISOString(),

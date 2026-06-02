@@ -83,6 +83,22 @@
           </label>
         </div>
       </div>
+
+      @if (isSubRepresentative()) {
+        <div class="col-12">
+          <label class="form-label">المندوب</label>
+          <app-searchable-select
+            formControlName="representativeId"
+            [options]="representativeOptions()"
+            [placeholder]="repsLoading() ? 'جاري تحميل المندوبين…' : 'اختر المندوب'"
+            searchPlaceholder="ابحث باسم المندوب…"
+          />
+          <app-form-error
+            [control]="form.controls.representativeId"
+            label="المندوب"
+          />
+        </div>
+      }
     </div>
 
     @if (serverError(); as msg) {

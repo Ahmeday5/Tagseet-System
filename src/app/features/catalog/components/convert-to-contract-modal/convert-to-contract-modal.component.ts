@@ -75,7 +75,7 @@ export class ConvertToContractModalComponent {
     warehouseId: [0, [Validators.required, Validators.min(1)]],
     treasuryId: [0, [Validators.required, Validators.min(1)]],
     representativeId: [0],
-    purchaseDate: ['', [Validators.required]],
+    dateOfSale: ['', [Validators.required]],
     firstInstallmentDate: ['', [Validators.required]],
     notes: [''],
   });
@@ -114,7 +114,7 @@ export class ConvertToContractModalComponent {
       representativeId: raw.representativeId
         ? Number(raw.representativeId)
         : undefined,
-      purchaseDate: raw.purchaseDate,
+      dateOfSale: raw.dateOfSale,
       firstInstallmentDate: raw.firstInstallmentDate,
       notes: raw.notes?.trim() ?? '',
     };
@@ -158,7 +158,7 @@ export class ConvertToContractModalComponent {
       warehouseId: 0,
       treasuryId: 0,
       representativeId: 0,
-      purchaseDate: today,
+      dateOfSale: today,
       firstInstallmentDate: inOneMonth,
       notes: '',
     });

@@ -81,12 +81,30 @@ export interface CreateClientPayload {
   password: string;
 }
 
-/** `data` returned by POST /dashboard/clients. */
+/**
+ * PUT /dashboard/clients/{id} body. Same shape as the create payload but
+ * without `password` (credentials are not edited here). `nationalId` may be
+ * an empty string — it is optional.
+ */
+export interface UpdateClientPayload {
+  fullName: string;
+  email: string;
+  nationalId: string;
+  address: string;
+  phoneNumber: string;
+  whatsappNumber: string;
+}
+
+/**
+ * Full client record returned by POST /dashboard/clients and
+ * GET/PUT /dashboard/clients/{id}. `nationalId` is nullable since it is
+ * optional on creation.
+ */
 export interface CreatedClient {
   id: number;
   fullName: string;
   email: string;
-  nationalId: string;
+  nationalId: string | null;
   address: string;
   phoneNumber: string;
   whatsappNumber: string;

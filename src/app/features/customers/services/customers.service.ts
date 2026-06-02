@@ -8,6 +8,7 @@ import {
   DashboardClient,
   DashboardClientsQuery,
   DashboardClientsResponse,
+  UpdateClientPayload,
 } from '../models/dashboard-client.model';
 import {
   ClientContractsPage,
@@ -108,6 +109,45 @@ export class CustomersService {
       phoneNumber: payload.phoneNumber.trim(),
       whatsappNumber: payload.whatsappNumber.trim(),
       password: payload.password,
+    };
+  }
+
+  /**
+   * Fetches a single client's full record (incl. email / nationalId /
+   * whatsappNumber that the paged list omits) — used to pre-fill the edit
+   * form. Bypasses the cache so the form always opens on fresh server data.
+   */
+  getClient(id: number): Observable<CreatedClient> {
+    return this.api.get<CreatedClient>(API_ENDPOINTS.clients.byId(id), {
+      context: withCacheBypass(withCache({ ttlMs: CLIENTS_TTL_MS })),
+    });
+  }
+
+  /**
+   * Updates a client (PUT /dashboard/clients/{id}). Invalidates the clients
+   * cache scope so the list — and the overdue badge — re-fetch.
+   */
+  updateClient(
+    id: number,
+    payload: UpdateClientPayload,
+  ): Observable<CreatedClient> {
+    return this.api.put<CreatedClient>(
+      API_ENDPOINTS.clients.byId(id),
+      this.normalizeUpdate(payload),
+      {
+        context: withInlineHandling(withCacheInvalidate([CLIENTS_CACHE_KEY])),
+      },
+    );
+  }
+
+  private normalizeUpdate(payload: UpdateClientPayload): UpdateClientPayload {
+    return {
+      fullName: payload.fullName.trim(),
+      email: payload.email.trim(),
+      nationalId: payload.nationalId.trim(),
+      address: payload.address.trim(),
+      phoneNumber: payload.phoneNumber.trim(),
+      whatsappNumber: payload.whatsappNumber.trim(),
     };
   }
 

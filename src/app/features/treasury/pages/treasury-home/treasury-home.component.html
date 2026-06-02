@@ -76,7 +76,14 @@
             <tbody>
               @for (t of treasuries(); track t.id) {
               <tr>
-                <td style="font-weight:600">{{ t.name }}</td>
+                <td style="font-weight:600">
+                  {{ t.name }}
+                  @if (repName(t); as rep) {
+                    <span style="display:block;font-size:10px;font-weight:500;color:var(--txt3)">
+                      👤 {{ rep }}
+                    </span>
+                  }
+                </td>
                 <td>
                   <app-badge [text]="typeLabel(t.type)" [type]="typeBadge(t.type)" />
                 </td>
@@ -439,6 +446,11 @@
           </table>
         </div>
       </div>
+    </div>
+    }
+    @if (canManageSubAccounts()) {
+    <div class="col-lg-6">
+      <app-sub-accounts-panel />
     </div>
     }
     <div class="col-12">

@@ -113,16 +113,16 @@
         </div>
 
         <div class="col-12 col-md-6">
-          <label class="form-label">تاريخ الشراء</label>
+          <label class="form-label">تاريخ البيع</label>
           <input
             type="date"
             class="form-control"
-            formControlName="purchaseDate"
-            [class.is-invalid]="isInvalid('purchaseDate')"
+            formControlName="dateOfSale"
+            [class.is-invalid]="isInvalid('dateOfSale')"
           />
           <app-form-error
-            [control]="form.controls.purchaseDate"
-            label="تاريخ الشراء"
+            [control]="form.controls.dateOfSale"
+            label="تاريخ البيع"
           />
         </div>
 

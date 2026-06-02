@@ -148,7 +148,7 @@ export interface RepStatementContractRow {
   profit: number;
   commission: number;
   status: string;
-  purchaseDate: string;
+  dateOfSale: string;
 }
 
 /** Wire shape of `data` for both statement endpoints. */

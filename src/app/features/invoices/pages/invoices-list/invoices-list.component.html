@@ -1,4 +1,5 @@
-<!-- ── SUMMARY CARDS ── -->
+<!-- ── SUMMARY CARDS ── (hidden for Representatives — owners-only totals) -->
+@if (!isRepresentative()) {
 <div class="iv-stats">
   <div class="sc">
     <div class="sc-l">إجمالي المشتريات</div>
@@ -23,6 +24,7 @@
     </div>
   </div>
 </div>
+}
 
 <!-- ── FILTERS ROW ── -->
 <div class="iv-filters">
@@ -50,7 +52,7 @@
   >
     <option value="">كل الموردين</option>
     @for (s of suppliers(); track s.id) {
-      <option [value]="s.id">{{ s.fullName }}</option>
+      <option [value]="s.id">{{ s.name }}</option>
     }
   </select>
 
@@ -76,11 +78,12 @@
     <span>🖨 طباعة PDF</span>
   </button>
 
-  <button
-    *appHasPermission="PERMS.suppliersFullAccess"
-    class="btn btn-sm btn-bl"
-    (click)="goToNew()"
-  >+ فاتورة جديدة</button>
+  @if (canWrite()) {
+    <button
+      class="btn btn-sm btn-bl"
+      (click)="goToNew()"
+    >+ فاتورة جديدة</button>
+  }
 </div>
 
 <!-- ── TABLE ── -->
@@ -125,15 +128,15 @@
                 class="btn btn-sm"
                 (click)="viewInvoice(inv)"
               >تفاصيل</button>
-              <button
-                *appHasPermission="PERMS.suppliersFullAccess"
-                type="button"
-                class="btn btn-sm btn-te"
-                (click)="editInvoice(inv)"
-              >تعديل</button>
-              @if (isDraft(inv)) {
+              @if (canEdit()) {
                 <button
-                  *appHasPermission="PERMS.suppliersFullAccess"
+                  type="button"
+                  class="btn btn-sm btn-te"
+                  (click)="editInvoice(inv)"
+                >تعديل</button>
+              }
+              @if (canWrite() && isDraft(inv)) {
+                <button
                   type="button"
                   class="btn btn-sm btn-gr"
                   (click)="openConfirm(inv)"

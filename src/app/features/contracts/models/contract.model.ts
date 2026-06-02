@@ -39,7 +39,11 @@ export interface ContractFormData {
 //  client-order conversion flow).
 // ─────────────────────────────────────────────────────────────────
 
-export type ContractPaymentFrequency = 'Monthly' | 'Weekly' | 'Daily' | 'Yearly';
+/**
+ * Backend `PaymentFrequency` enum (Monthly = 1, Quarterly = 3, SemiAnnual = 4).
+ * Sent/received by name. Daily/Weekly/Yearly are no longer supported.
+ */
+export type ContractPaymentFrequency = 'Monthly' | 'Quarterly' | 'SemiAnnual';
 
 export type ContractStatus =
   | 'Active'
@@ -65,8 +69,8 @@ export interface CreateContractPayload {
   productId: number;
   warehouseId: number;
   quantity: number;
-  /** ISO datetime — e.g. `2026-05-11T08:19:34.462Z`. */
-  purchaseDate: string;
+  /** ISO datetime (date of sale) — e.g. `2026-05-11T08:19:34.462Z`. */
+  dateOfSale: string;
   cashPrice: number;
   downPayment: number;
   /** 0..100. */
@@ -89,7 +93,7 @@ export interface CreatedContract {
   productId: number;
   warehouseId: number;
   quantity: number;
-  purchaseDate: string;
+  dateOfSale: string;
   purchasePrice: number;
   cashPrice: number;
   downPayment: number;
@@ -116,7 +120,7 @@ export interface ContractFormState {
   productId: number;
   warehouseId: number;
   quantity: number;
-  purchaseDate: string;
+  dateOfSale: string;
   cashPrice: number;
   downPayment: number;
   profitRate: number;
@@ -146,7 +150,7 @@ export function buildCreateContractPayload(
     productId: form.productId,
     warehouseId: form.warehouseId,
     quantity: form.quantity,
-    purchaseDate: form.purchaseDate,
+    dateOfSale: form.dateOfSale,
     cashPrice: form.cashPrice,
     downPayment: form.downPayment,
     profitRate: form.profitRate,

@@ -128,7 +128,6 @@
       <thead>
         <tr>
           <th class="vc-w-id">#</th>
-          <th class="vc-w-number">رقم السند</th>
           <th class="vc-w-type">النوع</th>
           <th class="vc-w-amount">المبلغ</th>
           <th class="vc-w-date">التاريخ</th>
@@ -142,34 +141,13 @@
       <tbody>
         @for (v of vouchers(); track v.id) {
           <tr>
-            <td class="vc-id">#{{ v.id }}</td>
-            <td class="cv-ltr">
+            <td class="vc-id">
               <button
                 type="button"
                 class="vc-number-btn"
-                [title]="isTruncated(v.voucherNumber) ? v.voucherNumber + ' — اضغط للعرض الكامل' : v.voucherNumber"
+                title="اضغط لعرض تفاصيل السند"
                 (click)="openDetail(v)"
-              >
-                <span class="vc-number">{{ shortVoucherNumber(v.voucherNumber) }}</span>
-                @if (isTruncated(v.voucherNumber)) {
-                  <svg
-                    class="vc-number-icon"
-                    width="11"
-                    height="11"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    aria-hidden="true"
-                  >
-                    <path d="M15 3h6v6" />
-                    <path d="M10 14 21 3" />
-                    <path d="M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5" />
-                  </svg>
-                }
-              </button>
+              >#{{ v.id }}</button>
             </td>
             <td>
               <app-badge [text]="v.type | voucherTypeLabel" [type]="typeBadge(v.type)" />
@@ -196,7 +174,7 @@
           </tr>
         } @empty {
           <tr>
-            <td colspan="10" class="vc-empty">
+            <td colspan="9" class="vc-empty">
               @if (loading()) {
                 <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
                 <span>جاري تحميل السندات...</span>
@@ -255,26 +233,6 @@
 >
   @if (detailVoucher(); as v) {
     <dl class="vd-list">
-      <div class="vd-row">
-        <dt>رقم السند</dt>
-        <dd>
-          <div class="vd-number cv-ltr" [title]="v.voucherNumber">{{ v.voucherNumber }}</div>
-          <button
-            type="button"
-            class="btn btn-sm vd-copy"
-            (click)="copyVoucherNumber()"
-            aria-label="نسخ رقم السند"
-          >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-              stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <rect x="9" y="9" width="11" height="11" rx="2" />
-              <path d="M5 15V5a2 2 0 0 1 2-2h10" />
-            </svg>
-            <span>نسخ</span>
-          </button>
-        </dd>
-      </div>
-
       <div class="vd-row">
         <dt>النوع</dt>
         <dd>

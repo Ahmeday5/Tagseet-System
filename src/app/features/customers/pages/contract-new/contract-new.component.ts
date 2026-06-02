@@ -110,10 +110,9 @@ export class ContractNewComponent implements OnInit {
     value: ContractPaymentFrequency;
     label: string;
   }[] = [
-    { value: 'Daily', label: 'يومي' },
-    { value: 'Weekly', label: 'أسبوعي' },
     { value: 'Monthly', label: 'شهري' },
-    { value: 'Yearly', label: 'سنوي' },
+    { value: 'Quarterly', label: 'ربع سنوي' },
+    { value: 'SemiAnnual', label: 'نصف سنوي' },
   ];
 
   // ───────────────── form ─────────────────
@@ -124,7 +123,7 @@ export class ContractNewComponent implements OnInit {
 
     quantity: [1, [Validators.required, Validators.min(1)]],
 
-    purchaseDate: [this.todayStr(), [Validators.required]],
+    dateOfSale: [this.todayStr(), [Validators.required]],
 
     cashPrice: [0, [Validators.required, Validators.min(1)]],
 
@@ -314,7 +313,7 @@ export class ContractNewComponent implements OnInit {
 
       quantity: Number(raw.quantity),
 
-      purchaseDate: new Date(raw.purchaseDate).toISOString(),
+      dateOfSale: new Date(raw.dateOfSale).toISOString(),
 
       cashPrice: Number(raw.cashPrice),
 
@@ -370,7 +369,7 @@ export class ContractNewComponent implements OnInit {
       productId: 'المنتج',
       warehouseId: 'المخزن',
       quantity: 'الكمية',
-      purchaseDate: 'تاريخ الشراء',
+      dateOfSale: 'تاريخ البيع',
       cashPrice: 'السعر الكاش',
       downPayment: 'المقدم',
       profitRate: 'نسبة الربح',
@@ -395,7 +394,7 @@ export class ContractNewComponent implements OnInit {
       profitRate: 20,
       installmentsCount: 12,
       paymentFrequency: 'Monthly',
-      purchaseDate: this.todayStr(),
+      dateOfSale: this.todayStr(),
       firstInstallmentDate: this.nextMonthStr(),
       installmentAmount: 0,
     });

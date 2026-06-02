@@ -75,6 +75,8 @@ export class CustomersListComponent {
 
   // ── modal ──
   protected readonly showForm = signal(false);
+  /** Non-null when the form modal is open in edit mode. */
+  protected readonly editTarget = signal<DashboardClient | null>(null);
 
   // ── derived ──
   protected readonly hasFilters = computed(
@@ -235,9 +237,25 @@ export class CustomersListComponent {
 
   // ─────────── modal ───────────
 
-  protected onSaved(): void {
+  protected openCreate(): void {
+    this.editTarget.set(null);
+    this.showForm.set(true);
+  }
+
+  protected openEdit(client: DashboardClient): void {
+    this.editTarget.set(client);
+    this.showForm.set(true);
+  }
+
+  protected closeForm(): void {
     this.showForm.set(false);
-    if (this.pageIndex() !== 1) this.pageIndex.set(1);
+    this.editTarget.set(null);
+  }
+
+  protected onSaved(): void {
+    const wasEdit = this.editTarget() !== null;
+    this.closeForm();
+    if (!wasEdit && this.pageIndex() !== 1) this.pageIndex.set(1);
     else this.refresh();
   }
 

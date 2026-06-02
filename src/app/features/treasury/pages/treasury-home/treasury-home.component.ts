@@ -13,11 +13,14 @@ import {
   TreasuryOperation,
   MonthlyProfit,
 } from '../../models/treasury.model';
+import { catchError, of } from 'rxjs';
 import { TreasuryService } from '../../services/treasury.service';
 import { RepsService } from '../../../reps/services/reps.service';
 import { RepresentativeSubTreasury } from '../../../reps/models/rep.model';
+import { LookupItem } from '../../../../core/models/lookup.model';
 import { TreasuryFormModelComponent } from '../../components/treasury-form-model/treasury-form-model.component';
 import { TreasuryTransferModalComponent } from '../../components/treasury-transfer-modal/treasury-transfer-modal.component';
+import { SubAccountsPanelComponent } from '../../components/sub-accounts-panel/sub-accounts-panel.component';
 import {
   BadgeComponent,
   BadgeType,
@@ -50,6 +53,7 @@ import { CommonModule } from '@angular/common';
   imports: [
     TreasuryFormModelComponent,
     TreasuryTransferModalComponent,
+    SubAccountsPanelComponent,
     BadgeComponent,
     PaginationComponent,
     CurrencyArPipe,
@@ -82,9 +86,30 @@ export class TreasuryHomeComponent implements OnInit {
     () => this.auth.currentUser()?.role === 'Representative',
   );
 
+  /**
+   * Sub-accounts are an owners-only ledger — visible (and managed) by Admin and
+   * GeneralManager only, regardless of any broader Treasury permission a lower
+   * role might carry.
+   */
+  protected readonly canManageSubAccounts = computed(() =>
+    this.auth.hasAnyRole(['Admin', 'GeneralManager']),
+  );
+
   // ── data ──
   protected readonly treasuries = signal<Treasury[]>([]);
   protected readonly loading = signal(false);
+
+  /**
+   * Representatives lookup — used to resolve the linked rep's name for
+   * sub-representative treasuries when the list payload omits it (it only
+   * carries `representativeId`).
+   */
+  protected readonly representatives = signal<LookupItem[]>([]);
+  private readonly repNameById = computed(() => {
+    const map = new Map<number, string>();
+    for (const r of this.representatives()) map.set(r.id, r.name);
+    return map;
+  });
 
   // ── representatives' sub-treasuries ──
   protected readonly subTreasuries = signal<RepresentativeSubTreasury[]>([]);
@@ -275,9 +300,29 @@ export class TreasuryHomeComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadTreasuries();
+    this.loadRepresentatives();
     this.loadSubTreasuries(false);
     this.loadOperations();
     this.loadMonthlyProfits();
+  }
+
+  /** Lightweight reps lookup for resolving sub-rep treasury names. */
+  private loadRepresentatives(): void {
+    this.repsService
+      .lookup()
+      .pipe(catchError(() => of([] as LookupItem[])))
+      .subscribe((items) => this.representatives.set(items));
+  }
+
+  /**
+   * Resolves the display name of the representative linked to a sub-rep
+   * treasury — prefers the server-provided name, falls back to the lookup.
+   */
+  protected repName(t: Treasury): string | null {
+    if (t.type !== TreasuryType.SubRepresentative) return null;
+    return (
+      t.representative ?? this.repNameById().get(t.representativeId ?? -1) ?? null
+    );
   }
 
   // ─────────────── sub-treasuries ───────────────

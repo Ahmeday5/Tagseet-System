@@ -9,7 +9,7 @@ export interface ClientContractRow {
   productId: number;
   productName: string;
   quantity: number;
-  purchaseDate: string;
+  dateOfSale: string;
   purchasePrice: number;
   cashPrice: number;
   downPayment: number;
@@ -50,7 +50,7 @@ export interface ContractDetails {
 export interface ContractDetailsContract {
   id: number;
   quantity: number;
-  purchaseDate: string;
+  dateOfSale: string;
   purchasePrice: number;
   cashPrice: number;
   downPayment: number;
@@ -119,6 +119,7 @@ export interface ContractInstallmentRow {
   paidDate: string | null;
   status: ContractInstallmentStatus;
   isOverdue: boolean;
+  notes: string | null;
 }
 
 /** POST /installments/pay */

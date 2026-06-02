@@ -76,7 +76,7 @@
             <th>الربح</th>
             <th>العمولة</th>
             <th>الحالة</th>
-            <th>تاريخ الشراء</th>
+            <th>تاريخ البيع</th>
           </tr>
         </thead>
         <tbody>
@@ -91,7 +91,7 @@
               <td class="rs-pos">{{ c.profit | currencyAr: true }}</td>
               <td>{{ c.commission | currencyAr: true }}</td>
               <td><app-badge [text]="c.status" [type]="contractBadge(c.status)" /></td>
-              <td class="trf-date">{{ c.purchaseDate | dateAr: 'short' }}</td>
+              <td class="trf-date">{{ c.dateOfSale | dateAr: 'short' }}</td>
             </tr>
           } @empty {
             <tr>

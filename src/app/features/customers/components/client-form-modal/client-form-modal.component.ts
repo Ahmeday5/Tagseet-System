@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   effect,
   inject,
   input,
@@ -17,6 +18,7 @@ import { CustomersService } from '../../services/customers.service';
 import {
   CreateClientPayload,
   CreatedClient,
+  DashboardClient,
 } from '../../models/dashboard-client.model';
 
 /** Egyptian mobile: 010 / 011 / 012 / 015 + 8 digits. */
@@ -39,6 +41,8 @@ const EG_NATIONAL_ID = /^[0-9]{14}$/;
 export class ClientFormModalComponent {
   // ── inputs ──
   readonly open = input.required<boolean>();
+  /** When set, the modal switches to edit mode for that client. */
+  readonly client = input<DashboardClient | null>(null);
 
   // ── outputs ──
   readonly closed = output<void>();
@@ -50,7 +54,9 @@ export class ClientFormModalComponent {
   private readonly toast = inject(ToastService);
 
   // ── template-bound state ──
+  protected readonly isEdit = computed(() => this.client() !== null);
   protected readonly submitting = signal(false);
+  protected readonly loadingDetail = signal(false);
   protected readonly serverError = signal<string | null>(null);
   protected readonly sameAsPhone = signal(true);
 
@@ -58,7 +64,8 @@ export class ClientFormModalComponent {
   protected readonly form = this.fb.nonNullable.group({
     fullName: ['', [Validators.required, Validators.minLength(3)]],
     email: ['', [Validators.email]],
-    nationalId: ['', [Validators.required, Validators.pattern(EG_NATIONAL_ID)]],
+    // Optional — but must be a valid 14-digit id when provided.
+    nationalId: ['', [Validators.pattern(EG_NATIONAL_ID)]],
     address: ['', [Validators.required, Validators.minLength(2)]],
     phoneNumber: ['', [Validators.required, Validators.pattern(EG_PHONE)]],
     whatsappNumber: ['', [Validators.required, Validators.pattern(EG_PHONE)]],
@@ -71,17 +78,13 @@ export class ClientFormModalComponent {
         if (!this.open()) return;
         this.serverError.set(null);
         this.submitting.set(false);
-        this.sameAsPhone.set(true);
-        this.form.reset({
-          fullName: '',
-          email: '',
-          nationalId: '',
-          address: '',
-          phoneNumber: '',
-          whatsappNumber: '',
-          password: '',
-        });
-        this.applyWhatsappSync(true);
+
+        const target = this.client();
+        if (target) {
+          this.enterEditMode(target);
+        } else {
+          this.enterCreateMode();
+        }
       },
       { allowSignalWrites: true },
     );
@@ -101,7 +104,7 @@ export class ClientFormModalComponent {
   }
 
   protected onSubmit(): void {
-    if (this.submitting()) return;
+    if (this.submitting() || this.loadingDetail()) return;
 
     if (this.form.invalid) {
       this.form.markAllAsTouched();
@@ -111,15 +114,27 @@ export class ClientFormModalComponent {
     this.serverError.set(null);
     this.submitting.set(true);
 
-    this.service.createClient(this.toPayload()).subscribe({
+    const target = this.client();
+    const request$ = target
+      ? this.service.updateClient(target.id, this.toUpdatePayload())
+      : this.service.createClient(this.toCreatePayload());
+
+    request$.subscribe({
       next: (client) => {
         this.submitting.set(false);
-        this.toast.success(`تم إضافة العميل "${client.fullName}" بنجاح`);
+        this.toast.success(
+          target
+            ? `تم تعديل بيانات العميل "${client.fullName}" بنجاح`
+            : `تم إضافة العميل "${client.fullName}" بنجاح`,
+        );
         this.saved.emit(client);
       },
       error: (err: ApiError) => {
         this.submitting.set(false);
-        this.serverError.set(err.message || 'تعذّر إضافة العميل');
+        this.serverError.set(
+          err.message ||
+            (target ? 'تعذّر تعديل بيانات العميل' : 'تعذّر إضافة العميل'),
+        );
       },
     });
   }
@@ -136,6 +151,79 @@ export class ClientFormModalComponent {
 
   // ─────────────── internals ───────────────
 
+  /** Create mode — blank form, password required, whatsapp synced to phone. */
+  private enterCreateMode(): void {
+    this.loadingDetail.set(false);
+    this.sameAsPhone.set(true);
+    this.setPasswordRequired(true);
+    this.form.reset({
+      fullName: '',
+      email: '',
+      nationalId: '',
+      address: '',
+      phoneNumber: '',
+      whatsappNumber: '',
+      password: '',
+    });
+    this.applyWhatsappSync(true);
+  }
+
+  /**
+   * Edit mode — pre-fills with what the list row already carries, then pulls
+   * the full record (email / nationalId / whatsapp) from the server. Password
+   * is not edited here, so its control is dropped from validation.
+   */
+  private enterEditMode(row: DashboardClient): void {
+    this.setPasswordRequired(false);
+    this.sameAsPhone.set(false);
+    this.form.controls.whatsappNumber.enable({ emitEvent: false });
+    this.form.reset({
+      fullName: row.fullName,
+      email: '',
+      nationalId: '',
+      address: row.address,
+      phoneNumber: row.phoneNumber,
+      whatsappNumber: '',
+      password: '',
+    });
+
+    this.loadingDetail.set(true);
+    this.service.getClient(row.id).subscribe({
+      next: (full) => {
+        this.loadingDetail.set(false);
+        this.form.patchValue({
+          fullName: full.fullName,
+          email: full.email ?? '',
+          nationalId: full.nationalId ?? '',
+          address: full.address,
+          phoneNumber: full.phoneNumber,
+          whatsappNumber: full.whatsappNumber ?? '',
+        });
+        const synced =
+          !!full.whatsappNumber && full.whatsappNumber === full.phoneNumber;
+        this.sameAsPhone.set(synced);
+        this.applyWhatsappSync(synced);
+      },
+      error: () => {
+        // Degrade gracefully: keep the row-level pre-fill and let the user
+        // complete the missing fields manually.
+        this.loadingDetail.set(false);
+      },
+    });
+  }
+
+  private setPasswordRequired(required: boolean): void {
+    const pwd = this.form.controls.password;
+    if (required) {
+      pwd.enable({ emitEvent: false });
+      pwd.setValidators([Validators.required, Validators.minLength(6)]);
+    } else {
+      pwd.clearValidators();
+      pwd.disable({ emitEvent: false });
+    }
+    pwd.updateValueAndValidity({ emitEvent: false });
+  }
+
   /**
    * When "same as phone" is on, the whatsapp number mirrors the phone and
    * its own field is disabled (kept valid by copying the value across).
@@ -150,7 +238,7 @@ export class ClientFormModalComponent {
     }
   }
 
-  private toPayload(): CreateClientPayload {
+  private toCreatePayload(): CreateClientPayload {
     const raw = this.form.getRawValue();
     return {
       fullName: raw.fullName.trim(),
@@ -158,11 +246,25 @@ export class ClientFormModalComponent {
       nationalId: raw.nationalId.trim(),
       address: raw.address.trim(),
       phoneNumber: raw.phoneNumber.trim(),
-      whatsappNumber: (this.sameAsPhone()
-        ? raw.phoneNumber
-        : raw.whatsappNumber
-      ).trim(),
+      whatsappNumber: this.resolvedWhatsapp(),
       password: raw.password,
     };
+  }
+
+  private toUpdatePayload() {
+    const raw = this.form.getRawValue();
+    return {
+      fullName: raw.fullName.trim(),
+      email: raw.email.trim(),
+      nationalId: raw.nationalId.trim(),
+      address: raw.address.trim(),
+      phoneNumber: raw.phoneNumber.trim(),
+      whatsappNumber: this.resolvedWhatsapp(),
+    };
+  }
+
+  private resolvedWhatsapp(): string {
+    const raw = this.form.getRawValue();
+    return (this.sameAsPhone() ? raw.phoneNumber : raw.whatsappNumber).trim();
   }
 }

@@ -64,6 +64,7 @@
               <th class="w-10">الهاتف</th>
               <th class="w-15">الأصناف</th>
               <th class="w-9">الإجمالي</th>
+              <th class="w-9">المقدم</th>
               <th class="w-10">النوع</th>
               <th class="w-10">التاريخ</th>
               <th class="w-10">الحالة</th>
@@ -81,6 +82,13 @@
                 </span>
               </td>
               <td class="ord-amount">{{ order.totalAmount | currencyAr: true }}</td>
+              <td>
+                @if (order.downPayment > 0) {
+                  {{ order.downPayment | currencyAr: true }}
+                } @else {
+                  <span class="text-muted">—</span>
+                }
+              </td>
               <td>{{ getPaymentTypeLabel(order) }}</td>
               <td class="fs-10">{{ formatOrderDate(order.orderDate) }}</td>
               <td>
@@ -131,7 +139,7 @@
             </tr>
             } @empty {
             <tr>
-              <td colspan="8" class="text-center fs-11 text-muted">
+              <td colspan="9" class="text-center fs-11 text-muted">
                 @if (loadingOrders()) {
                 جاري تحميل الطلبات...
                 } @else {

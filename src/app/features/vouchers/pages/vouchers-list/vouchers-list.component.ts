@@ -48,8 +48,6 @@ import { fetchAllPages } from '../../../../core/utils/api-list.util';
 
 const DEFAULT_PAGE_SIZE = 10;
 const REFETCH_DEBOUNCE_MS = 200;
-/** Voucher numbers are 70+ chars; show only the meaningful prefix in the table. */
-const VOUCHER_NUMBER_PREFIX_LEN = 18;
 
 @Component({
   selector: 'app-vouchers-list',
@@ -324,38 +322,7 @@ export class VouchersListComponent {
     this.detailOpen.set(false);
   }
 
-  protected copyVoucherNumber(): void {
-    const number = this.detailVoucher()?.voucherNumber;
-    if (!number) return;
-    const clipboard = navigator.clipboard;
-    if (clipboard?.writeText) {
-      clipboard.writeText(number).then(
-        () => this.toast.success('تم نسخ رقم السند'),
-        () => this.toast.error('تعذّر النسخ'),
-      );
-    } else {
-      this.toast.error('النسخ غير مدعوم في هذا المتصفح');
-    }
-  }
-
   // ─────────── view helpers ───────────
-
-  /**
-   * Backend voucher numbers are 70+ chars (`RCP-INST-<timestamp>-<guid>`).
-   * Showing the full string blows the column up, so we truncate to the
-   * meaningful business prefix and let users open the detail modal to see
-   * (and copy) the full identifier.
-   */
-  protected shortVoucherNumber(value: string): string {
-    if (!value) return '—';
-    return value.length > VOUCHER_NUMBER_PREFIX_LEN
-      ? `${value.slice(0, VOUCHER_NUMBER_PREFIX_LEN)}…`
-      : value;
-  }
-
-  protected isTruncated(value: string): boolean {
-    return !!value && value.length > VOUCHER_NUMBER_PREFIX_LEN;
-  }
 
   protected typeBadge(type: VoucherType): BadgeType {
     return VOUCHER_TYPE_BADGE[type] ?? 'info';

@@ -176,7 +176,7 @@ export class RepStatementModalComponent {
         { key: 'profit',       header: 'الربح',    align: 'end',    format: 'currency', bold: true },
         { key: 'commission',   header: 'العمولة',  align: 'end',    format: 'currency' },
         { key: 'status',       header: 'الحالة',   align: 'center' },
-        { key: 'purchaseDate', header: 'تاريخ الشراء', align: 'center', format: 'shortDate' },
+        { key: 'dateOfSale', header: 'تاريخ البيع', align: 'center', format: 'shortDate' },
       ],
       totals: sum
         ? {

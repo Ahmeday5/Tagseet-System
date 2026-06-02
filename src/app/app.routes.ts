@@ -3,6 +3,7 @@ import { authGuard } from './core/guards/auth.guard';
 import { guestGuard } from './core/guards/guest.guard';
 import { permissionGuard } from './core/guards/permission.guard';
 import { roleGuard } from './core/guards/role.guard';
+import { accessGuard } from './core/guards/access.guard';
 import { PERMISSIONS } from './core/constants/permissions.const';
 
 export const routes: Routes = [
@@ -69,8 +70,15 @@ export const routes: Routes = [
           ),
       },
       {
+        // Suppliers-permission holders, plus Representatives (who own the
+        // purchase workflow but carry no supplier permission).
         path: 'invoices',
-        canActivate: [permissionGuard(PERMISSIONS.suppliersView)],
+        canActivate: [
+          accessGuard({
+            anyPermission: [PERMISSIONS.suppliersView],
+            anyRole: ['Representative'],
+          }),
+        ],
         loadChildren: () =>
           import('./features/invoices/invoices.routes').then(
             (m) => m.invoicesRoutes,
@@ -86,7 +94,12 @@ export const routes: Routes = [
       },
       {
         path: 'products',
-        canActivate: [permissionGuard(PERMISSIONS.suppliersView)],
+        canActivate: [
+          accessGuard({
+            anyPermission: [PERMISSIONS.suppliersView],
+            anyRole: ['Representative'],
+          }),
+        ],
         loadChildren: () =>
           import('./features/products/products.routes').then(
             (m) => m.productsRoutes,
@@ -94,7 +107,12 @@ export const routes: Routes = [
       },
       {
         path: 'categories',
-        canActivate: [permissionGuard(PERMISSIONS.suppliersView)],
+        canActivate: [
+          accessGuard({
+            anyPermission: [PERMISSIONS.suppliersView],
+            anyRole: ['Representative'],
+          }),
+        ],
         loadChildren: () =>
           import('./features/categories/categories.routes').then(
             (m) => m.categoriesRoutes,
@@ -170,6 +188,6 @@ export const routes: Routes = [
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
     ],
   },
-  
+
   { path: '**', redirectTo: '/dashboard' },
 ];
