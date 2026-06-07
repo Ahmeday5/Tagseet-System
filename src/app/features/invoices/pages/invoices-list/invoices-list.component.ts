@@ -24,6 +24,7 @@ import {
 import { SuppliersService } from '../../../suppliers/services/suppliers.service';
 import { LookupItem } from '../../../../core/models/lookup.model';
 import { ConfirmInvoiceModalComponent } from '../../components/confirm-invoice-modal/confirm-invoice-modal.component';
+import { PayInvoiceModalComponent } from '../../components/pay-invoice-modal/pay-invoice-modal.component';
 import { AuthService } from '../../../../core/services/auth.service';
 import { PERMISSIONS } from '../../../../core/constants/permissions.const';
 import { PrintService } from '../../../../core/services/print.service';
@@ -45,7 +46,7 @@ const STATUS_OPTIONS: ReadonlyArray<{
   selector: 'app-invoices-list',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CurrencyArPipe, ConfirmInvoiceModalComponent],
+  imports: [CurrencyArPipe, ConfirmInvoiceModalComponent, PayInvoiceModalComponent],
   templateUrl: './invoices-list.component.html',
   styleUrl: './invoices-list.component.scss',
 })
@@ -98,6 +99,10 @@ export class InvoicesListComponent implements OnInit {
   // ── confirm modal ──
   protected readonly confirmOpen   = signal(false);
   protected readonly confirmTarget = signal<PurchaseInvoiceListItem | null>(null);
+
+  // ── payment modal ──
+  protected readonly paymentOpen   = signal(false);
+  protected readonly paymentTarget = signal<PurchaseInvoiceListItem | null>(null);
 
   // ── derived ──
   protected readonly statusOptions = STATUS_OPTIONS;
@@ -297,6 +302,34 @@ export class InvoicesListComponent implements OnInit {
     this.fetchSummary();
   }
 
+  // ─────────── payment modal ───────────
+
+  protected openPayment(inv: PurchaseInvoiceListItem): void {
+    this.paymentTarget.set(inv);
+    this.paymentOpen.set(true);
+  }
+
+  protected closePayment(): void {
+    this.paymentOpen.set(false);
+  }
+
+  protected onPaid(updated: PurchaseInvoice): void {
+    this.paymentOpen.set(false);
+    this.invoices.update((list) =>
+      list.map((i) =>
+        i.id === updated.id
+          ? {
+              ...i,
+              status: updated.status,
+              paidAmount: updated.paidAmount,
+              remainingAmount: updated.remainingAmount,
+            }
+          : i,
+      ),
+    );
+    this.fetchSummary();
+  }
+
   // ─────────── view helpers ───────────
 
   protected statusView(status: PurchaseInvoiceStatus): PurchaseInvoiceStatusView {
@@ -308,6 +341,15 @@ export class InvoicesListComponent implements OnInit {
 
   protected isDraft(inv: PurchaseInvoiceListItem): boolean {
     return inv.status === 'Draft';
+  }
+
+  /** True when the invoice can still receive payments (has an outstanding balance). */
+  protected isPayable(inv: PurchaseInvoiceListItem): boolean {
+    return (
+      inv.remainingAmount > 0 &&
+      inv.status !== 'Draft' &&
+      inv.status !== 'Cancelled'
+    );
   }
 
   protected formatDate(iso: string): string {

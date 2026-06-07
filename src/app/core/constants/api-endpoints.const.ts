@@ -88,6 +88,9 @@ export const API_ENDPOINTS = {
     summary: 'dashboard/supplier-purchase-invoices/summary',
     confirm: (id: number) =>
       `dashboard/supplier-purchase-invoices/${id}/confirm`,
+    /** POST: record a (partial or full) payment against a non-Draft invoice. */
+    payments: (id: number) =>
+      `dashboard/supplier-purchase-invoices/${id}/payments`,
   },
   dashboard: {
     summary: 'dashboard/summary',

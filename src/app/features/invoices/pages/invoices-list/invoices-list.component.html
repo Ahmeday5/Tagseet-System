@@ -142,6 +142,15 @@
                   (click)="openConfirm(inv)"
                 >تأكيد</button>
               }
+              @if (canWrite() && !isDraft(inv) && inv.status !== 'Cancelled') {
+                <button
+                  type="button"
+                  class="btn btn-sm btn-bl"
+                  [disabled]="!isPayable(inv)"
+                  [title]="isPayable(inv) ? 'تسجيل دفعة على الفاتورة' : 'الفاتورة مسددة بالكامل'"
+                  (click)="openPayment(inv)"
+                >دفع</button>
+              }
             </div>
           </td>
         </tr>
@@ -165,4 +174,11 @@
   [invoice]="confirmTarget()"
   (closed)="closeConfirm()"
   (confirmed)="onConfirmed($event)"
+/>
+
+<app-pay-invoice-modal
+  [open]="paymentOpen()"
+  [invoice]="paymentTarget()"
+  (closed)="closePayment()"
+  (paid)="onPaid($event)"
 />

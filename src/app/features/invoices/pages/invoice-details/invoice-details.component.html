@@ -24,6 +24,17 @@
         ✓ تأكيد الفاتورة
       </button>
     }
+    @if (invoice(); as inv) {
+      @if (inv.status !== 'Draft' && inv.status !== 'Cancelled') {
+        <button
+          type="button"
+          class="btn btn-sm btn-bl"
+          [disabled]="!canPay()"
+          [title]="canPay() ? 'تسجيل دفعة على الفاتورة' : 'الفاتورة مسددة بالكامل'"
+          (click)="openPayment()"
+        >دفع</button>
+      }
+    }
     <button
       type="button"
       class="btn btn-sm"
@@ -222,6 +233,13 @@
     [invoice]="invoice()"
     (closed)="closeConfirm()"
     (confirmed)="onConfirmed($event)"
+  />
+
+  <app-pay-invoice-modal
+    [open]="paymentOpen()"
+    [invoice]="invoice()"
+    (closed)="closePayment()"
+    (paid)="onPaid($event)"
   />
   }
 }

@@ -123,6 +123,15 @@ export interface ConfirmPurchaseInvoicePayload {
   treasuryId: number;
 }
 
+/** POST /dashboard/supplier-purchase-invoices/{id}/payments */
+export interface PayInvoicePayload {
+  treasuryId: number;
+  amount: number;
+  /** `yyyy-MM-dd` — calendar date, not a timestamp. */
+  paymentDate: string;
+  notes: string;
+}
+
 // ─────────────────────────────────────────────────────────────────
 //  Display helpers
 // ─────────────────────────────────────────────────────────────────

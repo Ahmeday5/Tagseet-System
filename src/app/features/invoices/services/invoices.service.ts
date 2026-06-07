@@ -12,6 +12,7 @@ import { toList } from '../../../core/utils/api-list.util';
 import {
   ConfirmPurchaseInvoicePayload,
   CreatePurchaseInvoicePayload,
+  PayInvoicePayload,
   PurchaseInvoice,
   PurchaseInvoiceFilters,
   PurchaseInvoiceListItem,
@@ -103,6 +104,22 @@ export class InvoicesService {
   ): Observable<PurchaseInvoice> {
     return this.api.post<PurchaseInvoice>(
       API_ENDPOINTS.purchaseInvoices.confirm(id),
+      payload,
+      {
+        context: withInlineHandling(
+          withCacheInvalidate([INVOICES_CACHE_KEY]),
+        ),
+      },
+    );
+  }
+
+  /**
+   * Records a partial or full payment against a non-Draft invoice.
+   * Returns the updated invoice (with new paidAmount / remainingAmount / status).
+   */
+  pay(id: number, payload: PayInvoicePayload): Observable<PurchaseInvoice> {
+    return this.api.post<PurchaseInvoice>(
+      API_ENDPOINTS.purchaseInvoices.payments(id),
       payload,
       {
         context: withInlineHandling(

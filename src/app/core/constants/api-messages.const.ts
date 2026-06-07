@@ -117,6 +117,15 @@ const MESSAGE_PATTERNS: readonly MessagePattern[] = [
 
   // ── balances / amounts ──
   {
+    test: /amount\s+exceeds\s+the\s+remaining\s+balance/i,
+    ar: (match) => {
+      const num = match[0].match(/[\d,]+\.?\d*/)?.[0];
+      return num
+        ? `المبلغ يتجاوز الرصيد المتبقي للفاتورة (${num} ج.م).`
+        : 'المبلغ يتجاوز الرصيد المتبقي للفاتورة.';
+    },
+  },
+  {
     test: /insufficient\s+(?:funds|balance)/i,
     ar: () => 'الرصيد غير كافٍ لإتمام العملية',
   },

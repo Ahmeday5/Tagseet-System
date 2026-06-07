@@ -18,6 +18,7 @@ import {
   PurchaseInvoiceStatusView,
 } from '../../models/invoice.model';
 import { ConfirmInvoiceModalComponent } from '../../components/confirm-invoice-modal/confirm-invoice-modal.component';
+import { PayInvoiceModalComponent } from '../../components/pay-invoice-modal/pay-invoice-modal.component';
 
 /**
  * Standalone invoice details / preview page.
@@ -38,6 +39,7 @@ import { ConfirmInvoiceModalComponent } from '../../components/confirm-invoice-m
     DecimalPipe,
     CurrencyArPipe,
     ConfirmInvoiceModalComponent,
+    PayInvoiceModalComponent,
   ],
   templateUrl: './invoice-details.component.html',
   styleUrl: './invoice-details.component.scss',
@@ -56,6 +58,9 @@ export class InvoiceDetailsComponent implements OnInit {
   // ── confirm modal ──
   protected readonly confirmOpen = signal(false);
 
+  // ── payment modal ──
+  protected readonly paymentOpen = signal(false);
+
   // ── derived ──
   protected readonly status = computed<PurchaseInvoiceStatusView | null>(() => {
     const inv = this.invoice();
@@ -69,6 +74,16 @@ export class InvoiceDetailsComponent implements OnInit {
   protected readonly canConfirm = computed(
     () => this.invoice()?.status === 'Draft',
   );
+
+  protected readonly canPay = computed(() => {
+    const inv = this.invoice();
+    if (!inv) return false;
+    return (
+      (inv.remainingAmount ?? 0) > 0 &&
+      inv.status !== 'Draft' &&
+      inv.status !== 'Cancelled'
+    );
+  });
 
   ngOnInit(): void {
     const idParam = this.route.snapshot.paramMap.get('id');
@@ -116,6 +131,22 @@ export class InvoiceDetailsComponent implements OnInit {
     this.confirmOpen.set(false);
     this.invoice.set(updated);
     this.toast.success(`تم تأكيد الفاتورة ${updated.invoiceNumber}`);
+  }
+
+  // ─────────── payment ───────────
+
+  protected openPayment(): void {
+    if (!this.canPay()) return;
+    this.paymentOpen.set(true);
+  }
+
+  protected closePayment(): void {
+    this.paymentOpen.set(false);
+  }
+
+  protected onPaid(updated: PurchaseInvoice): void {
+    this.paymentOpen.set(false);
+    this.invoice.set(updated);
   }
 
   // ─────────── print ───────────
