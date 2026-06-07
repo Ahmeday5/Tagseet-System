@@ -11,6 +11,8 @@ export interface Shareholder {
   companyPercentage: number;
   /** Cumulative profit distributed to this shareholder so far. */
   totalProfitReceived: number;
+  /** Profit accrued from installment payments, not yet settled or capitalised. */
+  accruedProfit: number;
   capitalTreasuryId: number;
   capitalTreasuryName: string;
   notes: string | null;

@@ -4,7 +4,14 @@
     <div class="pgt">المساهمون</div>
     <div class="pgs">إدارة الشركاء ونسب الملكية وتوزيع الأرباح</div>
   </div>
-  <div class="d-flex gap-2">
+  <div class="d-flex gap-2 flex-wrap">
+    <button
+      *appHasPermission="PERMS.treasuryFullAccess"
+      class="btn btn-sm btn-te"
+      [disabled]="!hasPendingProfits()"
+      (click)="openCapitalizeAll()"
+      title="ترحيل أرباح جميع المساهمين إلى رأس مالهم دفعةً واحدة"
+    >رسملة الأرباح الكلية</button>
     <button
       *appHasPermission="PERMS.treasuryFullAccess"
       class="btn btn-sm btn-gr"
@@ -53,6 +60,10 @@
   <div class="sc">
     <div class="sc-l">الأرباح الموزّعة (الصفحة)</div>
     <div class="sc-v sh-stat-pos">{{ pageProfit() | currencyAr: true }}</div>
+  </div>
+  <div class="sc">
+    <div class="sc-l">الأرباح المستحقة (الصفحة)</div>
+    <div class="sc-v sh-stat-te">{{ pageAccruedProfit() | currencyAr: true }}</div>
   </div>
   <div class="sc">
     <div class="sc-l">نسبة الملكية (الصفحة)</div>
@@ -124,6 +135,7 @@
           <th class="sh-w-pct">نسبة الملكية</th>
           <th class="sh-w-pct">نسبة الشركة</th>
           <th class="sh-w-amount">الأرباح الموزّعة</th>
+          <th class="sh-w-amount">الأرباح المستحقة</th>
           <th class="sh-w-treasury">خزينة رأس المال</th>
           <th class="sh-w-date">تاريخ الانضمام</th>
           <th class="sh-w-actions text-center">الإجراءات</th>
@@ -166,6 +178,7 @@
               </div>
             </td>
             <td class="sh-profit">{{ s.totalProfitReceived | currencyAr: true }}</td>
+            <td class="sh-profit">{{ s.accruedProfit | currencyAr: true }}</td>
             <td class="sh-treasury">{{ s.capitalTreasuryName || '—' }}</td>
             <td class="fs-10">{{ s.createdAt | dateAr: 'short' }}</td>
             <td>
@@ -199,7 +212,7 @@
           </tr>
         } @empty {
           <tr>
-            <td colspan="10" class="sh-empty">
+            <td colspan="11" class="sh-empty">
               @if (loading()) {
                 <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
                 <span>جاري تحميل المساهمين...</span>
@@ -272,6 +285,13 @@
       [disabled]="previewLoading()"
       (click)="loadPreview()"
     >تحديث</button>
+    <button
+      *appHasPermission="PERMS.treasuryFullAccess"
+      type="button"
+      class="btn btn-sm btn-te"
+      [disabled]="!hasPendingProfits()"
+      (click)="openCapitalizeAll()"
+    >رسملة الكل</button>
     <button
       *appHasPermission="PERMS.treasuryFullAccess"
       type="button"
@@ -466,4 +486,11 @@
   [shareholder]="capitalShareholder()"
   (closed)="closeCapital()"
   (changed)="onCapitalChanged()"
+/>
+
+<!-- ── CAPITALIZE ALL PROFITS MODAL ── -->
+<app-capitalize-all-profits-modal
+  [open]="capitalizeAllOpen()"
+  (closed)="closeCapitalizeAll()"
+  (capitalized)="onCapitalizedAll()"
 />

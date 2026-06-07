@@ -19,6 +19,7 @@ import { ShareholderFormModalComponent } from '../../components/shareholder-form
 import { ProfitDistributionModalComponent } from '../../components/profit-distribution-modal/profit-distribution-modal.component';
 import { ProfitSettlementDetailsModalComponent } from '../../components/profit-settlement-details-modal/profit-settlement-details-modal.component';
 import { ShareholderCapitalModalComponent } from '../../components/shareholder-capital-modal/shareholder-capital-modal.component';
+import { CapitalizeAllProfitsModalComponent } from '../../components/capitalize-all-profits-modal/capitalize-all-profits-modal.component';
 
 import { PaginationComponent } from '../../../../shared/components/pagination/pagination.component';
 import { CurrencyArPipe } from '../../../../shared/pipes/currency-ar.pipe';
@@ -47,6 +48,7 @@ const REFETCH_DEBOUNCE_MS = 300;
     ProfitDistributionModalComponent,
     ProfitSettlementDetailsModalComponent,
     ShareholderCapitalModalComponent,
+    CapitalizeAllProfitsModalComponent,
     PaginationComponent,
     CurrencyArPipe,
     DateArPipe,
@@ -118,6 +120,9 @@ export class ShareholdersComponent {
   protected readonly capitalOpen = signal(false);
   protected readonly capitalShareholder = signal<Shareholder | null>(null);
 
+  // ── capitalize-all-profits modal ──
+  protected readonly capitalizeAllOpen = signal(false);
+
   private readonly settlementsTrigger = computed(() => ({
     pageIndex: this.sPageIndex(),
     pageSize: this.sPageSize(),
@@ -135,6 +140,9 @@ export class ShareholdersComponent {
   );
   protected readonly pageOwnership = computed(() =>
     this.shareholders().reduce((s, sh) => s + (sh.ownedPercentage ?? 0), 0),
+  );
+  protected readonly pageAccruedProfit = computed(() =>
+    this.shareholders().reduce((s, sh) => s + (sh.accruedProfit ?? 0), 0),
   );
 
   /** Combined trigger — any filter / page change refetches. */
@@ -489,5 +497,19 @@ export class ShareholdersComponent {
 
   protected onCapitalChanged(): void {
     this.loadPreview();
+  }
+
+  // ─────────── capitalize-all modal ───────────
+
+  protected openCapitalizeAll(): void {
+    this.capitalizeAllOpen.set(true);
+  }
+
+  protected closeCapitalizeAll(): void {
+    this.capitalizeAllOpen.set(false);
+  }
+
+  protected onCapitalizedAll(): void {
+    this.capitalizeAllOpen.set(false);
   }
 }

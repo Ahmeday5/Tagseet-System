@@ -158,12 +158,17 @@ export class ShareholderCapitalModalComponent {
     () => this.preview()?.profitsTreasuryName ?? '—',
   );
 
-  /** Profit currently available to THIS shareholder, from the live preview. */
+  /**
+   * Profit available for capitalisation for THIS shareholder.
+   * Primary source: the live preview (reflects server-computed AccruedProfit).
+   * Fallback: shareholder.accruedProfit from the DTO (accurate until a write
+   * happens; updated after each capitalize via loadPreview()).
+   */
   protected readonly availableProfit = computed(() => {
-    const id = this.shareholder()?.id;
-    if (id == null) return 0;
-    const line = this.preview()?.lines.find((l) => l.shareholderId === id);
-    return line?.amount ?? 0;
+    const sh = this.shareholder();
+    if (!sh) return 0;
+    const line = this.preview()?.lines.find((l) => l.shareholderId === sh.id);
+    return line?.amount ?? sh.accruedProfit ?? 0;
   });
 
   protected readonly canCapitalize = computed(

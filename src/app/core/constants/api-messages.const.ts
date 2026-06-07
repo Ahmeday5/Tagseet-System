@@ -97,8 +97,17 @@ const MESSAGE_PATTERNS: readonly MessagePattern[] = [
   // ── shareholder capital / profit capitalisation (more specific than the
   //    generic balance rules below, so they must come first) ──
   {
+    test: /accrued\s+profit|مساهم.*أرباح\s+مستحق|cannot\s+delete.*accrued|has\s+(?:pending|unsettled|accrued)\s+profit/i,
+    ar: () =>
+      'لا يمكن حذف المساهم لوجود أرباح مستحقة غير مُسوَّاة. قم بتسوية أرباحه أو رسملتها أولاً.',
+  },
+  {
     test: /(?:amount|value).*exceed.*profit|exceed(?:s|ed)?\s+(?:the\s+)?available\s+profit|more\s+than\s+(?:the\s+)?available\s+profit|profit.*(?:is\s+)?(?:insufficient|not\s+enough)/i,
     ar: () => 'المبلغ يتجاوز الأرباح المتاحة لهذا المساهم.',
+  },
+  {
+    test: /no\s+(?:accrued\s+)?profits?\s+to\s+capitaliz|nothing\s+to\s+capitaliz|capitaliz.*zero|zero.*capitaliz/i,
+    ar: () => 'لا توجد أرباح مستحقة للرسملة حاليًا.',
   },
   {
     test: /(?:profits?|representative|delegate)\s+treasur(?:y|ies)|treasury\s+(?:type\s+)?(?:is\s+)?not\s+(?:allowed|permitted|valid)|cannot\s+(?:use|select)\s+(?:this\s+)?treasury/i,

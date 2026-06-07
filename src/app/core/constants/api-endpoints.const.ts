@@ -54,6 +54,8 @@ export const API_ENDPOINTS = {
     /** POST a deposit/withdrawal · GET (paged) the capital-movement ledger. */
     capitalTransactions: (id: number) =>
       `dashboard/shareholders/${id}/capital-transactions`,
+    /** POST: roll every shareholder's accrued profit into their capital in one shot. */
+    capitalizeAllProfits: 'dashboard/shareholders/capitalize-all-profits',
   },
   warehouses: {
     base: 'dashboard/warehouses',

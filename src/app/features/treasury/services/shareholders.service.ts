@@ -25,6 +25,7 @@ import {
   ProfitSettlementsQuery,
 } from '../models/profit-settlement.model';
 import {
+  CapitalizeAllProfitsPayload,
   CapitalizeProfitPayload,
   CapitalTransaction,
   CapitalTransactionsQuery,
@@ -201,6 +202,24 @@ export class ShareholdersService {
   ): Observable<CapitalTransaction> {
     return this.api.post<CapitalTransaction>(
       API_ENDPOINTS.shareholders.capitalizeProfit(shareholderId),
+      payload,
+      {
+        context: withInlineHandling(
+          withCacheInvalidate([SHAREHOLDERS_CACHE_KEY, TREASURY_CACHE_KEY]),
+        ),
+      },
+    );
+  }
+
+  /**
+   * Rolls every shareholder's AccruedProfit into their capital in one shot.
+   * Invalidates both shareholders and treasury scopes (balances + percentages shift).
+   */
+  capitalizeAllProfits(
+    payload: CapitalizeAllProfitsPayload,
+  ): Observable<{ message: string }> {
+    return this.api.post<{ message: string }>(
+      API_ENDPOINTS.shareholders.capitalizeAllProfits,
       payload,
       {
         context: withInlineHandling(

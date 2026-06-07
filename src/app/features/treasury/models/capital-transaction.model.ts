@@ -42,6 +42,14 @@ export interface CapitalizeProfitPayload {
   notes: string;
 }
 
+/** POST /shareholders/capitalize-all-profits — rolls every shareholder's AccruedProfit into capital. */
+export interface CapitalizeAllProfitsPayload {
+  profitsTreasuryId: number;
+  /** `yyyy-MM-dd` — calendar date, not a timestamp. */
+  date: string;
+  notes: string;
+}
+
 /** Query parameters for the paginated capital-transactions history. */
 export interface CapitalTransactionsQuery {
   pageIndex?: number;
