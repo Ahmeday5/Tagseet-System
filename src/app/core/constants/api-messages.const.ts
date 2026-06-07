@@ -94,6 +94,18 @@ const MESSAGE_PATTERNS: readonly MessagePattern[] = [
   { test: /\bnot\s+found\b/i, ar: () => 'العنصر المطلوب غير موجود' },
   { test: /does\s+not\s+exist/i, ar: () => 'العنصر المطلوب غير موجود' },
 
+  // ── shareholder capital / profit capitalisation (more specific than the
+  //    generic balance rules below, so they must come first) ──
+  {
+    test: /(?:amount|value).*exceed.*profit|exceed(?:s|ed)?\s+(?:the\s+)?available\s+profit|more\s+than\s+(?:the\s+)?available\s+profit|profit.*(?:is\s+)?(?:insufficient|not\s+enough)/i,
+    ar: () => 'المبلغ يتجاوز الأرباح المتاحة لهذا المساهم.',
+  },
+  {
+    test: /(?:profits?|representative|delegate)\s+treasur(?:y|ies)|treasury\s+(?:type\s+)?(?:is\s+)?not\s+(?:allowed|permitted|valid)|cannot\s+(?:use|select)\s+(?:this\s+)?treasury/i,
+    ar: () =>
+      'لا يمكن استخدام هذه الخزينة في حركة رأس المال؛ اختر خزينة نقدية عادية (ليست خزينة أرباح أو خزينة مندوبين).',
+  },
+
   // ── balances / amounts ──
   {
     test: /insufficient\s+(?:funds|balance)/i,

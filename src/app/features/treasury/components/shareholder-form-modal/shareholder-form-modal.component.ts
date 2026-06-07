@@ -29,23 +29,6 @@ import {
   UpdateShareholderPayload,
 } from '../../models/shareholder.model';
 
-/**
- * Add / edit dialog for a Shareholder.
- *
- *   <app-shareholder-form-modal
- *     [open]="modalOpen()"
- *     [mode]="modalMode()"
- *     [shareholder]="modalShareholder()"
- *     (closed)="closeModal()"
- *     (saved)="onSaved($event)" />
- *
- * Notes:
- *   - `contributedAmount` and `capitalTreasuryId` are sent only on CREATE —
- *     the contribution (and the treasury it lands in) can't be re-routed
- *     after the fact, so both controls are disabled in edit mode.
- *   - The form fully resets every time `open` flips to true, so reopening
- *     the modal in a different mode never shows stale data.
- */
 @Component({
   selector: 'app-shareholder-form-modal',
   standalone: true,
@@ -93,6 +76,7 @@ export class ShareholderFormModalComponent {
     ],
     address: ['', [Validators.required, Validators.minLength(2)]],
     contributedAmount: [0, [Validators.required, Validators.min(0.01)]],
+    companyPercentage: [0, [Validators.required, Validators.min(0)]],
     capitalTreasuryId: [0, [Validators.required, Validators.min(1)]],
     notes: [''],
   });
@@ -180,6 +164,7 @@ export class ShareholderFormModalComponent {
         phoneNumber: s.phoneNumber,
         address: s.address,
         contributedAmount: s.contributedAmount,
+        companyPercentage: s.companyPercentage,
         capitalTreasuryId: s.capitalTreasuryId,
         notes: s.notes ?? '',
       });
@@ -215,6 +200,7 @@ export class ShareholderFormModalComponent {
     phoneNumber: string;
     address: string;
     contributedAmount: number;
+    companyPercentage: number;
     capitalTreasuryId: number;
     notes: string;
   }): CreateShareholderPayload {
@@ -223,6 +209,7 @@ export class ShareholderFormModalComponent {
       phoneNumber: raw.phoneNumber.trim(),
       address: raw.address.trim(),
       contributedAmount: Number(raw.contributedAmount) || 0,
+      companyPercentage: Number(raw.companyPercentage) || 0,
       capitalTreasuryId: Number(raw.capitalTreasuryId),
       notes: (raw.notes ?? '').trim(),
     };
@@ -232,12 +219,14 @@ export class ShareholderFormModalComponent {
     name: string;
     phoneNumber: string;
     address: string;
+    companyPercentage: number;
     notes: string;
   }): UpdateShareholderPayload {
     return {
       name: raw.name.trim(),
       phoneNumber: raw.phoneNumber.trim(),
       address: raw.address.trim(),
+      companyPercentage: Number(raw.companyPercentage) || 0,
       notes: (raw.notes ?? '').trim(),
     };
   }

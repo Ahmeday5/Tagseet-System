@@ -18,6 +18,7 @@ import {
 import { ShareholderFormModalComponent } from '../../components/shareholder-form-modal/shareholder-form-modal.component';
 import { ProfitDistributionModalComponent } from '../../components/profit-distribution-modal/profit-distribution-modal.component';
 import { ProfitSettlementDetailsModalComponent } from '../../components/profit-settlement-details-modal/profit-settlement-details-modal.component';
+import { ShareholderCapitalModalComponent } from '../../components/shareholder-capital-modal/shareholder-capital-modal.component';
 
 import { PaginationComponent } from '../../../../shared/components/pagination/pagination.component';
 import { CurrencyArPipe } from '../../../../shared/pipes/currency-ar.pipe';
@@ -36,17 +37,6 @@ import { ApiError } from '../../../../core/models/api-response.model';
 const DEFAULT_PAGE_SIZE = 10;
 const REFETCH_DEBOUNCE_MS = 300;
 
-/**
- * Shareholders index page.
- *
- *   - server-paginated list (`PageIndex` / `PageSize`)
- *   - debounced search (matches name / phone server-side)
- *   - CRUD: create / edit via the form modal, delete via confirm dialog
- *   - PDF export of the full filtered dataset
- *
- * Any write recomputes every partner's ownership %, so saves always refetch
- * from the server rather than patching the row in place.
- */
 @Component({
   selector: 'app-shareholders',
   standalone: true,
@@ -56,6 +46,7 @@ const REFETCH_DEBOUNCE_MS = 300;
     ShareholderFormModalComponent,
     ProfitDistributionModalComponent,
     ProfitSettlementDetailsModalComponent,
+    ShareholderCapitalModalComponent,
     PaginationComponent,
     CurrencyArPipe,
     DateArPipe,
@@ -122,6 +113,10 @@ export class ShareholdersComponent {
   protected readonly distributeOpen = signal(false);
   protected readonly detailsOpen = signal(false);
   protected readonly detailsId = signal<number | null>(null);
+
+  // ── per-shareholder capital modal ──
+  protected readonly capitalOpen = signal(false);
+  protected readonly capitalShareholder = signal<Shareholder | null>(null);
 
   private readonly settlementsTrigger = computed(() => ({
     pageIndex: this.sPageIndex(),
@@ -267,15 +262,46 @@ export class ShareholdersComponent {
           meta: search ? [{ label: 'بحث', value: search }] : undefined,
           orientation: 'landscape',
           columns: [
-            { key: 'id', header: '#', align: 'center', width: '46px', format: (v) => `#${v}` },
+            {
+              key: 'id',
+              header: '#',
+              align: 'center',
+              width: '46px',
+              format: (v) => `#${v}`,
+            },
             { key: 'name', header: 'المساهم', align: 'start', bold: true },
             { key: 'phoneNumber', header: 'الهاتف', align: 'start' },
             { key: 'address', header: 'العنوان', align: 'start' },
-            { key: 'contributedAmount', header: 'قيمة المساهمة', align: 'end', format: 'currency', bold: true },
-            { key: 'ownedPercentage', header: 'نسبة الملكية', align: 'center', format: 'percent' },
-            { key: 'totalProfitReceived', header: 'الأرباح الموزّعة', align: 'end', format: 'currency' },
-            { key: 'capitalTreasuryName', header: 'خزينة رأس المال', align: 'start' },
-            { key: 'createdAt', header: 'تاريخ الانضمام', align: 'center', format: 'shortDate' },
+            {
+              key: 'contributedAmount',
+              header: 'قيمة المساهمة',
+              align: 'end',
+              format: 'currency',
+              bold: true,
+            },
+            {
+              key: 'ownedPercentage',
+              header: 'نسبة الملكية',
+              align: 'center',
+              format: 'percent',
+            },
+            {
+              key: 'totalProfitReceived',
+              header: 'الأرباح الموزّعة',
+              align: 'end',
+              format: 'currency',
+            },
+            {
+              key: 'capitalTreasuryName',
+              header: 'خزينة رأس المال',
+              align: 'start',
+            },
+            {
+              key: 'createdAt',
+              header: 'تاريخ الانضمام',
+              align: 'center',
+              format: 'shortDate',
+            },
             { key: 'notes', header: 'ملاحظات', align: 'start' },
           ],
           totals: {
@@ -448,5 +474,20 @@ export class ShareholdersComponent {
 
   protected closeDetails(): void {
     this.detailsOpen.set(false);
+  }
+
+  // ─────────── capital modal ───────────
+
+  protected openCapital(shareholder: Shareholder): void {
+    this.capitalShareholder.set(shareholder);
+    this.capitalOpen.set(true);
+  }
+
+  protected closeCapital(): void {
+    this.capitalOpen.set(false);
+  }
+
+  protected onCapitalChanged(): void {
+    this.loadPreview();
   }
 }

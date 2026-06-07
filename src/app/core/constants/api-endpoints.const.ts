@@ -48,6 +48,12 @@ export const API_ENDPOINTS = {
     profitSettlements: 'dashboard/shareholders/profit-settlements',
     profitSettlementById: (id: number) =>
       `dashboard/shareholders/profit-settlements/${id}`,
+    /** POST: roll part of one shareholder's accrued profit into their capital. */
+    capitalizeProfit: (id: number) =>
+      `dashboard/shareholders/${id}/capitalize-profit`,
+    /** POST a deposit/withdrawal · GET (paged) the capital-movement ledger. */
+    capitalTransactions: (id: number) =>
+      `dashboard/shareholders/${id}/capital-transactions`,
   },
   warehouses: {
     base: 'dashboard/warehouses',

@@ -24,6 +24,12 @@ import {
   ProfitSettlementRow,
   ProfitSettlementsQuery,
 } from '../models/profit-settlement.model';
+import {
+  CapitalizeProfitPayload,
+  CapitalTransaction,
+  CapitalTransactionsQuery,
+  CreateCapitalTransactionPayload,
+} from '../models/capital-transaction.model';
 
 /**
  * A shareholder's contribution moves capital-treasury money and recomputes
@@ -175,6 +181,81 @@ export class ShareholdersService {
 
   private toSettlementParams(
     query: ProfitSettlementsQuery,
+  ): Record<string, unknown> {
+    return {
+      PageIndex: query.pageIndex ?? 1,
+      PageSize: query.pageSize ?? 10,
+    };
+  }
+
+  // ─────────────── capital movements ───────────────
+
+  /**
+   * Rolls part of a shareholder's accrued profit into their capital, drawn from
+   * the profits treasury. Changes both the partner's capital/profit figures and
+   * the profits-treasury balance, so it invalidates both scopes.
+   */
+  capitalizeProfit(
+    shareholderId: number,
+    payload: CapitalizeProfitPayload,
+  ): Observable<CapitalTransaction> {
+    return this.api.post<CapitalTransaction>(
+      API_ENDPOINTS.shareholders.capitalizeProfit(shareholderId),
+      payload,
+      {
+        context: withInlineHandling(
+          withCacheInvalidate([SHAREHOLDERS_CACHE_KEY, TREASURY_CACHE_KEY]),
+        ),
+      },
+    );
+  }
+
+  /**
+   * Records a deposit (`Receipt`) or withdrawal (`Payment`) against a
+   * shareholder's capital, moving money in/out of the chosen treasury.
+   * Recomputes every partner's ownership %, so both scopes are invalidated.
+   */
+  createCapitalTransaction(
+    shareholderId: number,
+    payload: CreateCapitalTransactionPayload,
+  ): Observable<CapitalTransaction> {
+    return this.api.post<CapitalTransaction>(
+      API_ENDPOINTS.shareholders.capitalTransactions(shareholderId),
+      payload,
+      {
+        context: withInlineHandling(
+          withCacheInvalidate([SHAREHOLDERS_CACHE_KEY, TREASURY_CACHE_KEY]),
+        ),
+      },
+    );
+  }
+
+  listCapitalTransactions(
+    shareholderId: number,
+    query: CapitalTransactionsQuery = {},
+  ): Observable<PagedResponse<CapitalTransaction>> {
+    return this.api
+      .get<unknown>(API_ENDPOINTS.shareholders.capitalTransactions(shareholderId), {
+        params: this.toCapitalTxParams(query),
+        context: withCache({ ttlMs: SHAREHOLDERS_TTL_MS }),
+      })
+      .pipe(toPaged<CapitalTransaction>());
+  }
+
+  refreshCapitalTransactions(
+    shareholderId: number,
+    query: CapitalTransactionsQuery = {},
+  ): Observable<PagedResponse<CapitalTransaction>> {
+    return this.api
+      .get<unknown>(API_ENDPOINTS.shareholders.capitalTransactions(shareholderId), {
+        params: this.toCapitalTxParams(query),
+        context: withCacheBypass(withCache({ ttlMs: SHAREHOLDERS_TTL_MS })),
+      })
+      .pipe(toPaged<CapitalTransaction>());
+  }
+
+  private toCapitalTxParams(
+    query: CapitalTransactionsQuery,
   ): Record<string, unknown> {
     return {
       PageIndex: query.pageIndex ?? 1,

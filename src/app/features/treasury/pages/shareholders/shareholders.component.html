@@ -122,6 +122,7 @@
           <th class="sh-w-addr">العنوان</th>
           <th class="sh-w-amount">قيمة المساهمة</th>
           <th class="sh-w-pct">نسبة الملكية</th>
+          <th class="sh-w-pct">نسبة الشركة</th>
           <th class="sh-w-amount">الأرباح الموزّعة</th>
           <th class="sh-w-treasury">خزينة رأس المال</th>
           <th class="sh-w-date">تاريخ الانضمام</th>
@@ -156,12 +157,26 @@
                 </div>
               </div>
             </td>
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                <span class="sh-pct">{{ s.companyPercentage | number: '1.0-2' }}%</span>
+                <div class="sh-bar">
+                  <div class="sh-bar-fill" [style.width.%]="s.companyPercentage"></div>
+                </div>
+              </div>
+            </td>
             <td class="sh-profit">{{ s.totalProfitReceived | currencyAr: true }}</td>
             <td class="sh-treasury">{{ s.capitalTreasuryName || '—' }}</td>
             <td class="fs-10">{{ s.createdAt | dateAr: 'short' }}</td>
             <td>
               <div class="d-flex gap-1 justify-content-center align-items-center">
                 <ng-container *appHasPermission="PERMS.treasuryFullAccess">
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-te"
+                    title="إدارة رأس المال والأرباح"
+                    (click)="openCapital(s)"
+                  >رأس المال</button>
                   <button
                     type="button"
                     class="btn btn-sm btn-bl"
@@ -443,4 +458,12 @@
   [open]="detailsOpen()"
   [settlementId]="detailsId()"
   (closed)="closeDetails()"
+/>
+
+<!-- ── CAPITAL MANAGEMENT MODAL ── -->
+<app-shareholder-capital-modal
+  [open]="capitalOpen()"
+  [shareholder]="capitalShareholder()"
+  (closed)="closeCapital()"
+  (changed)="onCapitalChanged()"
 />
