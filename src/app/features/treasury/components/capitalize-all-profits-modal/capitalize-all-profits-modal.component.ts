@@ -66,6 +66,12 @@ export class CapitalizeAllProfitsModalComponent {
   protected readonly totalAmount = computed(
     () => this.preview()?.totalAmount ?? 0,
   );
+  protected readonly totalShareholdersShare = computed(
+    () => this.preview()?.totalShareholdersShare ?? 0,
+  );
+  protected readonly totalCompanyShare = computed(
+    () => this.preview()?.totalCompanyShare ?? 0,
+  );
   protected readonly canCapitalize = computed(
     () => this.totalAmount() > 0 && this.lines().length > 0,
   );

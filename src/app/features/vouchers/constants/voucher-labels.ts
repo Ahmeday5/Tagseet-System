@@ -42,6 +42,9 @@ export const REFERENCE_TYPE_LABELS: Readonly<Record<ReferenceType, string>> = {
   [ReferenceType.Contract]: 'عقد',
   [ReferenceType.SupplierPurchase]: 'فاتورة مشتريات',
   [ReferenceType.ClientOrder]: 'طلب عميل',
+  [ReferenceType.ShareholderCapital]: 'رأس مال مساهم',
+  [ReferenceType.ProfitAccrual]: 'ربح مستحق',
+  [ReferenceType.ProfitDistribution]: 'توزيع أرباح',
 };
 
 export const REFERENCE_TYPE_BADGE: Readonly<Record<ReferenceType, BadgeType>> = {
@@ -55,6 +58,9 @@ export const REFERENCE_TYPE_BADGE: Readonly<Record<ReferenceType, BadgeType>> = 
   [ReferenceType.Contract]: 'purple',
   [ReferenceType.SupplierPurchase]: 'warn',
   [ReferenceType.ClientOrder]: 'pink',
+  [ReferenceType.ShareholderCapital]: 'teal',
+  [ReferenceType.ProfitAccrual]: 'ok',
+  [ReferenceType.ProfitDistribution]: 'purple',
 };
 
 export const REFERENCE_TYPE_OPTIONS: ReadonlyArray<{
@@ -75,6 +81,7 @@ export const RELATED_PARTY_TYPE_LABELS: Readonly<
   [RelatedPartyType.Customer]: 'عميل',
   [RelatedPartyType.Supplier]: 'مورد',
   [RelatedPartyType.Other]: 'أخرى',
+  [RelatedPartyType.Shareholder]: 'مساهم',
 };
 
 export const RELATED_PARTY_TYPE_BADGE: Readonly<
@@ -83,6 +90,7 @@ export const RELATED_PARTY_TYPE_BADGE: Readonly<
   [RelatedPartyType.Customer]: 'info',
   [RelatedPartyType.Supplier]: 'purple',
   [RelatedPartyType.Other]: 'warn',
+  [RelatedPartyType.Shareholder]: 'teal',
 };
 
 export const RELATED_PARTY_TYPE_OPTIONS: ReadonlyArray<{

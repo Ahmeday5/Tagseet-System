@@ -75,6 +75,12 @@ export class ProfitDistributionModalComponent {
   protected readonly totalAmount = computed(
     () => this.preview()?.totalAmount ?? 0,
   );
+  protected readonly totalShareholdersShare = computed(
+    () => this.preview()?.totalShareholdersShare ?? 0,
+  );
+  protected readonly totalCompanyShare = computed(
+    () => this.preview()?.totalCompanyShare ?? 0,
+  );
   /** Only allow a distribution when there's a positive balance to split. */
   protected readonly canDistribute = computed(
     () => this.totalAmount() > 0 && this.lines().length > 0,

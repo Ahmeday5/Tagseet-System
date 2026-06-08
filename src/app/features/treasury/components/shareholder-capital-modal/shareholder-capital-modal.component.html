@@ -222,10 +222,18 @@
         <!-- projection -->
         <div class="cap-projection">
           <div>
+            <span class="cap-projection-label">نصيب المساهم من الترحيل:</span>
+            <span class="cap-projection-val cap-gr">{{ capShareholderShare() | currencyAr: true }}</span>
+          </div>
+          @if (companyPercentage() > 0) {
+            <div>
+              <span class="cap-projection-label">نصيب الشركة ({{ companyPercentage() | number: '1.0-1' }}%):</span>
+              <span class="cap-projection-val" style="color:var(--txt3)">{{ capCompanyShare() | currencyAr: true }}</span>
+            </div>
+          }
+          <div>
             <span class="cap-projection-label">رأس المال بعد الترحيل:</span>
-            <span class="cap-projection-val cap-gr">
-              {{ (currentCapital() + draftCapAmount()) | currencyAr: true }}
-            </span>
+            <span class="cap-projection-val cap-gr">{{ projectedCapitalAfterCap() | currencyAr: true }}</span>
           </div>
           <div>
             <span class="cap-projection-label">أرباح متبقية:</span>

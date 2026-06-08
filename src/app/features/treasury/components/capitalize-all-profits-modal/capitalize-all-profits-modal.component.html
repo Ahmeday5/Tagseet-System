@@ -18,6 +18,14 @@
         <span class="cap-all-value cap-all-amount">{{ totalAmount() | currencyAr: true }}</span>
       </div>
       <div class="cap-all-summary-item">
+        <span class="cap-all-label">نصيب المساهمين</span>
+        <span class="cap-all-value" style="color:var(--gr)">{{ totalShareholdersShare() | currencyAr: true }}</span>
+      </div>
+      <div class="cap-all-summary-item">
+        <span class="cap-all-label">نصيب الشركة</span>
+        <span class="cap-all-value" style="color:var(--txt2)">{{ totalCompanyShare() | currencyAr: true }}</span>
+      </div>
+      <div class="cap-all-summary-item">
         <span class="cap-all-label">عدد المساهمين</span>
         <span class="cap-all-value">{{ lines().length }}</span>
       </div>
@@ -43,6 +51,8 @@
             <tr>
               <th>المساهم</th>
               <th class="text-end">الأرباح المستحقة</th>
+              <th class="text-end">نصيب المساهم</th>
+              <th class="text-end">نصيب الشركة</th>
             </tr>
           </thead>
           <tbody>
@@ -50,6 +60,8 @@
               <tr>
                 <td class="fw-600">{{ line.shareholderName }}</td>
                 <td class="text-end cap-all-amount">{{ line.amount | currencyAr: true }}</td>
+                <td class="text-end" style="color:var(--gr);font-weight:600">{{ line.shareholderShare | currencyAr: true }}</td>
+                <td class="text-end" style="color:var(--txt3)">{{ line.companyShare | currencyAr: true }}</td>
               </tr>
             }
           </tbody>
@@ -57,6 +69,8 @@
             <tr class="cap-all-total-row">
               <td class="fw-600">الإجمالي</td>
               <td class="text-end cap-all-amount">{{ totalAmount() | currencyAr: true }}</td>
+              <td class="text-end" style="color:var(--gr);font-weight:600">{{ totalShareholdersShare() | currencyAr: true }}</td>
+              <td class="text-end" style="color:var(--txt3)">{{ totalCompanyShare() | currencyAr: true }}</td>
             </tr>
           </tfoot>
         </table>

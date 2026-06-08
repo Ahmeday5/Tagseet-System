@@ -23,6 +23,11 @@ import {
 const INVOICES_CACHE_KEY = 'supplier-purchase-invoices';
 const INVOICES_TTL_MS = 60 * 1000; // 1 min — list/summary churn with each save
 
+// Invoice confirmation and payments pull money out of a treasury — any
+// write that touches a treasury balance must also bust the treasury cache
+// so the treasury page reflects the change immediately.
+const TREASURY_CACHE_KEY = 'treasur';
+
 @Injectable({ providedIn: 'root' })
 export class InvoicesService {
   private readonly api = inject(ApiService);
@@ -107,7 +112,7 @@ export class InvoicesService {
       payload,
       {
         context: withInlineHandling(
-          withCacheInvalidate([INVOICES_CACHE_KEY]),
+          withCacheInvalidate([INVOICES_CACHE_KEY, TREASURY_CACHE_KEY]),
         ),
       },
     );
@@ -116,6 +121,8 @@ export class InvoicesService {
   /**
    * Records a partial or full payment against a non-Draft invoice.
    * Returns the updated invoice (with new paidAmount / remainingAmount / status).
+   * Invalidates both invoice and treasury caches — payment reduces the
+   * treasury balance, so the treasury page must re-fetch immediately.
    */
   pay(id: number, payload: PayInvoicePayload): Observable<PurchaseInvoice> {
     return this.api.post<PurchaseInvoice>(
@@ -123,7 +130,7 @@ export class InvoicesService {
       payload,
       {
         context: withInlineHandling(
-          withCacheInvalidate([INVOICES_CACHE_KEY]),
+          withCacheInvalidate([INVOICES_CACHE_KEY, TREASURY_CACHE_KEY]),
         ),
       },
     );

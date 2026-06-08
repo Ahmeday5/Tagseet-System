@@ -171,6 +171,17 @@ export class ShareholderCapitalModalComponent {
     return line?.amount ?? sh.accruedProfit ?? 0;
   });
 
+  /**
+   * Percentage of the capitalised amount that goes to the company's profits
+   * treasury (0 when not yet known or when the shareholder has no company cut).
+   */
+  protected readonly companyPercentage = computed(() => {
+    const sh = this.shareholder();
+    if (!sh) return 0;
+    const line = this.preview()?.lines.find((l) => l.shareholderId === sh.id);
+    return line?.companyPercentage ?? 0;
+  });
+
   protected readonly canCapitalize = computed(
     () => this.availableProfit() > 0 && this.profitsTreasuryId() != null,
   );
@@ -217,6 +228,22 @@ export class ShareholderCapitalModalComponent {
 
   protected readonly remainingProfit = computed(() =>
     Math.max(0, this.availableProfit() - this.draftCapAmount()),
+  );
+
+  /** Portion of the draft capitalisation amount that actually lands in the shareholder's capital. */
+  protected readonly capShareholderShare = computed(() => {
+    const fraction = (100 - this.companyPercentage()) / 100;
+    return this.draftCapAmount() * fraction;
+  });
+
+  /** Portion of the draft capitalisation amount that goes to the company's profits treasury. */
+  protected readonly capCompanyShare = computed(() =>
+    this.draftCapAmount() * (this.companyPercentage() / 100),
+  );
+
+  /** Projected capital balance after the capitalisation. */
+  protected readonly projectedCapitalAfterCap = computed(() =>
+    this.currentCapital() + this.capShareholderShare(),
   );
 
   // ── forms ──

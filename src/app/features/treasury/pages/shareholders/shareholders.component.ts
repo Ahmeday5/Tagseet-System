@@ -96,6 +96,12 @@ export class ShareholdersComponent {
   protected readonly previewTotal = computed(
     () => this.preview()?.totalAmount ?? 0,
   );
+  protected readonly previewTotalShareholdersShare = computed(
+    () => this.preview()?.totalShareholdersShare ?? 0,
+  );
+  protected readonly previewTotalCompanyShare = computed(
+    () => this.preview()?.totalCompanyShare ?? 0,
+  );
   protected readonly previewTreasuryName = computed(
     () => this.preview()?.profitsTreasuryName ?? '—',
   );

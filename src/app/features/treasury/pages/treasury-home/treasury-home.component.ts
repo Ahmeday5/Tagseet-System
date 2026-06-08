@@ -381,12 +381,6 @@ export class TreasuryHomeComponent implements OnInit {
     this.modalOpen.set(true);
   }
 
-  protected openEdit(treasury: Treasury): void {
-    this.modalTreasury.set(treasury);
-    this.modalMode.set('edit');
-    this.modalOpen.set(true);
-  }
-
   protected closeModal(): void {
     this.modalOpen.set(false);
   }

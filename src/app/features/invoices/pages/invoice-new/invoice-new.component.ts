@@ -359,8 +359,10 @@ export class InvoiceNewComponent implements OnInit {
     // The picker carries only `{id,name}` (lookup) — pull the purchase
     // price from the cached product detail to pre-fill the line.
     this.productsService.getById(productId).subscribe({
-      next: (product) =>
-        ctrl.controls.unitPrice.setValue(product.purchasePrice ?? 0),
+      next: (product) => {
+        ctrl.controls.unitPrice.setValue(product.purchasePrice ?? 0);
+        this.linesTick.update((v) => v + 1);
+      },
       error: () => {
         /* leave the unit price for manual entry */
       },

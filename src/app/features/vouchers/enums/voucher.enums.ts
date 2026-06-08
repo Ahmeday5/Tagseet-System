@@ -20,10 +20,14 @@ export enum ReferenceType {
   Contract = 'Contract',
   SupplierPurchase = 'SupplierPurchase',
   ClientOrder = 'ClientOrder',
+  ShareholderCapital = 'ShareholderCapital',
+  ProfitAccrual = 'ProfitAccrual',
+  ProfitDistribution = 'ProfitDistribution',
 }
 
 export enum RelatedPartyType {
   Customer = 'Customer',
   Supplier = 'Supplier',
   Other = 'Other',
+  Shareholder = 'Shareholder',
 }

@@ -13,7 +13,14 @@ export interface ProfitSettlementLine {
   contributedAmount: number;
   /** Share of the distributed total (%). */
   percentage: number;
+  /** Total AccruedProfit for this shareholder (what leaves the profits treasury). */
   amount: number;
+  /** Percentage of `amount` that goes to the company's profits treasury. */
+  companyPercentage: number;
+  /** Portion of `amount` that goes to the company → company profits treasury ↑. */
+  companyShare: number;
+  /** Portion of `amount` added to this shareholder's capital treasury. */
+  shareholderShare: number;
   /** Issued only once the settlement is executed — absent/empty in the preview. */
   voucherNumber?: string;
 }
@@ -26,7 +33,12 @@ export interface ProfitSettlementLine {
 export interface ProfitSettlementPreview {
   profitsTreasuryId: number;
   profitsTreasuryName: string;
+  /** Total AccruedProfit across all shareholders (whole amount leaving profits treasury). */
   totalAmount: number;
+  /** Sum of all shareholderShare values — what actually flows into shareholders' capital. */
+  totalShareholdersShare: number;
+  /** Sum of all companyShare values — what flows into the company's profits treasury. */
+  totalCompanyShare: number;
   lines: ProfitSettlementLine[];
 }
 
