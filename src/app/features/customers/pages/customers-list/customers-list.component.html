@@ -75,6 +75,17 @@
   <button
     *appHasPermission="PERMS.clientsFullAccess"
     type="button"
+    class="btn btn-sm btn-gr d-inline-flex align-items-center gap-1"
+    (click)="openDirectContract()"
+    title="إنشاء عقد تقسيط مباشر بدون ربطه بمنتج أو مخزن"
+  >
+    <span aria-hidden="true">+</span>
+    <span>عقد مباشر جديد</span>
+  </button>
+
+  <button
+    *appHasPermission="PERMS.clientsFullAccess"
+    type="button"
     class="btn btn-sm btn-bl d-inline-flex align-items-center gap-1"
     (click)="openCreate()"
   >
@@ -243,4 +254,10 @@
   [client]="editTarget()"
   (closed)="closeForm()"
   (saved)="onSaved()"
+/>
+
+<app-direct-contract-modal
+  [open]="showDirectContract()"
+  (closed)="closeDirectContract()"
+  (created)="onDirectContractCreated()"
 />

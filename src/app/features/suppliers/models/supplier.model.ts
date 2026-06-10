@@ -101,6 +101,10 @@ export interface SupplierStatementSummary {
   invoicesCount: number;
   totalPurchases: number;
   totalPaid: number;
+  /** Portion of totalPaid applied directly against invoice balances. */
+  invoicePaidTotal: number;
+  /** Portion of totalPaid made as standalone supplier payments. */
+  standalonePaidTotal: number;
   totalRemaining: number;
   firstSupplyDate: string | null;
   lastSupplyDate: string | null;
@@ -130,9 +134,46 @@ export interface SupplierStatementInvoice {
   items: SupplierStatementItem[];
 }
 
+export interface SupplierStatementPayment {
+  id: number;
+  voucherNumber: string;
+  date: string;
+  amount: number;
+  notes: string | null;
+}
+
 export interface SupplierStatement {
   supplier: SupplierStatementParty;
   period: SupplierStatementPeriod;
   summary: SupplierStatementSummary;
   invoices: SupplierStatementInvoice[];
+  payments: SupplierStatementPayment[];
+}
+
+// ─────────────────────────────────────────────────────────────────
+//  POST /dashboard/suppliers/{id}/payments
+//  Direct supplier payment — not tied to a specific invoice.
+// ─────────────────────────────────────────────────────────────────
+
+export interface SupplierPaymentPayload {
+  treasuryId: number;
+  amount: number;
+  /** ISO date YYYY-MM-DD. */
+  paymentDate: string;
+  notes?: string;
+}
+
+export interface SupplierPaymentResponse {
+  voucherId: number;
+  voucherNumber: string;
+  supplierId: number;
+  supplierName: string;
+  amount: number;
+  date: string;
+  treasuryId: number;
+  treasuryName: string;
+  treasuryBalanceAfter: number;
+  supplierOwedBefore: number;
+  supplierOwedAfter: number;
+  notes: string;
 }

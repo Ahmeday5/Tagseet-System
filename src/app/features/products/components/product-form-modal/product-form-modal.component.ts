@@ -60,6 +60,9 @@ export class ProductFormModalComponent {
   protected readonly categories = signal<Category[]>([]);
   protected readonly loadingCategories = signal(false);
 
+  /** Prevents the effect from re-triggering a fetch after categories load. */
+  private categoriesLoaded = false;
+
   /** The picked file, if any. Service serializes this as the `Image` field. */
   protected readonly pickedImage = signal<File | null>(null);
   /** Local error from client-side image validation (size / MIME type). */
@@ -246,14 +249,9 @@ export class ProductFormModalComponent {
     });
   }
 
-  /**
-   * Lazy-load categories on first modal open. Re-uses the cached entry
-   * on subsequent opens so the dropdown is instant. Cache invalidation
-   * (handled by CategoriesService on create/edit/delete) refreshes it
-   * naturally next time.
-   */
   private loadCategoriesIfNeeded(): void {
-    if (this.categories().length > 0) return;
+    if (this.categoriesLoaded) return;
+    this.categoriesLoaded = true;
     this.loadingCategories.set(true);
     this.categoriesService.listAll().subscribe({
       next: (list) => {
@@ -261,6 +259,7 @@ export class ProductFormModalComponent {
         this.loadingCategories.set(false);
       },
       error: () => {
+        this.categoriesLoaded = false;
         this.categories.set([]);
         this.loadingCategories.set(false);
       },

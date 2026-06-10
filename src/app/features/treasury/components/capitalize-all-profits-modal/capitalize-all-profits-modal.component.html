@@ -79,6 +79,17 @@
       <!-- form -->
       <form [formGroup]="form" (ngSubmit)="onSubmit()" novalidate autocomplete="off" class="cap-all-form">
         <div class="row g-3">
+          <div class="col-12">
+            <label class="form-label">الخزينة التشغيلية (مصدر الصرف)</label>
+            <app-searchable-select
+              formControlName="profitsTreasuryId"
+              [options]="operationalTreasuryOptions()"
+              [isDisabled]="loadingTreasuries()"
+              placeholder="اختر الخزينة"
+              searchPlaceholder="ابحث باسم الخزينة…"
+            />
+            <app-form-error [control]="form.controls.profitsTreasuryId" label="الخزينة" />
+          </div>
           <div class="col-12 col-md-6">
             <label class="form-label">تاريخ الرسملة</label>
             <input
@@ -103,7 +114,7 @@
       </form>
 
       <div class="cap-all-note" role="note">
-        سيتم ترحيل الأرباح المتراكمة لكل مساهم إلى رأس ماله وتصفير رصيد أرباحه. هذا الإجراء لا يمكن التراجع عنه.
+        سيتم ترحيل الأرباح المتراكمة من الخزينة التشغيلية المحددة إلى رأس مال كل مساهم وتصفير رصيد أرباحه. هذا الإجراء لا يمكن التراجع عنه.
       </div>
     }
 
@@ -130,7 +141,7 @@
     <button
       type="button"
       class="btn btn-gr d-inline-flex align-items-center gap-2"
-      [disabled]="submitting() || loadingPreview() || !canCapitalize()"
+      [disabled]="submitting() || loadingPreview() || !canCapitalize() || form.invalid || loadingTreasuries()"
       (click)="onSubmit()"
     >
       @if (submitting()) {

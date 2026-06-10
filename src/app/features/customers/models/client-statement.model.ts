@@ -6,7 +6,8 @@ import { PagedResponse } from '../../../core/models/api-response.model';
  */
 export interface ClientContractRow {
   id: number;
-  productId: number;
+  /** `null` for direct contracts that are not linked to an inventory product. */
+  productId: number | null;
   productName: string;
   quantity: number;
   dateOfSale: string;
@@ -39,7 +40,8 @@ export interface ClientContractsQuery {
 export interface ContractDetails {
   contract: ContractDetailsContract;
   client: ContractDetailsClient;
-  product: ContractDetailsProduct;
+  /** `null` for direct contracts that are not linked to a catalog product. */
+  product: ContractDetailsProduct | null;
   warehouse: ContractDetailsWarehouse | null;
   representative: ContractDetailsRepresentative | null;
   summary: ContractDetailsSummary;
@@ -49,6 +51,8 @@ export interface ContractDetails {
 
 export interface ContractDetailsContract {
   id: number;
+  /** Free-text product name for direct contracts (no catalog product). Null for regular contracts. */
+  productName: string | null;
   quantity: number;
   dateOfSale: string;
   purchasePrice: number;

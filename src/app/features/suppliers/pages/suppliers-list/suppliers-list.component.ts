@@ -10,10 +10,12 @@ import {
 import { SuppliersService } from '../../services/suppliers.service';
 import {
   Supplier,
+  SupplierPaymentResponse,
   SuppliersSummary,
 } from '../../models/supplier.model';
 import { SupplierFormModalComponent } from '../../components/supplier-form-modal/supplier-form-modal.component';
 import { SupplierStatementModalComponent } from '../../components/supplier-statement-modal/supplier-statement-modal.component';
+import { SupplierPaymentModalComponent } from '../../components/supplier-payment-modal/supplier-payment-modal.component';
 import { PaginationComponent } from '../../../../shared/components/pagination/pagination.component';
 import { CurrencyArPipe } from '../../../../shared/pipes/currency-ar.pipe';
 import { FormMode } from '../../../../shared/models/form-mode.model';
@@ -46,6 +48,7 @@ const DEFAULT_PAGE_SIZE = 10;
   imports: [
     SupplierFormModalComponent,
     SupplierStatementModalComponent,
+    SupplierPaymentModalComponent,
     PaginationComponent,
     CurrencyArPipe,
     HasPermissionDirective,
@@ -87,6 +90,10 @@ export class SuppliersListComponent implements OnInit {
   // ── statement modal state ──
   protected readonly statementOpen     = signal(false);
   protected readonly statementSupplier = signal<Supplier | null>(null);
+
+  // ── payment modal state ──
+  protected readonly paymentOpen     = signal(false);
+  protected readonly paymentSupplier = signal<Supplier | null>(null);
 
   /** Tracks which row is currently being deleted, for inline button state. */
   protected readonly deletingId = signal<number | null>(null);
@@ -258,6 +265,32 @@ export class SuppliersListComponent implements OnInit {
 
   protected closeStatement(): void {
     this.statementOpen.set(false);
+  }
+
+  protected openPayment(supplier: Supplier): void {
+    this.paymentSupplier.set(supplier);
+    this.paymentOpen.set(true);
+  }
+
+  protected closePayment(): void {
+    this.paymentOpen.set(false);
+  }
+
+  protected onPaid(res: SupplierPaymentResponse): void {
+    this.paymentOpen.set(false);
+    // Update the supplier's remaining amount in-place so the row reflects the
+    // payment immediately without a full round-trip.
+    this.suppliers.update((list) =>
+      list.map((s) =>
+        s.id === res.supplierId
+          ? {
+              ...s,
+              paidAmount: (s.paidAmount ?? 0) + res.amount,
+              remainingAmount: res.supplierOwedAfter,
+            }
+          : s,
+      ),
+    );
   }
 
   protected onSaved(saved: Supplier): void {

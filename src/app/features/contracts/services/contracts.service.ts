@@ -16,6 +16,9 @@ import {
   CreatedContract,
   CreateContractPayload,
   buildCreateContractPayload,
+  CreateDirectContractPayload,
+  CreatedDirectContract,
+  buildDirectContractPayload,
 } from '../models/contract.model';
 
 const CONTRACTS_CACHE_KEY = 'contracts';
@@ -57,6 +60,30 @@ export class ContractsService {
         ]),
       ),
     });
+  }
+
+  /**
+   * Direct installment-contract creation (no product/warehouse link).
+   *
+   * POST /dashboard/contracts/direct
+   */
+  createDirect(
+    payload: CreateDirectContractPayload,
+  ): Observable<CreatedDirectContract> {
+    return this.api.post<CreatedDirectContract>(
+      API_ENDPOINTS.contracts.direct,
+      buildDirectContractPayload(payload),
+      {
+        context: withInlineHandling(
+          withCacheInvalidate([
+            CONTRACTS_CACHE_KEY,
+            'client',
+            'treasur',
+            'financial-separation',
+          ]),
+        ),
+      },
+    );
   }
 
   /**

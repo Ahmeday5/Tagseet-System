@@ -25,6 +25,7 @@ import { HttpCacheService } from '../../../../core/services/http-cache.service';
 import { onInvalidate } from '../../../../core/utils/auto-refresh.util';
 import { HasPermissionDirective } from '../../../../shared/directives/has-permission.directive';
 import { ClientFormModalComponent } from '../../components/client-form-modal/client-form-modal.component';
+import { DirectContractModalComponent } from '../../components/direct-contract-modal/direct-contract-modal.component';
 import { PERMISSIONS } from '../../../../core/constants/permissions.const';
 import { PrintService } from '../../../../core/services/print.service';
 import { map } from 'rxjs/operators';
@@ -43,6 +44,7 @@ const SEARCH_DEBOUNCE_MS = 300;
     CurrencyArPipe,
     HasPermissionDirective,
     ClientFormModalComponent,
+    DirectContractModalComponent,
   ],
   templateUrl: './customers-list.component.html',
   styleUrl: './customers-list.component.scss',
@@ -77,6 +79,9 @@ export class CustomersListComponent {
   protected readonly showForm = signal(false);
   /** Non-null when the form modal is open in edit mode. */
   protected readonly editTarget = signal<DashboardClient | null>(null);
+
+  // ── direct contract modal ──
+  protected readonly showDirectContract = signal(false);
 
   // ── derived ──
   protected readonly hasFilters = computed(
@@ -256,6 +261,21 @@ export class CustomersListComponent {
     const wasEdit = this.editTarget() !== null;
     this.closeForm();
     if (!wasEdit && this.pageIndex() !== 1) this.pageIndex.set(1);
+    else this.refresh();
+  }
+
+  protected openDirectContract(): void {
+    this.showDirectContract.set(true);
+  }
+
+  protected closeDirectContract(): void {
+    this.showDirectContract.set(false);
+  }
+
+  protected onDirectContractCreated(): void {
+    this.showDirectContract.set(false);
+    // Jump to page 1 so the new contract's client is visible
+    if (this.pageIndex() !== 1) this.pageIndex.set(1);
     else this.refresh();
   }
 

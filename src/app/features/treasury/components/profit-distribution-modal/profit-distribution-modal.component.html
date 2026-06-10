@@ -88,6 +88,17 @@
       <!-- form -->
       <form [formGroup]="form" (ngSubmit)="onSubmit()" novalidate autocomplete="off" class="pd-form">
         <div class="row g-3">
+          <div class="col-12">
+            <label class="form-label">الخزينة التشغيلية (مصدر الصرف)</label>
+            <app-searchable-select
+              formControlName="treasuryId"
+              [options]="operationalTreasuryOptions()"
+              [isDisabled]="loadingTreasuries()"
+              placeholder="اختر الخزينة"
+              searchPlaceholder="ابحث باسم الخزينة…"
+            />
+            <app-form-error [control]="form.controls.treasuryId" label="الخزينة" />
+          </div>
           <div class="col-12 col-md-6">
             <label class="form-label">تاريخ التوزيع</label>
             <input
@@ -112,7 +123,7 @@
       </form>
 
       <div class="pd-note" role="note">
-        سيتم خصم إجمالي المبلغ من خزينة الأرباح وإصدار سند صرف لكل مساهم. هذا الإجراء لا يمكن التراجع عنه.
+        سيتم خصم إجمالي المبلغ من الخزينة التشغيلية المحددة وإصدار سند صرف لكل مساهم. هذا الإجراء لا يمكن التراجع عنه.
       </div>
     }
 
@@ -139,7 +150,7 @@
     <button
       type="button"
       class="btn btn-bl d-inline-flex align-items-center gap-2"
-      [disabled]="submitting() || loadingPreview() || !canDistribute()"
+      [disabled]="submitting() || loadingPreview() || !canDistribute() || form.invalid || loadingTreasuries()"
       (click)="onSubmit()"
     >
       @if (submitting()) {

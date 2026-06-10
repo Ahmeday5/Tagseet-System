@@ -124,6 +124,14 @@
           <div class="ss-summary-val">{{ st.summary.invoicesCount }}</div>
         </div>
         <div class="ss-summary-card">
+          <div class="ss-summary-label">مدفوع عبر الفواتير</div>
+          <div class="ss-summary-val ss-text-gr">{{ st.summary.invoicePaidTotal | currencyAr: true }}</div>
+        </div>
+        <div class="ss-summary-card">
+          <div class="ss-summary-label">مدفوع مباشر</div>
+          <div class="ss-summary-val ss-text-gr">{{ st.summary.standalonePaidTotal | currencyAr: true }}</div>
+        </div>
+        <div class="ss-summary-card">
           <div class="ss-summary-label">أول توريد</div>
           <div class="ss-summary-val">{{ formatDate(st.summary.firstSupplyDate) }}</div>
         </div>
@@ -278,6 +286,50 @@
           </div>
         }
       </section>
+
+      <!-- STANDALONE PAYMENTS -->
+      @if (st.payments.length > 0) {
+        <section class="ss-payments">
+          <div class="ss-section-head">
+            <div class="ss-section-title">المدفوعات المباشرة</div>
+            <div class="ss-section-sub">{{ st.payments.length }} دفعة</div>
+          </div>
+
+          <div class="tw ss-pay-table mb-0">
+            <table>
+              <thead>
+                <tr>
+                  <th>رقم السند</th>
+                  <th class="text-center">التاريخ</th>
+                  <th class="text-end">المبلغ</th>
+                  <th>ملاحظات</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (p of st.payments; track p.id) {
+                  <tr>
+                    <td class="cv-ltr ss-pay-voucher" [title]="p.voucherNumber">
+                      {{ p.voucherNumber }}
+                    </td>
+                    <td class="text-center">{{ formatDate(p.date) }}</td>
+                    <td class="text-end ss-text-gr fw-600">{{ p.amount | currencyAr: true }}</td>
+                    <td class="ss-pay-notes">{{ p.notes || '—' }}</td>
+                  </tr>
+                }
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="2" class="fw-600">الإجمالي</td>
+                  <td class="text-end ss-text-gr fw-600">
+                    {{ paymentsTotal(st.payments) | currencyAr: true }}
+                  </td>
+                  <td></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </section>
+      }
     } @else if (loading()) {
       <div class="ss-loading">
         <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>

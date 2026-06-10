@@ -18,6 +18,8 @@ import {
   SuppliersListResponse,
   SupplierStatement,
   SupplierStatementQuery,
+  SupplierPaymentPayload,
+  SupplierPaymentResponse,
   UpdateSupplierPayload,
 } from '../models/supplier.model';
 
@@ -111,6 +113,27 @@ export class SuppliersService {
       to: query.to || undefined,
       includeDrafts: query.includeDrafts ?? false,
     };
+  }
+
+  // ─────────── payments ───────────
+
+  /**
+   * Record a direct payment to a supplier (not tied to a specific invoice).
+   * POST /dashboard/suppliers/{id}/payments
+   */
+  pay(
+    supplierId: number,
+    payload: SupplierPaymentPayload,
+  ): Observable<SupplierPaymentResponse> {
+    return this.api.post<SupplierPaymentResponse>(
+      API_ENDPOINTS.suppliers.payments(supplierId),
+      payload,
+      {
+        context: withInlineHandling(
+          withCacheInvalidate([SUPPLIERS_CACHE_KEY, 'treasur', 'financial-separation']),
+        ),
+      },
+    );
   }
 
   // ─────────── writes ───────────

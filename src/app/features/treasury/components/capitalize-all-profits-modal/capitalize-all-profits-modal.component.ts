@@ -12,25 +12,26 @@ import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';
 import { FormErrorComponent } from '../../../../shared/components/form-error/form-error.component';
+import {
+  SearchableSelectComponent,
+  SearchableSelectOption,
+} from '../../../../shared/components/searchable-select/searchable-select.component';
 import { CurrencyArPipe } from '../../../../shared/pipes/currency-ar.pipe';
 import { ApiError } from '../../../../core/models/api-response.model';
 import { ToastService } from '../../../../core/services/toast.service';
 
 import { ShareholdersService } from '../../services/shareholders.service';
+import { TreasuryService } from '../../services/treasury.service';
+import { TreasuryType } from '../../enums/treasury-type.enum';
+import { Treasury } from '../../models/treasury.model';
 import { ProfitSettlementPreview } from '../../models/profit-settlement.model';
 
-/**
- * Capitalize-all-profits dialog.
- *
- *   <app-capitalize-all-profits-modal
- *     [open]="capitalizeAllOpen()"
- *     (closed)="closeCapitalizeAll()"
- *     (capitalized)="onCapitalizedAll()" />
- *
- * On open it fetches the live preview to determine the profits treasury and
- * each shareholder's AccruedProfit. The user only picks a date and an optional
- * note — amounts are fully server-managed.
- */
+const PROFIT_TREASURY_TYPES = new Set([
+  TreasuryType.Profits,
+  TreasuryType.SubRepresentativeProfits,
+  TreasuryType.CompanyProfits,
+]);
+
 @Component({
   selector: 'app-capitalize-all-profits-modal',
   standalone: true,
@@ -39,6 +40,7 @@ import { ProfitSettlementPreview } from '../../models/profit-settlement.model';
     ReactiveFormsModule,
     ModalComponent,
     FormErrorComponent,
+    SearchableSelectComponent,
     CurrencyArPipe,
   ],
   templateUrl: './capitalize-all-profits-modal.component.html',
@@ -52,6 +54,7 @@ export class CapitalizeAllProfitsModalComponent {
 
   private readonly fb = inject(FormBuilder);
   private readonly service = inject(ShareholdersService);
+  private readonly treasuryService = inject(TreasuryService);
   private readonly toast = inject(ToastService);
 
   protected readonly preview = signal<ProfitSettlementPreview | null>(null);
@@ -59,6 +62,8 @@ export class CapitalizeAllProfitsModalComponent {
   protected readonly previewError = signal<string | null>(null);
   protected readonly submitting = signal(false);
   protected readonly serverError = signal<string | null>(null);
+  protected readonly treasuries = signal<Treasury[]>([]);
+  protected readonly loadingTreasuries = signal(false);
 
   protected readonly lines = computed(() =>
     (this.preview()?.lines ?? []).filter((l) => l.amount > 0),
@@ -75,8 +80,18 @@ export class CapitalizeAllProfitsModalComponent {
   protected readonly canCapitalize = computed(
     () => this.totalAmount() > 0 && this.lines().length > 0,
   );
+  protected readonly operationalTreasuryOptions = computed<SearchableSelectOption[]>(() =>
+    this.treasuries()
+      .filter((t) => t.isActive && !PROFIT_TREASURY_TYPES.has(t.type as TreasuryType))
+      .map((t) => ({
+        value: t.id,
+        label: t.name,
+        hint: t.type === TreasuryType.Bank ? 'بنك' : undefined,
+      })),
+  );
 
   protected readonly form = this.fb.nonNullable.group({
+    profitsTreasuryId: this.fb.control<number | null>(null, [Validators.required]),
     date: [this.todayISO(), [Validators.required]],
     notes: [''],
   });
@@ -87,8 +102,9 @@ export class CapitalizeAllProfitsModalComponent {
         if (!this.open()) return;
         this.serverError.set(null);
         this.submitting.set(false);
-        this.form.reset({ date: this.todayISO(), notes: '' });
+        this.form.reset({ profitsTreasuryId: null, date: this.todayISO(), notes: '' });
         this.loadPreview();
+        if (!this.treasuries().length) this.loadTreasuries();
       },
       { allowSignalWrites: true },
     );
@@ -101,10 +117,10 @@ export class CapitalizeAllProfitsModalComponent {
       return;
     }
 
-    const treasuryId = this.preview()?.profitsTreasuryId;
+    const raw = this.form.getRawValue();
+    const treasuryId = Number(raw.profitsTreasuryId);
     if (!treasuryId) return;
 
-    const raw = this.form.getRawValue();
     this.serverError.set(null);
     this.submitting.set(true);
 
@@ -149,6 +165,20 @@ export class CapitalizeAllProfitsModalComponent {
       error: (err: ApiError) => {
         this.loadingPreview.set(false);
         this.previewError.set(err.message || 'تعذّر تحميل بيانات الأرباح');
+      },
+    });
+  }
+
+  private loadTreasuries(): void {
+    this.loadingTreasuries.set(true);
+    this.treasuryService.list().subscribe({
+      next: (list) => {
+        this.treasuries.set(list ?? []);
+        this.loadingTreasuries.set(false);
+      },
+      error: () => {
+        this.treasuries.set([]);
+        this.loadingTreasuries.set(false);
       },
     });
   }

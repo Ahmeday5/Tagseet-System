@@ -13,29 +13,29 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';
 import { FormErrorComponent } from '../../../../shared/components/form-error/form-error.component';
+import {
+  SearchableSelectComponent,
+  SearchableSelectOption,
+} from '../../../../shared/components/searchable-select/searchable-select.component';
 import { CurrencyArPipe } from '../../../../shared/pipes/currency-ar.pipe';
 import { ApiError } from '../../../../core/models/api-response.model';
 import { ToastService } from '../../../../core/services/toast.service';
 
 import { ShareholdersService } from '../../services/shareholders.service';
+import { TreasuryService } from '../../services/treasury.service';
+import { TreasuryType } from '../../enums/treasury-type.enum';
+import { Treasury } from '../../models/treasury.model';
 import {
   ProfitSettlement,
   ProfitSettlementPreview,
 } from '../../models/profit-settlement.model';
 
-/**
- * Profit-distribution dialog.
- *
- *   <app-profit-distribution-modal
- *     [open]="distributeOpen()"
- *     (closed)="closeDistribute()"
- *     (settled)="onSettled($event)" />
- *
- * On open it fetches a live preview (the profits treasury + each shareholder's
- * proportional slice). The treasury and amounts are server-computed and shown
- * read-only — the user only confirms the date and an optional note. Confirm is
- * disabled when there are no profits to distribute.
- */
+const PROFIT_TREASURY_TYPES = new Set([
+  TreasuryType.Profits,
+  TreasuryType.SubRepresentativeProfits,
+  TreasuryType.CompanyProfits,
+]);
+
 @Component({
   selector: 'app-profit-distribution-modal',
   standalone: true,
@@ -45,6 +45,7 @@ import {
     DecimalPipe,
     ModalComponent,
     FormErrorComponent,
+    SearchableSelectComponent,
     CurrencyArPipe,
   ],
   templateUrl: './profit-distribution-modal.component.html',
@@ -61,6 +62,7 @@ export class ProfitDistributionModalComponent {
   // ── deps ──
   private readonly fb = inject(FormBuilder);
   private readonly service = inject(ShareholdersService);
+  private readonly treasuryService = inject(TreasuryService);
   private readonly toast = inject(ToastService);
 
   // ── state ──
@@ -69,6 +71,8 @@ export class ProfitDistributionModalComponent {
   protected readonly previewError = signal<string | null>(null);
   protected readonly submitting = signal(false);
   protected readonly serverError = signal<string | null>(null);
+  protected readonly treasuries = signal<Treasury[]>([]);
+  protected readonly loadingTreasuries = signal(false);
 
   // ── derived ──
   protected readonly lines = computed(() => this.preview()?.lines ?? []);
@@ -81,13 +85,22 @@ export class ProfitDistributionModalComponent {
   protected readonly totalCompanyShare = computed(
     () => this.preview()?.totalCompanyShare ?? 0,
   );
-  /** Only allow a distribution when there's a positive balance to split. */
   protected readonly canDistribute = computed(
     () => this.totalAmount() > 0 && this.lines().length > 0,
+  );
+  protected readonly operationalTreasuryOptions = computed<SearchableSelectOption[]>(() =>
+    this.treasuries()
+      .filter((t) => t.isActive && !PROFIT_TREASURY_TYPES.has(t.type as TreasuryType))
+      .map((t) => ({
+        value: t.id,
+        label: t.name,
+        hint: t.type === TreasuryType.Bank ? 'بنك' : undefined,
+      })),
   );
 
   // ── form ──
   protected readonly form = this.fb.nonNullable.group({
+    treasuryId: this.fb.control<number | null>(null, [Validators.required]),
     date: [this.todayISO(), [Validators.required]],
     notes: [''],
   });
@@ -98,8 +111,9 @@ export class ProfitDistributionModalComponent {
         if (!this.open()) return;
         this.serverError.set(null);
         this.submitting.set(false);
-        this.form.reset({ date: this.todayISO(), notes: '' });
+        this.form.reset({ treasuryId: null, date: this.todayISO(), notes: '' });
         this.loadPreview();
+        if (!this.treasuries().length) this.loadTreasuries();
       },
       { allowSignalWrites: true },
     );
@@ -114,10 +128,10 @@ export class ProfitDistributionModalComponent {
       return;
     }
 
-    const treasuryId = this.preview()?.profitsTreasuryId;
+    const raw = this.form.getRawValue();
+    const treasuryId = Number(raw.treasuryId);
     if (!treasuryId) return;
 
-    const raw = this.form.getRawValue();
     this.serverError.set(null);
     this.submitting.set(true);
 
@@ -164,6 +178,20 @@ export class ProfitDistributionModalComponent {
       error: (err: ApiError) => {
         this.loadingPreview.set(false);
         this.previewError.set(err.message || 'تعذّر تحميل بيانات التوزيع');
+      },
+    });
+  }
+
+  private loadTreasuries(): void {
+    this.loadingTreasuries.set(true);
+    this.treasuryService.list().subscribe({
+      next: (list) => {
+        this.treasuries.set(list ?? []);
+        this.loadingTreasuries.set(false);
+      },
+      error: () => {
+        this.treasuries.set([]);
+        this.loadingTreasuries.set(false);
       },
     });
   }

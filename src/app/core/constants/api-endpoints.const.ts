@@ -81,6 +81,8 @@ export const API_ENDPOINTS = {
     statement: (id: number) => `dashboard/suppliers/${id}/statement`,
     /** Lightweight `{id,name}` list for the supplier picker (role-scoped server-side). */
     lookup: 'dashboard/suppliers/lookup',
+    /** POST: record a direct payment (not tied to an invoice) for a supplier. */
+    payments: (id: number) => `dashboard/suppliers/${id}/payments`,
   },
   purchaseInvoices: {
     base: 'dashboard/supplier-purchase-invoices',
@@ -146,5 +148,7 @@ export const API_ENDPOINTS = {
   contracts: {
     base: 'dashboard/contracts',
     details: (id: number) => `dashboard/contracts/${id}/details`,
+    /** POST: create a direct installment contract (free-text product, no warehouse). */
+    direct: 'dashboard/contracts/direct',
   },
 } as const;

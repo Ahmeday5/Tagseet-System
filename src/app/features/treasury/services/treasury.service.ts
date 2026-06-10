@@ -46,7 +46,7 @@ export class TreasuryService {
       })
       .pipe(toList<Treasury>());
   }
-
+  
 
   lookup(): Observable<LookupItem[]> {
     return this.api

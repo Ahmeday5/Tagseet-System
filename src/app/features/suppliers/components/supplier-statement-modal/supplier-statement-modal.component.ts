@@ -20,6 +20,7 @@ import {
   SupplierStatement,
   SupplierStatementInvoice,
   SupplierStatementInvoiceStatus,
+  SupplierStatementPayment,
   SupplierStatementQuery,
 } from '../../models/supplier.model';
 import { PrintService } from '../../../../core/services/print.service';
@@ -190,13 +191,14 @@ export class SupplierStatementModalComponent {
     });
   }
 
-  /**
-   * Sum-line helper for the printable footer — adds the line totals to
-   * mirror the server's `totalAmount` even when discounts/tax are zero,
-   * so anomalies show up immediately when an invoice is malformed.
-   */
+  /** Sum of `lineTotal` across invoice items. */
   protected itemsTotal(items: { lineTotal: number }[]): number {
     return items.reduce((sum, it) => sum + (it.lineTotal ?? 0), 0);
+  }
+
+  /** Sum of standalone payment amounts. */
+  protected paymentsTotal(payments: SupplierStatementPayment[]): number {
+    return payments.reduce((sum, p) => sum + (p.amount ?? 0), 0);
   }
 
   /**
@@ -215,6 +217,12 @@ export class SupplierStatementModalComponent {
     if (s.period.from) meta.push({ label: 'من تاريخ', value: this.formatDate(s.period.from) });
     if (s.period.to)   meta.push({ label: 'إلى تاريخ', value: this.formatDate(s.period.to) });
     meta.push({ label: 'عدد الفواتير', value: String(s.summary.invoicesCount) });
+    if (s.summary.standalonePaidTotal > 0) {
+      meta.push({
+        label: 'مدفوع مباشر',
+        value: `${Math.round(s.summary.standalonePaidTotal).toLocaleString('ar-EG')} ج.م`,
+      });
+    }
 
     this.printer.print<SupplierStatementInvoice>({
       title: 'كشف حساب المورد',

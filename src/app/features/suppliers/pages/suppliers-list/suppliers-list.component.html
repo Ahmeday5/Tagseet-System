@@ -168,6 +168,13 @@
                 <ng-container *appHasPermission="PERMS.suppliersFullAccess">
                   <button
                     type="button"
+                    class="btn btn-sm btn-gr d-inline-flex align-items-center gap-1"
+                    [disabled]="(s.remainingAmount ?? 0) <= 0"
+                    (click)="openPayment(s)"
+                    title="تسجيل دفعة للمورد"
+                  >دفع</button>
+                  <button
+                    type="button"
                     class="btn btn-sm btn-bl"
                     (click)="openEdit(s)"
                   >تعديل</button>
@@ -257,4 +264,11 @@
   [open]="statementOpen()"
   [supplier]="statementSupplier()"
   (closed)="closeStatement()"
+/>
+
+<app-supplier-payment-modal
+  [open]="paymentOpen()"
+  [supplier]="paymentSupplier()"
+  (closed)="closePayment()"
+  (paid)="onPaid($event)"
 />

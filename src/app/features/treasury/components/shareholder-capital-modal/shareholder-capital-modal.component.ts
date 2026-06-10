@@ -45,6 +45,12 @@ import {
 type CapitalMode = 'transaction' | 'capitalize';
 
 const DEFAULT_PAGE_SIZE = 10;
+
+const PROFIT_TREASURY_TYPES = new Set([
+  TreasuryType.Profits,
+  TreasuryType.SubRepresentativeProfits,
+  TreasuryType.CompanyProfits,
+]);
 const VOUCHER_PREFIX_LEN = 18;
 
 /**
@@ -151,9 +157,6 @@ export class ShareholderCapitalModalComponent {
     () => this.shareholder()?.ownedPercentage ?? 0,
   );
 
-  protected readonly profitsTreasuryId = computed(
-    () => this.preview()?.profitsTreasuryId ?? null,
-  );
   protected readonly profitsTreasuryName = computed(
     () => this.preview()?.profitsTreasuryName ?? '—',
   );
@@ -183,28 +186,38 @@ export class ShareholderCapitalModalComponent {
   });
 
   protected readonly canCapitalize = computed(
-    () => this.availableProfit() > 0 && this.profitsTreasuryId() != null,
+    () => this.availableProfit() > 0,
   );
 
   /**
    * Cash treasuries valid for a capital deposit/withdrawal: active, not a
-   * representative (مندوبين) sub-treasury, and not the profits treasury.
+   * representative sub-treasury, and not any profits-type treasury.
    */
-  protected readonly treasuryOptions = computed<SearchableSelectOption[]>(() => {
-    const profitsId = this.profitsTreasuryId();
-    return this.treasuries()
+  protected readonly treasuryOptions = computed<SearchableSelectOption[]>(() =>
+    this.treasuries()
       .filter(
         (t) =>
           t.isActive &&
           t.type !== TreasuryType.SubRepresentative &&
-          t.id !== profitsId,
+          !PROFIT_TREASURY_TYPES.has(t.type as TreasuryType),
       )
       .map((t) => ({
         value: t.id,
         label: t.name,
         hint: t.type === TreasuryType.Bank ? 'بنك' : undefined,
-      }));
-  });
+      })),
+  );
+
+  /** Operational treasuries valid as source for capitalising profits. */
+  protected readonly capOperationalTreasuryOptions = computed<SearchableSelectOption[]>(() =>
+    this.treasuries()
+      .filter((t) => t.isActive && !PROFIT_TREASURY_TYPES.has(t.type as TreasuryType))
+      .map((t) => ({
+        value: t.id,
+        label: t.name,
+        hint: t.type === TreasuryType.Bank ? 'بنك' : undefined,
+      })),
+  );
 
   /** Capital balance after a deposit (adds) / withdrawal (subtracts). */
   protected readonly projectedCapital = computed(() => {
@@ -256,6 +269,7 @@ export class ShareholderCapitalModalComponent {
   });
 
   protected readonly capForm = this.fb.nonNullable.group({
+    profitsTreasuryId: this.fb.control<number | null>(null, [Validators.required]),
     amount: [0, [Validators.required, Validators.min(0.01)]],
     date: [this.todayISO(), [Validators.required]],
     notes: [''],
@@ -343,20 +357,21 @@ export class ShareholderCapitalModalComponent {
   protected submitCap(): void {
     if (this.submitting()) return;
     const sh = this.shareholder();
-    const profitsId = this.profitsTreasuryId();
-    if (!sh || profitsId == null) return;
+    if (!sh) return;
     if (this.capForm.invalid || this.capExceedsAvailable()) {
       this.capForm.markAllAsTouched();
       return;
     }
 
     const raw = this.capForm.getRawValue();
+    const profitsTreasuryId = Number(raw.profitsTreasuryId);
+    if (!profitsTreasuryId) return;
     this.serverError.set(null);
     this.submitting.set(true);
 
     this.service
       .capitalizeProfit(sh.id, {
-        profitsTreasuryId: profitsId,
+        profitsTreasuryId,
         amount: Number(raw.amount) || 0,
         date: raw.date,
         notes: (raw.notes ?? '').trim(),
@@ -464,7 +479,7 @@ export class ShareholderCapitalModalComponent {
       date: this.todayISO(),
       notes: '',
     });
-    this.capForm.reset({ amount: 0, date: this.todayISO(), notes: '' });
+    this.capForm.reset({ profitsTreasuryId: null, amount: 0, date: this.todayISO(), notes: '' });
   }
 
   private loadPreview(): void {

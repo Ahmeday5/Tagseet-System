@@ -133,6 +133,95 @@ export interface ContractFormState {
   notes?: string;
 }
 
+// ─────────────────────────────────────────────────────────────────
+//  Live API: POST /dashboard/contracts/direct
+//  Direct contract — free-text product name, no warehouse/inventory.
+// ─────────────────────────────────────────────────────────────────
+
+/**
+ * Payload for `POST /dashboard/contracts/direct`.
+ *
+ * Identical to `CreateContractPayload` except:
+ *  - `productName` replaces `productId`
+ *  - no `warehouseId` — not inventory-linked
+ *  - has `purchasePrice` (the dealer's cost price)
+ */
+export interface CreateDirectContractPayload {
+  clientId: number;
+  productName: string;
+  quantity: number;
+  /** ISO datetime. */
+  dateOfSale: string;
+  purchasePrice: number;
+  cashPrice: number;
+  downPayment: number;
+  /** 0..100. */
+  profitRate: number;
+  installmentsCount: number;
+  installmentAmount: number;
+  paymentFrequency: ContractPaymentFrequency;
+  /** ISO datetime. */
+  firstInstallmentDate: string;
+  treasuryId: number;
+  /** Omit when no representative — do NOT send 0 or null. */
+  representativeId?: number;
+  notes?: string;
+}
+
+/** Response shape from `POST /dashboard/contracts/direct`. */
+export interface CreatedDirectContract {
+  id: number;
+  clientId: number;
+  productName: string;
+  quantity: number;
+  dateOfSale: string;
+  purchasePrice: number;
+  cashPrice: number;
+  downPayment: number;
+  profitRate: number;
+  installmentsCount: number;
+  installmentAmount: number;
+  paymentFrequency: ContractPaymentFrequency;
+  firstInstallmentDate: string;
+  status: ContractStatus;
+  representativeId: number | null;
+  representativeCommission: number;
+  notes: string | null;
+}
+
+/**
+ * Build a `POST /dashboard/contracts/direct` body from raw form values.
+ * Strips `representativeId` when null/zero, trims/drops empty notes.
+ */
+export function buildDirectContractPayload(
+  form: CreateDirectContractPayload,
+): CreateDirectContractPayload {
+  const payload: CreateDirectContractPayload = {
+    clientId: form.clientId,
+    productName: form.productName.trim(),
+    quantity: form.quantity,
+    dateOfSale: form.dateOfSale,
+    purchasePrice: form.purchasePrice,
+    cashPrice: form.cashPrice,
+    downPayment: form.downPayment,
+    profitRate: form.profitRate,
+    installmentsCount: form.installmentsCount,
+    installmentAmount: form.installmentAmount,
+    paymentFrequency: form.paymentFrequency,
+    firstInstallmentDate: form.firstInstallmentDate,
+    treasuryId: form.treasuryId,
+  };
+
+  if (form.representativeId && form.representativeId > 0) {
+    payload.representativeId = form.representativeId;
+  }
+
+  const trimmedNotes = form.notes?.trim();
+  if (trimmedNotes) payload.notes = trimmedNotes;
+
+  return payload;
+}
+
 /**
  * Build a `POST /dashboard/contracts` body from form state.
  *

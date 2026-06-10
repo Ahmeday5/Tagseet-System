@@ -169,9 +169,16 @@
     @if (canCapitalize()) {
       <form [formGroup]="capForm" (ngSubmit)="submitCap()" novalidate autocomplete="off">
         <div class="row g-3">
-          <div class="col-12 col-md-6">
-            <label class="form-label">خزينة الأرباح (المصدر)</label>
-            <input type="text" class="form-control" [value]="profitsTreasuryName()" disabled />
+          <div class="col-12">
+            <label class="form-label">الخزينة التشغيلية (مصدر الصرف)</label>
+            <app-searchable-select
+              formControlName="profitsTreasuryId"
+              [options]="capOperationalTreasuryOptions()"
+              [isDisabled]="treasuriesLoading()"
+              placeholder="اختر الخزينة"
+              searchPlaceholder="ابحث باسم الخزينة…"
+            />
+            <app-form-error [control]="capForm.controls.profitsTreasuryId" label="الخزينة" />
           </div>
 
           <div class="col-12 col-md-6">
@@ -257,7 +264,7 @@
           <button
             type="submit"
             class="btn btn-sm btn-gr d-inline-flex align-items-center gap-2"
-            [disabled]="submitting() || capForm.invalid || capExceedsAvailable()"
+            [disabled]="submitting() || capForm.invalid || capExceedsAvailable() || treasuriesLoading()"
           >
             @if (submitting()) {
               <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
