@@ -16,7 +16,10 @@ import { onInvalidate } from '../../../../core/utils/auto-refresh.util';
 import { ApiError } from '../../../../core/models/api-response.model';
 
 import { SubAccountsService } from '../../services/sub-accounts.service';
-import { SubAccount } from '../../models/sub-account.model';
+import { TreasuryService } from '../../services/treasury.service';
+import { RepsService } from '../../../reps/services/reps.service';
+import { SubAccount, SubAccountVoucher } from '../../models/sub-account.model';
+import { LookupItem } from '../../../../core/models/lookup.model';
 import { SubAccountFormModalComponent } from '../sub-account-form-modal/sub-account-form-modal.component';
 import { SubAccountVoucherModalComponent } from '../sub-account-voucher-modal/sub-account-voucher-modal.component';
 import { SubAccountStatementModalComponent } from '../sub-account-statement-modal/sub-account-statement-modal.component';
@@ -51,6 +54,8 @@ const REFETCH_DEBOUNCE_MS = 250;
 })
 export class SubAccountsPanelComponent {
   private readonly service = inject(SubAccountsService);
+  private readonly treasuryService = inject(TreasuryService);
+  private readonly repsService = inject(RepsService);
   private readonly toast = inject(ToastService);
   private readonly cache = inject(HttpCacheService);
 
@@ -75,6 +80,8 @@ export class SubAccountsPanelComponent {
   // ── voucher modal ──
   protected readonly voucherOpen = signal(false);
   protected readonly voucherAccount = signal<SubAccount | null>(null);
+  protected readonly treasuriesLookup = signal<LookupItem[]>([]);
+  protected readonly repsLookup = signal<LookupItem[]>([]);
 
   // ── statement modal ──
   protected readonly statementOpen = signal(false);
@@ -109,6 +116,16 @@ export class SubAccountsPanelComponent {
 
     // Any sub-account write (here or in another tab) refreshes the list.
     onInvalidate(this.cache, 'sub-account', () => this.refresh());
+
+    this.treasuryService.lookup().subscribe({
+      next: (items) => this.treasuriesLookup.set(items),
+      error: () => {},
+    });
+
+    this.repsService.lookup().subscribe({
+      next: (items) => this.repsLookup.set(items),
+      error: () => {},
+    });
   }
 
   // ─────────── data ───────────
@@ -187,12 +204,18 @@ export class SubAccountsPanelComponent {
     this.formOpen.set(false);
   }
 
-  protected onSaved(_saved: SubAccount): void {
+  protected onSaved(saved: SubAccount): void {
     const wasCreate = this.formMode() === 'create';
     this.formOpen.set(false);
-    // Service invalidation triggers a refresh; jump to page 1 on create so the
-    // new account is visible.
-    if (wasCreate && this.pageIndex() !== 1) this.pageIndex.set(1);
+    if (wasCreate) {
+      this.accounts.update((list) => [saved, ...list]);
+      this.count.update((c) => c + 1);
+      if (this.pageIndex() !== 1) this.pageIndex.set(1);
+    } else {
+      this.accounts.update((list) =>
+        list.map((a) => (a.id === saved.id ? saved : a)),
+      );
+    }
   }
 
   // ─────────── voucher modal ───────────
@@ -206,9 +229,15 @@ export class SubAccountsPanelComponent {
     this.voucherOpen.set(false);
   }
 
-  protected onVoucherSaved(): void {
+  protected onVoucherSaved(voucher: SubAccountVoucher): void {
+    // Instant optimistic update — no round-trip needed; the response already
+    // carries `balanceAfter` which is the account's new running balance.
+    this.accounts.update((list) =>
+      list.map((a) =>
+        a.id === voucher.subAccountId ? { ...a, balance: voucher.balanceAfter } : a,
+      ),
+    );
     this.voucherOpen.set(false);
-    // Service invalidation refreshes the list balances automatically.
   }
 
   // ─────────── statement modal ───────────

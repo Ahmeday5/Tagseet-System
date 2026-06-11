@@ -13,12 +13,17 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';
 import { FormErrorComponent } from '../../../../shared/components/form-error/form-error.component';
 import {
+  SearchableSelectComponent,
+  SearchableSelectOption,
+} from '../../../../shared/components/searchable-select/searchable-select.component';
+import {
   FormMode,
   formModeSubmitLabel,
   formModeTitle,
 } from '../../../../shared/models/form-mode.model';
 import { ApiError } from '../../../../core/models/api-response.model';
 import { ToastService } from '../../../../core/services/toast.service';
+import { LookupItem } from '../../../../core/models/lookup.model';
 
 import { SubAccountsService } from '../../services/sub-accounts.service';
 import { SubAccount, SubAccountPayload } from '../../models/sub-account.model';
@@ -38,7 +43,7 @@ import { SubAccount, SubAccountPayload } from '../../models/sub-account.model';
   selector: 'app-sub-account-form-modal',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, ModalComponent, FormErrorComponent],
+  imports: [ReactiveFormsModule, ModalComponent, FormErrorComponent, SearchableSelectComponent],
   templateUrl: './sub-account-form-modal.component.html',
 })
 export class SubAccountFormModalComponent {
@@ -46,6 +51,11 @@ export class SubAccountFormModalComponent {
   readonly open = input.required<boolean>();
   readonly mode = input.required<FormMode>();
   readonly account = input<SubAccount | null>(null);
+  readonly representatives = input<LookupItem[]>([]);
+
+  protected readonly repOptions = computed<SearchableSelectOption[]>(() =>
+    this.representatives().map((r) => ({ value: r.id, label: r.name })),
+  );
 
   // ── outputs ──
   readonly closed = output<void>();
@@ -76,6 +86,7 @@ export class SubAccountFormModalComponent {
       '',
       [Validators.required, Validators.pattern(/^[0-9+\-\s()]{6,20}$/)],
     ],
+    representativeId: [null as number | null],
   });
 
   constructor() {
@@ -139,17 +150,25 @@ export class SubAccountFormModalComponent {
   private resetFormToInputs(): void {
     const a = this.account();
     if (a && !this.isCreate()) {
-      this.form.reset({ name: a.name, phoneNumber: a.phoneNumber });
+      this.form.reset({
+        name: a.name,
+        phoneNumber: a.phoneNumber,
+        representativeId: a.representativeId ?? null,
+      });
       return;
     }
-    this.form.reset({ name: '', phoneNumber: '' });
+    this.form.reset({ name: '', phoneNumber: '', representativeId: null });
   }
 
   private toPayload(): SubAccountPayload {
     const raw = this.form.getRawValue();
-    return {
+    const payload: SubAccountPayload = {
       name: raw.name.trim(),
       phoneNumber: raw.phoneNumber.trim(),
     };
+    if (raw.representativeId && raw.representativeId > 0) {
+      payload.representativeId = raw.representativeId;
+    }
+    return payload;
   }
 }

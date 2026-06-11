@@ -7,7 +7,7 @@ import {
   signal,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { forkJoin, finalize, of, catchError } from 'rxjs';
@@ -33,7 +33,9 @@ import { RepsService } from '../../../reps/services/reps.service';
 import {
   ContractFormState,
   ContractPaymentFrequency,
+  UpdateContractFormState,
 } from '../../../contracts/models/contract.model';
+import { ContractDetails } from '../../models/client-statement.model';
 
 import { DashboardClient } from '../../models/dashboard-client.model';
 import { LookupItem } from '../../../../core/models/lookup.model';
@@ -57,6 +59,7 @@ export class ContractNewComponent implements OnInit {
   // ───────────────── deps ─────────────────
   private readonly fb = inject(FormBuilder);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
 
   private readonly contractsService = inject(ContractsService);
   private readonly customersService = inject(CustomersService);
@@ -66,6 +69,14 @@ export class ContractNewComponent implements OnInit {
   private readonly repsService = inject(RepsService);
 
   private readonly toast = inject(ToastService);
+
+  // ───────────────── edit mode ─────────────────
+  protected readonly editId = signal<number | null>(null);
+  protected readonly isEditMode = computed(() => this.editId() !== null);
+  /** Original purchase price shown read-only in edit mode. */
+  protected readonly purchasePrice = signal(0);
+  /** Prevents product price auto-fill from overwriting prefilled cashPrice. */
+  private prefilling = false;
 
   // ───────────────── UI state ─────────────────
   protected readonly loading = signal(true);
@@ -191,33 +202,37 @@ export class ContractNewComponent implements OnInit {
 
   // ───────────────── lifecycle ─────────────────
   ngOnInit(): void {
+    const idParam = Number(this.route.snapshot.queryParamMap.get('editId'));
+    if (idParam) this.editId.set(idParam);
     this.loadLookups();
     this.setupFormEffects();
   }
 
   private loadLookups(): void {
     this.loading.set(true);
+    const id = this.editId();
 
     forkJoin({
       clients: this.customersService
         .listAllClients()
         .pipe(catchError(() => of([] as DashboardClient[]))),
-
       products: this.productsService
         .lookup()
         .pipe(catchError(() => of([] as LookupItem[]))),
-
       warehouses: this.warehouseService
         .lookup()
         .pipe(catchError(() => of([] as LookupItem[]))),
-
       treasuries: this.treasuryService
         .lookup()
         .pipe(catchError(() => of([] as LookupItem[]))),
-
       reps: this.repsService
         .lookup()
         .pipe(catchError(() => of([] as LookupItem[]))),
+      details: id
+        ? this.contractsService
+            .getDetails(id)
+            .pipe(catchError(() => of(null as ContractDetails | null)))
+        : of(null as ContractDetails | null),
     })
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
@@ -227,12 +242,36 @@ export class ContractNewComponent implements OnInit {
           this.warehouses.set(res.warehouses);
           this.treasuries.set(res.treasuries);
           this.representatives.set(res.reps);
+          if (res.details) this.prefillFromDetails(res.details);
         },
-
         error: () => {
           this.toast.error('حدث خطأ أثناء تحميل البيانات');
         },
       });
+  }
+
+  private prefillFromDetails(d: ContractDetails): void {
+    this.purchasePrice.set(d.contract.purchasePrice);
+    this.prefilling = true;
+    this.form.patchValue({
+      clientId: d.client.id,
+      productId: d.product?.id ?? null,
+      warehouseId: d.warehouse?.id ?? null,
+      quantity: d.contract.quantity,
+      dateOfSale: d.contract.dateOfSale.split('T')[0],
+      cashPrice: d.contract.cashPrice,
+      downPayment: d.contract.downPayment,
+      profitRate: d.contract.profitRate,
+      installmentsCount: d.contract.installmentsCount,
+      paymentFrequency: d.contract.paymentFrequency as ContractPaymentFrequency,
+      firstInstallmentDate: d.contract.firstInstallmentDate.split('T')[0],
+      representativeId: d.representative?.id ?? null,
+      notes: d.contract.notes ?? '',
+    });
+    this.prefilling = false;
+    this.form
+      .get('installmentAmount')
+      ?.setValue(d.contract.installmentAmount, { emitEvent: false });
   }
 
   // ───────────────── calculations ─────────────────
@@ -244,6 +283,7 @@ export class ContractNewComponent implements OnInit {
     // The product picker now carries only `{id,name}` (lookup endpoint), so
     // the selling price is pulled on demand from the cached product detail.
     this.form.get('productId')?.valueChanges.subscribe((id) => {
+      if (this.prefilling) return;
       const productId = Number(id);
       if (!productId) return;
 
@@ -303,55 +343,53 @@ export class ContractNewComponent implements OnInit {
     this.isSaving.set(true);
 
     const raw = this.form.getRawValue();
+    const id = this.editId();
 
-    const payload: ContractFormState = {
+    const sharedFields = {
       clientId: Number(raw.clientId),
-
       productId: Number(raw.productId),
-
       warehouseId: Number(raw.warehouseId),
-
       quantity: Number(raw.quantity),
-
       dateOfSale: new Date(raw.dateOfSale).toISOString(),
-
       cashPrice: Number(raw.cashPrice),
-
       downPayment: Number(raw.downPayment),
-
       profitRate: Number(raw.profitRate),
-
       installmentsCount: Number(raw.installmentsCount),
-
       installmentAmount: Number(raw.installmentAmount),
-
       paymentFrequency: raw.paymentFrequency as ContractPaymentFrequency,
-
       firstInstallmentDate: new Date(raw.firstInstallmentDate).toISOString(),
-
       treasuryId: Number(raw.treasuryId),
-
-      representativeId: raw.representativeId
-        ? Number(raw.representativeId)
-        : null,
-
+      representativeId: raw.representativeId ? Number(raw.representativeId) : null,
       notes: raw.notes?.trim() || '',
     };
 
+    if (id) {
+      const updateForm: UpdateContractFormState = sharedFields;
+      this.contractsService
+        .update(id, updateForm)
+        .pipe(finalize(() => this.isSaving.set(false)))
+        .subscribe({
+          next: () => {
+            this.toast.success('تم تعديل العقد بنجاح');
+            this.router.navigate(['/customers/statement']);
+          },
+          error: (err: ApiError) => {
+            this.toast.error(apiErrorToMessage(err, 'فشل في تعديل العقد'));
+          },
+        });
+      return;
+    }
+
+    const payload: ContractFormState = sharedFields;
+
     this.contractsService
       .create(payload)
-      .pipe(
-        finalize(() => {
-          this.isSaving.set(false);
-        }),
-      )
+      .pipe(finalize(() => this.isSaving.set(false)))
       .subscribe({
         next: () => {
           this.toast.success('تم إنشاء العقد بنجاح');
-
           this.router.navigate(['/customers/customer-list']);
         },
-
         error: (err: ApiError) => {
           this.toast.error(apiErrorToMessage(err, 'فشل في إنشاء العقد'));
         },

@@ -19,6 +19,8 @@ import {
   CreateDirectContractPayload,
   CreatedDirectContract,
   buildDirectContractPayload,
+  UpdateContractFormState,
+  buildUpdateContractPayload,
 } from '../models/contract.model';
 
 const CONTRACTS_CACHE_KEY = 'contracts';
@@ -78,6 +80,32 @@ export class ContractsService {
           withCacheInvalidate([
             CONTRACTS_CACHE_KEY,
             'client',
+            'treasur',
+            'financial-separation',
+          ]),
+        ),
+      },
+    );
+  }
+
+  /**
+   * Update an existing installment contract.
+   *
+   * PUT /dashboard/contracts/{id}
+   */
+  update(
+    id: number,
+    form: UpdateContractFormState,
+  ): Observable<CreatedContract> {
+    return this.api.put<CreatedContract>(
+      API_ENDPOINTS.contracts.byId(id),
+      buildUpdateContractPayload(form),
+      {
+        context: withInlineHandling(
+          withCacheInvalidate([
+            CONTRACTS_CACHE_KEY,
+            'client',
+            'warehous',
             'treasur',
             'financial-separation',
           ]),

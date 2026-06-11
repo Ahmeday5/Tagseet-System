@@ -196,6 +196,11 @@ export class AuthService {
   }
 
   logout(opts: LogoutOptions = {}): void {
+    // Mark dead immediately so any concurrent 401/refresh attempts are
+    // silently short-circuited — prevents spurious "session expired" toasts
+    // on an intentional logout.
+    this.sessionDead = true;
+
     const { redirect = true, callApi = true, reason } = opts;
     const refreshToken = this.getRefreshToken();
 

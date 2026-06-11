@@ -222,6 +222,86 @@ export function buildDirectContractPayload(
   return payload;
 }
 
+// ─────────────────────────────────────────────────────────────────
+//  Live API: PUT /dashboard/contracts/{id}
+// ─────────────────────────────────────────────────────────────────
+
+/**
+ * Payload for `PUT /dashboard/contracts/{id}`.
+ *
+ * Identical to `CreateContractPayload` except `purchasePrice` is NOT
+ * sent — it is immutable after creation.
+ *
+ * Same rule as create: OMIT `representativeId` when not selected.
+ * Use `buildUpdateContractPayload()` to assemble the body safely.
+ */
+export interface UpdateContractPayload {
+  clientId: number;
+  productId: number;
+  warehouseId: number;
+  quantity: number;
+  dateOfSale: string;
+  cashPrice: number;
+  downPayment: number;
+  profitRate: number;
+  installmentsCount: number;
+  installmentAmount: number;
+  paymentFrequency: ContractPaymentFrequency;
+  firstInstallmentDate: string;
+  treasuryId: number;
+  representativeId?: number;
+  notes?: string;
+}
+
+/** Form-state shape for the edit page. */
+export interface UpdateContractFormState {
+  clientId: number;
+  productId: number;
+  warehouseId: number;
+  quantity: number;
+  dateOfSale: string;
+  cashPrice: number;
+  downPayment: number;
+  profitRate: number;
+  installmentsCount: number;
+  installmentAmount: number;
+  paymentFrequency: ContractPaymentFrequency;
+  firstInstallmentDate: string;
+  treasuryId: number;
+  representativeId: number | null;
+  notes?: string;
+}
+
+/** Build a `PUT /dashboard/contracts/{id}` body. Strips representativeId when absent. */
+export function buildUpdateContractPayload(
+  form: UpdateContractFormState,
+): UpdateContractPayload {
+  const payload: UpdateContractPayload = {
+    clientId: form.clientId,
+    productId: form.productId,
+    warehouseId: form.warehouseId,
+    quantity: form.quantity,
+    dateOfSale: form.dateOfSale,
+    cashPrice: form.cashPrice,
+    downPayment: form.downPayment,
+    profitRate: form.profitRate,
+    installmentsCount: form.installmentsCount,
+    installmentAmount: form.installmentAmount,
+    paymentFrequency: form.paymentFrequency,
+    firstInstallmentDate: form.firstInstallmentDate,
+    treasuryId: form.treasuryId,
+  };
+
+  if (form.representativeId && form.representativeId > 0) {
+    payload.representativeId = form.representativeId;
+  }
+
+  const trimmedNotes = form.notes?.trim();
+  if (trimmedNotes) payload.notes = trimmedNotes;
+
+  return payload;
+}
+
 /**
  * Build a `POST /dashboard/contracts` body from form state.
  *

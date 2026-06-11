@@ -33,18 +33,20 @@ export const appConfig: ApplicationConfig = {
       withRouterConfig({ paramsInheritanceStrategy: 'always' }),
       withPreloading(PreloadAllModules)
     ),
-    // Interceptor order matters:
+    // Interceptor order matters (outermost → innermost → HTTP backend):
     //   cache  → short-circuits hits before any other work runs
     //   loader → toggles the global spinner
-    //   auth   → attaches Bearer + handles 401 refresh dance
     //   error  → normalizes failures into ApiError + toasts
+    //   auth   → attaches Bearer + handles 401 refresh dance (must be
+    //            innermost so it intercepts 401s BEFORE error can toast them;
+    //            successful retries never reach the error layer at all)
     provideHttpClient(
       withFetch(),
       withInterceptors([
         cacheInterceptor,
         loaderInterceptor,
-        authInterceptor,
         errorInterceptor,
+        authInterceptor,
       ]),
     ),
     provideAnimationsAsync(),

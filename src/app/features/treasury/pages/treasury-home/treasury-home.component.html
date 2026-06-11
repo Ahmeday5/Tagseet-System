@@ -1,12 +1,15 @@
 <div class="pgh">
   <div>
     <div class="pgt">الخزينة</div>
-    <div class="pgs">الرصيد الرئيسي بعد كل عملية والخزائن الفرعية</div>
+    <div class="pgs">
+      @if (isRep()) { حساباتك الفرعية المرتبطة بك } @else { الرصيد الرئيسي بعد كل عملية والخزائن الفرعية }
+    </div>
   </div>
 </div>
 
 
-<!-- ملخص الخزينة (LIVE) -->
+<!-- ملخص الخزينة (LIVE) — مخفي للمندوبين -->
+@if (!isRep()) {
 <div class="trs-hero d-flex justify-content-between align-items-center flex-wrap"
   style="background:var(--te);color:#fff;border-radius:var(--rl);padding:16px;margin-bottom:12px">
   <div class="flex-grow-1">
@@ -45,6 +48,7 @@
     </button>
   </div>
 </div>
+}
 
 
 
@@ -466,10 +470,11 @@
     </div>
     }
     @if (canManageSubAccounts()) {
-    <div class="col-lg-6">
+    <div [class]="isRep() ? 'col-12' : 'col-lg-6'">
       <app-sub-accounts-panel />
     </div>
     }
+    @if (!isRep()) {
     <div class="col-12">
       <div class="card">
         <div class="chdr trf-head">
@@ -575,6 +580,7 @@
         }
       </div>
     </div>
+    }
   </div>
 </div>
 

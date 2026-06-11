@@ -48,7 +48,7 @@
             <tr>
               <th>رقم العقد</th>
               <th>العميل</th>
-              <th class="text-center">عرض</th>
+              <th class="text-center">إجراءات</th>
             </tr>
           </thead>
           <tbody>
@@ -57,7 +57,10 @@
                 <td style="font-size:10px;color:var(--bl)">{{ c.id }}</td>
                 <td class="fw-semibold" style="font-size:11px">{{ c.customerName }}</td>
                 <td class="text-center">
-                  <button class="btn btn-sm btn-bl" (click)="selectContract(c.id)">عرض</button>
+                  <div class="d-flex gap-1 justify-content-center">
+                    <button class="btn btn-sm btn-bl" (click)="selectContract(c.id)">عرض</button>
+                    <a class="btn btn-sm" routerLink="/customers/contract" [queryParams]="{editId: c.id}">تعديل</a>
+                  </div>
                 </td>
               </tr>
             }

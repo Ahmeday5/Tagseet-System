@@ -73,6 +73,17 @@ export class UsersListComponent implements OnInit {
     });
   }
 
+  protected refreshUsers(): void {
+    this.loading.set(true);
+    this.service.refreshList().subscribe({
+      next: (list) => {
+        this.users.set(list);
+        this.loading.set(false);
+      },
+      error: () => this.loading.set(false),
+    });
+  }
+
   protected openCreate(): void {
     this.modalUser.set(null);
     this.modalMode.set('create');

@@ -114,9 +114,10 @@
             {{ notesLabel(row.notes) }}
           </td>
           <td>
-            <button class="btn btn-sm btn-bl" (click)="openDetails(row)">
-              التفاصيل
-            </button>
+            <div class="d-flex gap-1">
+              <button class="btn btn-sm btn-bl" (click)="openDetails(row)">التفاصيل</button>
+              <a class="btn btn-sm" routerLink="/customers/contract" [queryParams]="{editId: row.id}">تعديل</a>
+            </div>
           </td>
         </tr>
         }

@@ -18,12 +18,17 @@ export interface SubAccount {
   /** Running balance after every receipt/payment — server-managed. */
   balance: number;
   createdAt: string;
+  /** Linked representative — null when not assigned. */
+  representativeId: number | null;
+  representativeName: string | null;
 }
 
 /** POST /dashboard/sub-accounts and PUT /dashboard/sub-accounts/{id} body. */
 export interface SubAccountPayload {
   name: string;
   phoneNumber: string;
+  /** Omit entirely when no rep is assigned — never send 0 or null. */
+  representativeId?: number;
 }
 
 /** Query for `GET /dashboard/sub-accounts` — `search` matches name or phone. */
@@ -57,6 +62,7 @@ export interface SubAccountVoucher {
  * (`yyyy-MM-dd`); a `Receipt` raises the balance, a `Payment` lowers it.
  */
 export interface CreateSubAccountVoucherPayload {
+  treasuryId: number;
   type: VoucherType;
   amount: number;
   date: string;

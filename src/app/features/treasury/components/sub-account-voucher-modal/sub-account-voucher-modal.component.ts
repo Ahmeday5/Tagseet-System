@@ -25,6 +25,7 @@ import {
   SubAccount,
   SubAccountVoucher,
 } from '../../models/sub-account.model';
+import { LookupItem } from '../../../../core/models/lookup.model';
 
 /**
  * Add a receipt / payment voucher to a single sub-account.
@@ -44,6 +45,7 @@ export class SubAccountVoucherModalComponent {
   // ── inputs ──
   readonly open = input.required<boolean>();
   readonly account = input<SubAccount | null>(null);
+  readonly treasuries = input<LookupItem[]>([]);
 
   // ── outputs ──
   readonly closed = output<void>();
@@ -83,6 +85,7 @@ export class SubAccountVoucherModalComponent {
 
   // ── form ──
   protected readonly form = this.fb.nonNullable.group({
+    treasuryId: [0, [Validators.required, Validators.min(1)]],
     type: [VoucherType.Receipt, [Validators.required]],
     amount: [0, [Validators.required, Validators.min(0.01)]],
     date: [this.todayISO(), [Validators.required]],
@@ -98,6 +101,7 @@ export class SubAccountVoucherModalComponent {
         this.draftType.set(VoucherType.Receipt);
         this.draftAmount.set(0);
         this.form.reset({
+          treasuryId: 0,
           type: VoucherType.Receipt,
           amount: 0,
           date: this.todayISO(),
@@ -158,6 +162,7 @@ export class SubAccountVoucherModalComponent {
   private toPayload(): CreateSubAccountVoucherPayload {
     const raw = this.form.getRawValue();
     return {
+      treasuryId: Number(raw.treasuryId),
       type: raw.type,
       amount: Number(raw.amount) || 0,
       date: raw.date,

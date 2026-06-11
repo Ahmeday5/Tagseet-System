@@ -12,9 +12,11 @@ export const PERMISSIONS = {
   clientsFullAccess:   'Clients.FullAccess',
   suppliersView:       'Suppliers.View',
   suppliersFullAccess: 'Suppliers.FullAccess',
-  treasuryView:        'Treasury.View',
-  treasuryFullAccess:  'Treasury.FullAccess',
-  userManagement:      'UserManagement',
+  treasuryView:          'Treasury.View',
+  treasuryFullAccess:    'Treasury.FullAccess',
+  subAccountsView:       'SubAccounts.View',
+  subAccountsFullAccess: 'SubAccounts.FullAccess',
+  userManagement:        'UserManagement',
 } as const;
 
 export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
@@ -74,5 +76,8 @@ export const ROLE_PERMISSIONS: Readonly<
     PERMISSIONS.dashboardView,
     PERMISSIONS.clientsView,
     PERMISSIONS.clientsFullAccess,
+    PERMISSIONS.treasuryView,
+    PERMISSIONS.subAccountsView,
+    PERMISSIONS.subAccountsFullAccess,
   ],
 });

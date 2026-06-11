@@ -1,11 +1,15 @@
 @if (loading()) {
   <div class="loader-container">
     <app-loader></app-loader>
-    <p class="mt-2 text-muted">
-      جاري تحميل البيانات...
-    </p>
+    <p class="mt-2 text-muted">جاري تحميل البيانات...</p>
   </div>
 } @else {
+
+@if (isEditMode()) {
+  <div class="edit-banner mb-3">
+    تعديل العقد رقم #{{ editId() }}
+  </div>
+}
 
 <form [formGroup]="form" (ngSubmit)="save()" novalidate>
   <div class="row g-3">
@@ -258,6 +262,13 @@
           ملخص العقد المحسوب
         </div>
 
+        @if (isEditMode()) {
+          <div class="cr" style="border-bottom:1px dashed var(--bg3);margin-bottom:8px;padding-bottom:8px">
+            <span style="color:var(--txt3)">سعر الشراء (ثابت)</span>
+            <span style="font-weight:700">{{ purchasePrice() | currencyAr }}</span>
+          </div>
+        }
+
         <div class="cr">
           <span>سعر البيع كاش</span>
           <span>
@@ -323,7 +334,9 @@
             {{
               isSaving()
                 ? 'جاري الحفظ...'
-                : 'حفظ العقد'
+                : isEditMode()
+                  ? 'حفظ التعديلات'
+                  : 'حفظ العقد'
             }}
           </button>
 

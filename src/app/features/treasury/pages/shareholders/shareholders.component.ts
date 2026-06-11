@@ -454,6 +454,10 @@ export class ShareholdersComponent {
     });
   }
 
+  protected refreshSettlements(): void {
+    this.fetchSettlements(this.settlementsTrigger(), true);
+  }
+
   protected onSettlementsPageChange(page: number): void {
     this.sPageIndex.set(page);
   }

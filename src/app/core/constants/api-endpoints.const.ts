@@ -147,6 +147,7 @@ export const API_ENDPOINTS = {
   },
   contracts: {
     base: 'dashboard/contracts',
+    byId: (id: number) => `dashboard/contracts/${id}`,
     details: (id: number) => `dashboard/contracts/${id}/details`,
     /** POST: create a direct installment contract (free-text product, no warehouse). */
     direct: 'dashboard/contracts/direct',

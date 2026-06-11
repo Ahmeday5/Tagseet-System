@@ -22,10 +22,13 @@ export function onInvalidate(
   pattern: string,
   refetch: () => void,
 ): void {
-  effect(() => {
-    const event = cache.invalidations();
-    if (!event.pattern) return; // initial / unrelated event — skip
-    if (!event.pattern.includes(pattern)) return;
-    refetch();
-  });
+  effect(
+    () => {
+      const event = cache.invalidations();
+      if (!event.pattern) return; // initial / unrelated event — skip
+      if (!event.pattern.includes(pattern)) return;
+      refetch();
+    },
+    { allowSignalWrites: true },
+  );
 }

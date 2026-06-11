@@ -1,6 +1,7 @@
 import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { catchError, throwError } from 'rxjs';
+import { AuthService } from '../services/auth.service';
 import { ToastService } from '../services/toast.service';
 import { SKIP_ERROR_TOAST } from '../http/http-context.tokens';
 import { ApiError, ApiFieldErrors } from '../models/api-response.model';
@@ -22,15 +23,19 @@ import { environment } from '../../../environments/environment';
  */
 export const errorInterceptor: HttpInterceptorFn = (req, next) => {
   const toast = inject(ToastService);
+  const auth  = inject(AuthService);
 
   return next(req).pipe(
     catchError((err: HttpErrorResponse) => {
       const apiError = normalizeError(err);
       logError(req.method, req.url, err, apiError);
 
+      // Suppress toasts when the user is not authenticated — covers in-flight
+      // requests that fail after an explicit logout (the token was just cleared).
       const silent =
         req.context.get(SKIP_ERROR_TOAST) ||
-        req.url.includes(API_ENDPOINTS.auth.refresh);
+        req.url.includes(API_ENDPOINTS.auth.refresh) ||
+        !auth.isAuthenticated();
 
       if (!silent) toast.error(apiError.message);
 

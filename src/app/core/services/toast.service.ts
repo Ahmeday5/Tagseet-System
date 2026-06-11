@@ -131,6 +131,14 @@ export class ToastService {
   // ─────────── internals ───────────
 
   private show(type: ToastType, message: string, options?: ToastOptions): string {
+    // Deduplicate: if an identical toast is already visible, extend its timer
+    // rather than stacking a clone. This prevents flooding when multiple
+    // concurrent requests fail with the same message (e.g. startup 401 storm).
+    const dup = this.toastsSignal().find(
+      (t) => t.type === type && t.message === message,
+    );
+    if (dup) return dup.id;
+
     const id = generateUUID();
     const duration = options?.duration ?? DEFAULT_DURATION[type];
     const toast: Toast = {

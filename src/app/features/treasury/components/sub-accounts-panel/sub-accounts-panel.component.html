@@ -13,6 +13,18 @@
       >
         📑 كل السندات
       </button>
+      <button
+        type="button"
+        class="btn btn-sm d-inline-flex align-items-center gap-1"
+        [disabled]="loading()"
+        (click)="refresh()"
+        title="تحديث القائمة من الخادم"
+      >
+        @if (loading()) {
+          <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+        }
+        <span>تحديث</span>
+      </button>
       <button type="button" class="btn btn-sm btn-bl" (click)="openCreate()">
         + حساب فرعي
       </button>
@@ -42,6 +54,7 @@
         <tr>
           <th>الاسم</th>
           <th>رقم الهاتف</th>
+          <th>المندوب</th>
           <th>الرصيد</th>
           <th class="text-center">إجراءات</th>
         </tr>
@@ -51,6 +64,7 @@
           <tr>
             <td style="font-weight:600">{{ a.name }}</td>
             <td dir="ltr" style="font-size:11px;color:var(--txt2)">{{ a.phoneNumber || '—' }}</td>
+            <td style="font-size:11px;color:var(--txt2)">{{ a.representativeName || '—' }}</td>
             <td
               style="font-weight:700"
               [style.color]="a.balance < 0 ? 'var(--re,#c0392b)' : 'var(--te)'"
@@ -67,7 +81,7 @@
           </tr>
         } @empty {
           <tr>
-            <td colspan="4" class="text-center py-4" style="color:var(--txt3);font-size:12px">
+            <td colspan="5" class="text-center py-4" style="color:var(--txt3);font-size:12px">
               @if (loading()) {
                 جاري التحميل...
               } @else if (hasFilters()) {
@@ -82,7 +96,7 @@
       @if (accounts().length > 0) {
         <tfoot>
           <tr>
-            <td colspan="2" style="font-weight:700">إجمالي أرصدة الصفحة</td>
+            <td colspan="3" style="font-weight:700">إجمالي أرصدة الصفحة</td>
             <td colspan="2" style="font-weight:700;color:var(--te)">
               {{ pageBalance() | currencyAr: true }}
             </td>
@@ -110,6 +124,7 @@
   [open]="formOpen()"
   [mode]="formMode()"
   [account]="formAccount()"
+  [representatives]="repsLookup()"
   (closed)="closeForm()"
   (saved)="onSaved($event)"
 />
@@ -117,8 +132,9 @@
 <app-sub-account-voucher-modal
   [open]="voucherOpen()"
   [account]="voucherAccount()"
+  [treasuries]="treasuriesLookup()"
   (closed)="closeVoucher()"
-  (saved)="onVoucherSaved()"
+  (saved)="onVoucherSaved($event)"
 />
 
 <app-sub-account-statement-modal

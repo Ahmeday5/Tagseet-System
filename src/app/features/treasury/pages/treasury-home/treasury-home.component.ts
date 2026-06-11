@@ -86,13 +86,12 @@ export class TreasuryHomeComponent implements OnInit {
     () => this.auth.currentUser()?.role === 'Representative',
   );
 
-  /**
-   * Sub-accounts are an owners-only ledger — visible (and managed) by Admin and
-   * GeneralManager only, regardless of any broader Treasury permission a lower
-   * role might carry.
-   */
+  /** Sub-accounts panel is visible to anyone with SubAccounts.View or SubAccounts.FullAccess. */
   protected readonly canManageSubAccounts = computed(() =>
-    this.auth.hasAnyRole(['Admin', 'GeneralManager']),
+    this.auth.hasAnyPermission([
+      PERMISSIONS.subAccountsView,
+      PERMISSIONS.subAccountsFullAccess,
+    ]),
   );
 
   // ── data ──
@@ -253,16 +252,18 @@ export class TreasuryHomeComponent implements OnInit {
     // a treasury transfer was just created from this tab.
     onInvalidate(this.cache, 'treasur', () => {
       this.refresh();
+      this.loadSubTreasuries(true);
+      if (this.isRep()) return;
       this.fetchTransfers(this.transfersTrigger(), true);
       this.fetchOperations(this.operationsTrigger(), true);
       this.fetchMonthlyProfits(this.selectedYear(), true);
-      this.loadSubTreasuries(true);
     });
 
     // Refetch transfers on any filter / page change. The fetch is wrapped
     // in `setTimeout` so signal writes inside it run OUTSIDE the effect's
     // reactive context — matches the codebase idiom (see customers-list).
     effect(() => {
+      if (this.isRep()) return;
       const trigger = this.transfersTrigger();
       if (this.transfersDebounceTimer) {
         clearTimeout(this.transfersDebounceTimer);
@@ -275,6 +276,7 @@ export class TreasuryHomeComponent implements OnInit {
 
     // Refetch operations on any filter / page change.
     effect(() => {
+      if (this.isRep()) return;
       const trigger = this.operationsTrigger();
       if (this.operationsDebounceTimer) {
         clearTimeout(this.operationsDebounceTimer);
@@ -287,6 +289,7 @@ export class TreasuryHomeComponent implements OnInit {
 
     // Refetch monthly profits on year change.
     effect(() => {
+      if (this.isRep()) return;
       const year = this.selectedYear();
       if (this.monthlyProfitsDebounceTimer) {
         clearTimeout(this.monthlyProfitsDebounceTimer);
@@ -300,8 +303,9 @@ export class TreasuryHomeComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadTreasuries();
-    this.loadRepresentatives();
     this.loadSubTreasuries(false);
+    if (this.isRep()) return;
+    this.loadRepresentatives();
     this.loadOperations();
     this.loadMonthlyProfits();
   }

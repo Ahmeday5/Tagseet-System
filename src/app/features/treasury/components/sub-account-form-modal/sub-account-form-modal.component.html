@@ -34,6 +34,18 @@
         />
         <app-form-error [control]="form.controls.phoneNumber" label="رقم الهاتف" />
       </div>
+
+      @if (repOptions().length > 0) {
+        <div class="col-12">
+          <label class="form-label">المندوب <span class="text-muted" style="font-size:11px">(اختياري)</span></label>
+          <app-searchable-select
+            formControlName="representativeId"
+            placeholder="بدون مندوب"
+            searchPlaceholder="ابحث باسم المندوب…"
+            [options]="repOptions()"
+          />
+        </div>
+      }
     </div>
 
     @if (serverError(); as msg) {

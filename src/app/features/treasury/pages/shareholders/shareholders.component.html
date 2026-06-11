@@ -394,9 +394,18 @@
     <div class="sh-section-title">سجل توزيع الأرباح</div>
     <div class="sh-section-sub">عمليات توزيع الأرباح المنفّذة على المساهمين</div>
   </div>
-  @if (settlementsLoading()) {
-    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-  }
+  <button
+    type="button"
+    class="btn btn-sm d-inline-flex align-items-center gap-1"
+    [disabled]="settlementsLoading()"
+    (click)="refreshSettlements()"
+    title="تحديث السجل من الخادم"
+  >
+    @if (settlementsLoading()) {
+      <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+    }
+    <span>تحديث</span>
+  </button>
 </div>
 
 <div class="card sh-card">

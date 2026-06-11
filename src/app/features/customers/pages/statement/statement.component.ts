@@ -7,6 +7,7 @@ import {
   signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterModule } from '@angular/router';
 
 import { CustomersService } from '../../services/customers.service';
 import { InstallmentsService } from '../../services/installments.service';
@@ -61,6 +62,7 @@ interface PaymentForm {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     FormsModule,
+    RouterModule,
     BadgeComponent,
     ModalComponent,
     PaginationComponent,

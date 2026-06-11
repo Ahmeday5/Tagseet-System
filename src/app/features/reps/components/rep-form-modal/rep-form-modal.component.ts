@@ -168,6 +168,23 @@ export class RepFormModalComponent {
     this.showPassword.update((v) => !v);
   }
 
+  protected async pickContact(): Promise<void> {
+    if (!('contacts' in navigator)) {
+      this.toast.error('هذه الميزة تتطلب كروم على أندرويد مع HTTPS');
+      return;
+    }
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const contacts = await (navigator as any).contacts.select(['tel'], { multiple: false });
+      const raw: string = contacts?.[0]?.tel?.[0] ?? '';
+      if (!raw) return;
+      const cleaned = raw.replace(/[\s\-().]/g, '');
+      this.form.controls.phoneNumber.setValue(cleaned);
+      this.form.controls.phoneNumber.markAsDirty();
+      this.form.controls.phoneNumber.markAsTouched();
+    } catch { /* User cancelled */ }
+  }
+
   protected isInvalid(field: keyof typeof this.form.controls): boolean {
     const ctrl = this.form.controls[field];
     return ctrl.invalid && (ctrl.dirty || ctrl.touched);
