@@ -76,12 +76,6 @@ export class TreasuryHomeComponent implements OnInit {
   /** Exposed so the template can gate write actions with `*appHasPermission`. */
   protected readonly PERMS = PERMISSIONS;
 
-  /**
-   * Reps see a stripped-down treasury view: their own sub-treasury card and
-   * the operations log stay, but the cross-treasury transfers and the
-   * company-wide monthly profits are hidden — those are confidential to
-   * management and shouldn't be exposed at the rep level.
-   */
   protected readonly isRep = computed(
     () => this.auth.currentUser()?.role === 'Representative',
   );
@@ -98,11 +92,6 @@ export class TreasuryHomeComponent implements OnInit {
   protected readonly treasuries = signal<Treasury[]>([]);
   protected readonly loading = signal(false);
 
-  /**
-   * Representatives lookup — used to resolve the linked rep's name for
-   * sub-representative treasuries when the list payload omits it (it only
-   * carries `representativeId`).
-   */
   protected readonly representatives = signal<LookupItem[]>([]);
   private readonly repNameById = computed(() => {
     const map = new Map<number, string>();
@@ -259,9 +248,6 @@ export class TreasuryHomeComponent implements OnInit {
       this.fetchMonthlyProfits(this.selectedYear(), true);
     });
 
-    // Refetch transfers on any filter / page change. The fetch is wrapped
-    // in `setTimeout` so signal writes inside it run OUTSIDE the effect's
-    // reactive context — matches the codebase idiom (see customers-list).
     effect(() => {
       if (this.isRep()) return;
       const trigger = this.transfersTrigger();
@@ -325,7 +311,9 @@ export class TreasuryHomeComponent implements OnInit {
   protected repName(t: Treasury): string | null {
     if (t.type !== TreasuryType.SubRepresentative) return null;
     return (
-      t.representative ?? this.repNameById().get(t.representativeId ?? -1) ?? null
+      t.representative ??
+      this.repNameById().get(t.representativeId ?? -1) ??
+      null
     );
   }
 
@@ -396,6 +384,12 @@ export class TreasuryHomeComponent implements OnInit {
     // via localStorage — gets replaced with the fresh list, so the
     // newly-saved treasury stays visible on hard refresh.
     this.refresh();
+  }
+
+  protected openEdit(treasury: Treasury): void {
+    this.modalTreasury.set(treasury);
+    this.modalMode.set('edit');
+    this.modalOpen.set(true);
   }
 
   // ─────────────── delete ───────────────
@@ -634,14 +628,46 @@ export class TreasuryHomeComponent implements OnInit {
           meta: this.operationsPrintMeta(),
           orientation: 'landscape',
           columns: [
-            { key: 'id',           header: '#',          align: 'center', width: '48px', format: (v) => `#${v}` },
-            { key: 'treasuryName', header: 'الخزينة',   align: 'start',  bold: true },
-            { key: 'direction',    header: 'النوع',     align: 'center', format: (v) => (v === 'Receipt' ? 'إيراد' : 'صرف') },
-            { key: 'description',  header: 'الوصف',    align: 'start' },
-            { key: 'signedAmount', header: 'المبلغ',    align: 'end',    format: 'currency', bold: true },
-            { key: 'balanceAfter', header: 'الرصيد بعد', align: 'end',   format: 'currency' },
-            { key: 'userName',     header: 'المستخدم',  align: 'start' },
-            { key: 'date',         header: 'التاريخ',   align: 'center', format: 'shortDate' },
+            {
+              key: 'id',
+              header: '#',
+              align: 'center',
+              width: '48px',
+              format: (v) => `#${v}`,
+            },
+            {
+              key: 'treasuryName',
+              header: 'الخزينة',
+              align: 'start',
+              bold: true,
+            },
+            {
+              key: 'direction',
+              header: 'النوع',
+              align: 'center',
+              format: (v) => (v === 'Receipt' ? 'إيراد' : 'صرف'),
+            },
+            { key: 'description', header: 'الوصف', align: 'start' },
+            {
+              key: 'signedAmount',
+              header: 'المبلغ',
+              align: 'end',
+              format: 'currency',
+              bold: true,
+            },
+            {
+              key: 'balanceAfter',
+              header: 'الرصيد بعد',
+              align: 'end',
+              format: 'currency',
+            },
+            { key: 'userName', header: 'المستخدم', align: 'start' },
+            {
+              key: 'date',
+              header: 'التاريخ',
+              align: 'center',
+              format: 'shortDate',
+            },
           ],
           rows,
         });
@@ -673,18 +699,47 @@ export class TreasuryHomeComponent implements OnInit {
           meta: this.transfersPrintMeta(),
           orientation: 'landscape',
           columns: [
-            { key: 'id',                header: '#',         align: 'center', width: '48px', format: (v) => `#${v}` },
-            { key: 'fromTreasuryName',  header: 'من خزينة', align: 'start',  bold: true },
-            { key: 'toTreasuryName',    header: 'إلى خزينة', align: 'start', bold: true },
-            { key: 'amount',            header: 'المبلغ',   align: 'end',    format: 'currency', bold: true },
-            { key: 'transferDate',      header: 'التاريخ',  align: 'center', format: 'shortDate' },
-            { key: 'notes',             header: 'ملاحظات', align: 'start' },
+            {
+              key: 'id',
+              header: '#',
+              align: 'center',
+              width: '48px',
+              format: (v) => `#${v}`,
+            },
+            {
+              key: 'fromTreasuryName',
+              header: 'من خزينة',
+              align: 'start',
+              bold: true,
+            },
+            {
+              key: 'toTreasuryName',
+              header: 'إلى خزينة',
+              align: 'start',
+              bold: true,
+            },
+            {
+              key: 'amount',
+              header: 'المبلغ',
+              align: 'end',
+              format: 'currency',
+              bold: true,
+            },
+            {
+              key: 'transferDate',
+              header: 'التاريخ',
+              align: 'center',
+              format: 'shortDate',
+            },
+            { key: 'notes', header: 'ملاحظات', align: 'start' },
           ],
           totals: {
             label: 'إجمالي التحويلات',
             labelColSpan: 3,
             cells: [
-              this.formatCurrencyTotal(rows.reduce((s, r) => s + (r.amount ?? 0), 0)),
+              this.formatCurrencyTotal(
+                rows.reduce((s, r) => s + (r.amount ?? 0), 0),
+              ),
               '',
               '',
             ],
@@ -710,16 +765,58 @@ export class TreasuryHomeComponent implements OnInit {
       subtitle: 'المبيعات والتكلفة والأرباح والعمولات لكل مندوب',
       orientation: 'landscape',
       columns: [
-        { key: 'representativeName',    header: 'المندوب',          align: 'start',  bold: true },
-        { key: 'treasuryName',          header: 'الخزينة',          align: 'start' },
-        { key: 'balance',               header: 'الرصيد',           align: 'end',    format: 'currency' },
-        { key: 'totalSales',            header: 'المبيعات',         align: 'end',    format: 'currency' },
-        { key: 'totalCost',             header: 'التكلفة',          align: 'end',    format: 'currency' },
-        { key: 'totalProfit',           header: 'الربح',           align: 'end',    format: 'currency', bold: true },
-        { key: 'accumulatedCommission', header: 'العمولة المتراكمة', align: 'end',  format: 'currency' },
-        { key: 'paidCommission',        header: 'المدفوع',         align: 'end',    format: 'currency' },
-        { key: 'outstandingCommission', header: 'المتبقي',         align: 'end',    format: 'currency', bold: true },
-        { key: 'lastActivityDate',      header: 'آخر نشاط',         align: 'center', format: 'shortDate' },
+        {
+          key: 'representativeName',
+          header: 'المندوب',
+          align: 'start',
+          bold: true,
+        },
+        { key: 'treasuryName', header: 'الخزينة', align: 'start' },
+        { key: 'balance', header: 'الرصيد', align: 'end', format: 'currency' },
+        {
+          key: 'totalSales',
+          header: 'المبيعات',
+          align: 'end',
+          format: 'currency',
+        },
+        {
+          key: 'totalCost',
+          header: 'التكلفة',
+          align: 'end',
+          format: 'currency',
+        },
+        {
+          key: 'totalProfit',
+          header: 'الربح',
+          align: 'end',
+          format: 'currency',
+          bold: true,
+        },
+        {
+          key: 'accumulatedCommission',
+          header: 'العمولة المتراكمة',
+          align: 'end',
+          format: 'currency',
+        },
+        {
+          key: 'paidCommission',
+          header: 'المدفوع',
+          align: 'end',
+          format: 'currency',
+        },
+        {
+          key: 'outstandingCommission',
+          header: 'المتبقي',
+          align: 'end',
+          format: 'currency',
+          bold: true,
+        },
+        {
+          key: 'lastActivityDate',
+          header: 'آخر نشاط',
+          align: 'center',
+          format: 'shortDate',
+        },
       ],
       totals: {
         label: 'الإجمالي',
@@ -746,12 +843,13 @@ export class TreasuryHomeComponent implements OnInit {
     if (rows.length === 0) return;
     this.isPrintingMonthlyProfits.set(true);
 
-    const totalRevenue  = rows.reduce((s, r) => s + (r.revenue ?? 0), 0);
+    const totalRevenue = rows.reduce((s, r) => s + (r.revenue ?? 0), 0);
     const totalExpenses = rows.reduce((s, r) => s + (r.expenses ?? 0), 0);
-    const totalProfit   = totalRevenue - totalExpenses;
-    const margin = totalRevenue > 0
-      ? Math.round((totalProfit / totalRevenue) * 1000) / 10
-      : 0;
+    const totalProfit = totalRevenue - totalExpenses;
+    const margin =
+      totalRevenue > 0
+        ? Math.round((totalProfit / totalRevenue) * 1000) / 10
+        : 0;
 
     this.printer.print<MonthlyProfit>({
       title: 'الأرباح الشهرية',
@@ -759,16 +857,38 @@ export class TreasuryHomeComponent implements OnInit {
         ? `بيانات سنة ${this.selectedYear()}`
         : 'ملخص الإيرادات والمصروفات وصافي الربح لكل شهر',
       columns: [
-        { key: 'monthName',     header: 'الشهر',      align: 'start',  bold: true },
-        { key: 'revenue',       header: 'الإيرادات',  align: 'end',    format: 'currency' },
-        { key: 'expenses',      header: 'المصروفات', align: 'end',    format: 'currency' },
-        { key: 'profit',        header: 'صافي الربح', align: 'end',   format: 'currency', bold: true },
-        { key: 'marginPercent', header: 'هامش الربح', align: 'center', format: 'percent' },
+        { key: 'monthName', header: 'الشهر', align: 'start', bold: true },
+        {
+          key: 'revenue',
+          header: 'الإيرادات',
+          align: 'end',
+          format: 'currency',
+        },
+        {
+          key: 'expenses',
+          header: 'المصروفات',
+          align: 'end',
+          format: 'currency',
+        },
+        {
+          key: 'profit',
+          header: 'صافي الربح',
+          align: 'end',
+          format: 'currency',
+          bold: true,
+        },
+        {
+          key: 'marginPercent',
+          header: 'هامش الربح',
+          align: 'center',
+          format: 'percent',
+        },
         {
           key: (m) => m,
           header: 'الحالة',
           align: 'center',
-          format: (_v, m) => (m.profit > 0 ? 'ربح' : m.profit < 0 ? 'خسارة' : 'تعادل'),
+          format: (_v, m) =>
+            m.profit > 0 ? 'ربح' : m.profit < 0 ? 'خسارة' : 'تعادل',
         },
       ],
       totals: {
@@ -795,23 +915,31 @@ export class TreasuryHomeComponent implements OnInit {
       const t = this.treasuries().find((x) => x.id === Number(treasuryId));
       if (t) items.push({ label: 'الخزينة', value: t.name });
     }
-    if (this.oFromDate()) items.push({ label: 'من تاريخ', value: this.oFromDate() });
-    if (this.oToDate())   items.push({ label: 'إلى تاريخ', value: this.oToDate() });
+    if (this.oFromDate())
+      items.push({ label: 'من تاريخ', value: this.oFromDate() });
+    if (this.oToDate())
+      items.push({ label: 'إلى تاريخ', value: this.oToDate() });
     return items;
   }
 
   private transfersPrintMeta(): Array<{ label: string; value: string }> {
     const items: Array<{ label: string; value: string }> = [];
     if (this.tFromFilter()) {
-      const t = this.treasuries().find((x) => x.id === Number(this.tFromFilter()));
+      const t = this.treasuries().find(
+        (x) => x.id === Number(this.tFromFilter()),
+      );
       if (t) items.push({ label: 'من خزينة', value: t.name });
     }
     if (this.tToFilter()) {
-      const t = this.treasuries().find((x) => x.id === Number(this.tToFilter()));
+      const t = this.treasuries().find(
+        (x) => x.id === Number(this.tToFilter()),
+      );
       if (t) items.push({ label: 'إلى خزينة', value: t.name });
     }
-    if (this.tFromDate()) items.push({ label: 'من تاريخ', value: this.tFromDate() });
-    if (this.tToDate())   items.push({ label: 'إلى تاريخ', value: this.tToDate() });
+    if (this.tFromDate())
+      items.push({ label: 'من تاريخ', value: this.tFromDate() });
+    if (this.tToDate())
+      items.push({ label: 'إلى تاريخ', value: this.tToDate() });
     return items;
   }
 
