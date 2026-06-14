@@ -20,6 +20,8 @@ import { ProfitDistributionModalComponent } from '../../components/profit-distri
 import { ProfitSettlementDetailsModalComponent } from '../../components/profit-settlement-details-modal/profit-settlement-details-modal.component';
 import { ShareholderCapitalModalComponent } from '../../components/shareholder-capital-modal/shareholder-capital-modal.component';
 import { CapitalizeAllProfitsModalComponent } from '../../components/capitalize-all-profits-modal/capitalize-all-profits-modal.component';
+import { ShareholderStatementModalComponent } from '../../components/shareholder-statement-modal/shareholder-statement-modal.component';
+import { CompanyProfitStatementModalComponent } from '../../components/company-profit-statement-modal/company-profit-statement-modal.component';
 
 import { PaginationComponent } from '../../../../shared/components/pagination/pagination.component';
 import { CurrencyArPipe } from '../../../../shared/pipes/currency-ar.pipe';
@@ -49,6 +51,8 @@ const REFETCH_DEBOUNCE_MS = 300;
     ProfitSettlementDetailsModalComponent,
     ShareholderCapitalModalComponent,
     CapitalizeAllProfitsModalComponent,
+    ShareholderStatementModalComponent,
+    CompanyProfitStatementModalComponent,
     PaginationComponent,
     CurrencyArPipe,
     DateArPipe,
@@ -128,6 +132,13 @@ export class ShareholdersComponent {
 
   // ── capitalize-all-profits modal ──
   protected readonly capitalizeAllOpen = signal(false);
+
+  // ── statement modal ──
+  protected readonly statementOpen = signal(false);
+  protected readonly statementShareholder = signal<Shareholder | null>(null);
+
+  // ── company profit statement modal ──
+  protected readonly companyStatementOpen = signal(false);
 
   private readonly settlementsTrigger = computed(() => ({
     pageIndex: this.sPageIndex(),
@@ -231,10 +242,17 @@ export class ShareholdersComponent {
 
     stream$.subscribe({
       next: (page) => {
-        this.shareholders.set(page?.data ?? []);
+        const data = page?.data ?? [];
+        this.shareholders.set(data);
         this.count.set(page?.count ?? 0);
         this.totalPages.set(page?.totalPages ?? 0);
         this.loading.set(false);
+        // Keep capitalShareholder in sync so the modal reflects the latest contributedAmount
+        if (this.capitalOpen()) {
+          const capId = this.capitalShareholder()?.id;
+          const fresh = capId != null ? data.find((s) => s.id === capId) : null;
+          if (fresh) this.capitalShareholder.set(fresh);
+        }
       },
       error: (err: ApiError) => {
         this.shareholders.set([]);
@@ -521,5 +539,26 @@ export class ShareholdersComponent {
 
   protected onCapitalizedAll(): void {
     this.capitalizeAllOpen.set(false);
+  }
+
+  // ─────────── statement modal ───────────
+
+  protected openStatement(shareholder: Shareholder): void {
+    this.statementShareholder.set(shareholder);
+    this.statementOpen.set(true);
+  }
+
+  protected closeStatement(): void {
+    this.statementOpen.set(false);
+  }
+
+  // ─────────── company profit statement ───────────
+
+  protected openCompanyStatement(): void {
+    this.companyStatementOpen.set(true);
+  }
+
+  protected closeCompanyStatement(): void {
+    this.companyStatementOpen.set(false);
   }
 }

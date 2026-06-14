@@ -232,6 +232,16 @@
                 />
               }
 
+              <!-- zero baseline (shown only when range includes negative values) -->
+              @if (hasNegative()) {
+                <line
+                  class="profit-card__svg-zero"
+                  x1="0" x2="600"
+                  [attr.y1]="zeroLineY()"
+                  [attr.y2]="zeroLineY()"
+                />
+              }
+
               <!-- area fill -->
               <path
                 class="profit-card__svg-area"

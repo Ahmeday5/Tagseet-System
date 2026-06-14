@@ -165,6 +165,14 @@
   }
 }
 
+.profit-card__svg-zero {
+  stroke: var(--txt3);
+  stroke-width: 1;
+  stroke-dasharray: 4 4;
+  opacity: 0.5;
+  vector-effect: non-scaling-stroke;
+}
+
 .profit-card__svg-callout {
   position: absolute;
   transform: translate(50%, -130%);

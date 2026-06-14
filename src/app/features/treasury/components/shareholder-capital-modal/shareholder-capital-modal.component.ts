@@ -125,8 +125,9 @@ export class ShareholderCapitalModalComponent {
   protected readonly draftTxAmount = signal(0);
   protected readonly draftCapAmount = signal(0);
 
-  // ── live capital (newest movement's balanceAfter, falls back to the input) ──
+  // ── live capital — source of truth is contributedAmount from the shareholders list ──
   private readonly liveCapital = signal<number | null>(null);
+  private readonly lastOpenShId = signal<number | null>(null);
 
   // ── profit preview (profits treasury + this shareholder's available slice) ──
   protected readonly preview = signal<ProfitSettlementPreview | null>(null);
@@ -280,10 +281,18 @@ export class ShareholderCapitalModalComponent {
       () => {
         const sh = this.shareholder();
         if (!this.open() || !sh) return;
-        this.resetState(sh);
-        this.loadPreview();
-        this.loadTreasuries();
-        this.fetchTransactions(sh.id, true);
+
+        const isNewShareholder = sh.id !== this.lastOpenShId();
+        this.lastOpenShId.set(sh.id);
+        // Always reflect the fresh contributedAmount from the list endpoint
+        this.liveCapital.set(sh.contributedAmount ?? 0);
+
+        if (isNewShareholder) {
+          this.resetState(sh);
+          this.loadPreview();
+          this.loadTreasuries();
+          this.fetchTransactions(sh.id, true);
+        }
       },
       { allowSignalWrites: true },
     );
@@ -462,12 +471,11 @@ export class ShareholderCapitalModalComponent {
     this.changed.emit();
   }
 
-  private resetState(sh: Shareholder): void {
+  private resetState(_sh: Shareholder): void {
     this.mode.set('transaction');
     this.submitting.set(false);
     this.serverError.set(null);
     this.preview.set(null);
-    this.liveCapital.set(sh.contributedAmount ?? 0);
     this.draftTxType.set(CapitalTransactionType.Receipt);
     this.draftTxAmount.set(0);
     this.draftCapAmount.set(0);
@@ -524,10 +532,6 @@ export class ShareholderCapitalModalComponent {
         this.count.set(page?.count ?? 0);
         this.totalPages.set(page?.totalPages ?? 0);
         this.txLoading.set(false);
-        // Newest movement (page 1, first row) carries the live capital balance.
-        if (this.pageIndex() === 1 && rows.length > 0) {
-          this.liveCapital.set(rows[0].balanceAfter);
-        }
       },
       error: (err: ApiError) => {
         this.transactions.set([]);

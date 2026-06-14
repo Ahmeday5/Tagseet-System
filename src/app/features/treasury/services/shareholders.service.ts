@@ -31,6 +31,14 @@ import {
   CapitalTransactionsQuery,
   CreateCapitalTransactionPayload,
 } from '../models/capital-transaction.model';
+import {
+  ShareholderStatement,
+  StatementQuery,
+} from '../models/shareholder-statement.model';
+import {
+  CompanyProfitStatement,
+  CompanyProfitStatementQuery,
+} from '../models/company-profit-statement.model';
 
 /**
  * A shareholder's contribution moves capital-treasury money and recomputes
@@ -279,6 +287,80 @@ export class ShareholdersService {
     return {
       PageIndex: query.pageIndex ?? 1,
       PageSize: query.pageSize ?? 10,
+    };
+  }
+
+  // ─────────────── shareholder statement ───────────────
+
+  getStatement(
+    shareholderId: number,
+    query: StatementQuery = {},
+  ): Observable<ShareholderStatement> {
+    return this.api.get<ShareholderStatement>(
+      API_ENDPOINTS.shareholders.statement(shareholderId),
+      {
+        params: this.toStatementParams(query),
+        context: withCache({ ttlMs: SHAREHOLDERS_TTL_MS }),
+      },
+    );
+  }
+
+  refreshStatement(
+    shareholderId: number,
+    query: StatementQuery = {},
+  ): Observable<ShareholderStatement> {
+    return this.api.get<ShareholderStatement>(
+      API_ENDPOINTS.shareholders.statement(shareholderId),
+      {
+        params: this.toStatementParams(query),
+        context: withCacheBypass(withCache({ ttlMs: SHAREHOLDERS_TTL_MS })),
+      },
+    );
+  }
+
+  private toStatementParams(query: StatementQuery): Record<string, unknown> {
+    return {
+      PageIndex: query.pageIndex ?? 1,
+      PageSize: query.pageSize ?? 10,
+      ...(query.fromDate ? { fromDate: query.fromDate } : {}),
+      ...(query.toDate ? { toDate: query.toDate } : {}),
+    };
+  }
+
+  // ─────────────── company profit statement ───────────────
+
+  getCompanyProfitStatement(
+    query: CompanyProfitStatementQuery = {},
+  ): Observable<CompanyProfitStatement> {
+    return this.api.get<CompanyProfitStatement>(
+      API_ENDPOINTS.shareholders.companyProfitStatement,
+      {
+        params: this.toCompanyStatementParams(query),
+        context: withCache({ ttlMs: SHAREHOLDERS_TTL_MS }),
+      },
+    );
+  }
+
+  refreshCompanyProfitStatement(
+    query: CompanyProfitStatementQuery = {},
+  ): Observable<CompanyProfitStatement> {
+    return this.api.get<CompanyProfitStatement>(
+      API_ENDPOINTS.shareholders.companyProfitStatement,
+      {
+        params: this.toCompanyStatementParams(query),
+        context: withCacheBypass(withCache({ ttlMs: SHAREHOLDERS_TTL_MS })),
+      },
+    );
+  }
+
+  private toCompanyStatementParams(
+    query: CompanyProfitStatementQuery,
+  ): Record<string, unknown> {
+    return {
+      PageIndex: query.pageIndex ?? 1,
+      PageSize: query.pageSize ?? 10,
+      ...(query.fromDate ? { fromDate: query.fromDate } : {}),
+      ...(query.toDate ? { toDate: query.toDate } : {}),
     };
   }
 }

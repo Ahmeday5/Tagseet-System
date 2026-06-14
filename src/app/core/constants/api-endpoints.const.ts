@@ -56,6 +56,10 @@ export const API_ENDPOINTS = {
       `dashboard/shareholders/${id}/capital-transactions`,
     /** POST: roll every shareholder's accrued profit into their capital in one shot. */
     capitalizeAllProfits: 'dashboard/shareholders/capitalize-all-profits',
+    /** GET (paged): full ledger for one shareholder — capital + profit movements. */
+    statement: (id: number) => `dashboard/shareholders/${id}/statement`,
+    /** GET (paged): company profit treasury ledger — all received/paid entries. */
+    companyProfitStatement: 'dashboard/company-profit-statement',
   },
   warehouses: {
     base: 'dashboard/warehouses',

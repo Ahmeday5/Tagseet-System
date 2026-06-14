@@ -60,12 +60,23 @@ export class DashboardHomeComponent implements OnInit {
   protected readonly summary = signal<HomeSummaryDto | null>(null);
   protected readonly summaryLoading = signal(false);
 
-  private readonly maxProfit = computed(() => {
+  /**
+   * Always includes 0 so the baseline is the zero line.
+   * range is at least 1 to prevent division by zero.
+   */
+  private readonly profitRange = computed(() => {
     const months = this.profitMonths();
-    return months.length
-      ? Math.max(...months.map((m) => m.profitAmount), 1)
-      : 1;
+    if (!months.length) return { min: 0, max: 1, range: 1 };
+    const values = months.map((m) => m.profitAmount);
+    const dataMin = Math.min(...values);
+    const dataMax = Math.max(...values);
+    const min = Math.min(dataMin, 0);
+    const max = Math.max(dataMax, 0);
+    const range = max - min || 1;
+    return { min, max, range };
   });
+
+  private readonly maxProfit = computed(() => this.profitRange().max);
 
   /** Last entry in the array — the API orders them oldest-to-newest. */
   protected readonly currentMonth = computed(() => {
@@ -87,9 +98,20 @@ export class DashboardHomeComponent implements OnInit {
   });
 
   protected readonly profitGridTicks = computed(() => {
-    const max = this.maxProfit();
-    return [1, 0.75, 0.5, 0.25, 0].map((r) => max * r);
+    const { min, max } = this.profitRange();
+    return [1, 0.75, 0.5, 0.25, 0].map((r) => min + (max - min) * r);
   });
+
+  /** Y position (in SVG viewBox units) of the zero baseline. */
+  protected readonly zeroLineY = computed(() => {
+    const { min, range } = this.profitRange();
+    const innerH = this.CHART_VB_H - this.CHART_PAD_TOP - this.CHART_PAD_BOTTOM;
+    const ratio = (0 - min) / range;
+    return this.CHART_PAD_TOP + innerH * (1 - ratio);
+  });
+
+  /** True when the data contains at least one negative value — drives the zero-line. */
+  protected readonly hasNegative = computed(() => this.profitRange().min < 0);
 
   /* ──────────────────────────────────────────────────────────────
      SVG chart geometry. The viewBox is fixed at 600×200 so the path
@@ -122,7 +144,7 @@ export class DashboardHomeComponent implements OnInit {
   >(() => {
     const months = this.profitMonths();
     if (!months.length) return [];
-    const max = this.maxProfit();
+    const { min, range } = this.profitRange();
     const innerW = this.CHART_VB_W - this.CHART_PAD_X * 2;
     const innerH =
       this.CHART_VB_H - this.CHART_PAD_TOP - this.CHART_PAD_BOTTOM;
@@ -131,7 +153,7 @@ export class DashboardHomeComponent implements OnInit {
 
     return months.map((m, i) => {
       const x = this.CHART_PAD_X + stepX * i;
-      const ratio = max ? m.profitAmount / max : 0;
+      const ratio = (m.profitAmount - min) / range;
       const y = this.CHART_PAD_TOP + innerH * (1 - ratio);
       return {
         x,
