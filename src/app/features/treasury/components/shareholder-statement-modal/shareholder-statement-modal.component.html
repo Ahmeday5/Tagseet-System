@@ -143,8 +143,8 @@
         @for (e of entries(); track e.id) {
           <tr>
             <td class="shst-date">{{ e.date | dateAr: 'short' }}</td>
-            <td class="shst-voucher" [title]="e.voucherNumber">
-              {{ shortVoucher(e.voucherNumber) }}
+            <td class="shst-voucher">
+              {{ (pageIndex() - 1) * pageSize() + $index + 1 }}
             </td>
             <td>
               <app-badge [text]="txLabel(e.transactionType)" [type]="txBadge(e.transactionType)" />

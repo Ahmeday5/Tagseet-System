@@ -93,8 +93,8 @@
           <tr>
             <td class="trf-date">{{ v.date | dateAr: 'short' }}</td>
             <td style="font-weight:600">{{ v.subAccountName }}</td>
-            <td style="font-size:10.5px;color:var(--txt2)" [title]="v.voucherNumber">
-              {{ v.voucherNumber }}
+            <td>
+              {{ (pageIndex() - 1) * pageSize() + $index + 1 }}
             </td>
             <td><app-badge [text]="typeLabel(v.type)" [type]="typeBadge(v.type)" /></td>
             <td
