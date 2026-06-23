@@ -11,6 +11,7 @@ import {
 import { PagedResponse } from '../../../core/models/api-response.model';
 import {
   CreateVoucherPayload,
+  UpdateVoucherPayload,
   VoucherDto,
   VouchersQuery,
 } from '../models/voucher.model';
@@ -56,6 +57,19 @@ export class VouchersService {
   create(payload: CreateVoucherPayload): Observable<VoucherDto> {
     return this.api.post<VoucherDto>(
       API_ENDPOINTS.dashboard.vouchers,
+      payload,
+      {
+        context: withInlineHandling(
+          withCacheInvalidate([...VOUCHERS_CACHE_KEYS]),
+        ),
+      },
+    );
+  }
+
+  /** Updates an existing voucher. */
+  update(id: number, payload: UpdateVoucherPayload): Observable<VoucherDto> {
+    return this.api.put<VoucherDto>(
+      API_ENDPOINTS.dashboard.voucherById(id),
       payload,
       {
         context: withInlineHandling(

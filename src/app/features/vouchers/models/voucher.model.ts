@@ -50,3 +50,13 @@ export interface VouchersQuery {
   /** Free-text search over the related-party name. */
   search?: string;
 }
+
+/** PUT /dashboard/vouchers/{id} body. */
+export interface UpdateVoucherPayload {
+  amount: number;
+  treasuryId: number;
+  date: string;
+  relatedPartyType: RelatedPartyType;
+  relatedPartyId: number;
+  notes: string;
+}

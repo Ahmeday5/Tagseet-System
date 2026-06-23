@@ -31,8 +31,13 @@ import {
   VOUCHER_TYPE_OPTIONS,
 } from '../../../vouchers/constants/voucher-labels';
 
+import { TreasuryService } from '../../services/treasury.service';
 import { SubAccountsService } from '../../services/sub-accounts.service';
-import { SubAccountVoucher } from '../../models/sub-account.model';
+import {
+  SubAccountVoucher,
+  UpdateSubAccountVoucherPayload,
+} from '../../models/sub-account.model';
+import { LookupItem } from '../../../../core/models/lookup.model';
 
 const DEFAULT_PAGE_SIZE = 10;
 const REFETCH_DEBOUNCE_MS = 250;
@@ -72,6 +77,7 @@ export class SubAccountVouchersModalComponent {
 
   // ── deps ──
   private readonly service = inject(SubAccountsService);
+  private readonly treasuryService = inject(TreasuryService);
   private readonly printer = inject(PrintService);
   private readonly toast = inject(ToastService);
 
@@ -83,6 +89,18 @@ export class SubAccountVouchersModalComponent {
   protected readonly loading = signal(false);
   protected readonly isPrinting = signal(false);
   protected readonly accountOptions = signal<SearchableSelectOption[]>([]);
+
+  // ── edit-voucher modal state ──
+  protected readonly treasuries = signal<LookupItem[]>([]);
+  protected readonly editVoucherOpen = signal(false);
+  protected readonly editVoucherSubmitting = signal(false);
+  protected readonly editVoucherTarget = signal<SubAccountVoucher | null>(null);
+  protected readonly editVoucherForm = signal<{
+    amount: number;
+    treasuryId: number | null;
+    date: string;
+    notes: string;
+  }>({ amount: 0, treasuryId: null, date: '', notes: '' });
 
   // ── filters ──
   protected readonly searchTerm = signal('');
@@ -146,6 +164,18 @@ export class SubAccountVouchersModalComponent {
       },
       { allowSignalWrites: true },
     );
+
+    // Load treasuries once for the edit-voucher form.
+    effect(
+      () => {
+        if (!this.open() || this.treasuries().length > 0) return;
+        this.treasuryService.lookup().subscribe({
+          next: (list) => this.treasuries.set(list),
+          error: () => {},
+        });
+      },
+      { allowSignalWrites: true },
+    );
   }
 
   // ─────────── template handlers ───────────
@@ -203,6 +233,68 @@ export class SubAccountVouchersModalComponent {
 
   protected isReceipt(type: VoucherType): boolean {
     return type === VoucherType.Receipt;
+  }
+
+  // ── edit-voucher handlers ──
+
+  protected openEditVoucher(v: SubAccountVoucher): void {
+    this.editVoucherTarget.set(v);
+    this.editVoucherForm.set({
+      amount: v.amount,
+      treasuryId: this.treasuries()[0]?.id ?? null,
+      date: v.date.split('T')[0],
+      notes: v.notes ?? '',
+    });
+    this.editVoucherOpen.set(true);
+  }
+
+  protected closeEditVoucher(): void {
+    if (this.editVoucherSubmitting()) return;
+    this.editVoucherOpen.set(false);
+    this.editVoucherTarget.set(null);
+  }
+
+  protected updateEditVoucherForm<K extends keyof ReturnType<typeof this.editVoucherForm>>(
+    key: K,
+    value: ReturnType<typeof this.editVoucherForm>[K],
+  ): void {
+    this.editVoucherForm.update((f) => ({ ...f, [key]: value }));
+  }
+
+  protected submitEditVoucher(): void {
+    const target = this.editVoucherTarget();
+    const f = this.editVoucherForm();
+    if (!target) return;
+    if (!f.amount || f.amount <= 0) {
+      this.toast.error('أدخل مبلغًا صحيحًا');
+      return;
+    }
+    if (!f.treasuryId) {
+      this.toast.error('اختر الخزينة');
+      return;
+    }
+
+    const payload: UpdateSubAccountVoucherPayload = {
+      treasuryId: f.treasuryId,
+      amount: Number(f.amount),
+      date: f.date,
+      notes: f.notes?.trim() ?? '',
+    };
+
+    this.editVoucherSubmitting.set(true);
+    this.service.updateVoucher(target.id, payload).subscribe({
+      next: () => {
+        this.editVoucherSubmitting.set(false);
+        this.editVoucherOpen.set(false);
+        this.editVoucherTarget.set(null);
+        this.toast.success('تم تعديل السند بنجاح');
+        this.fetch(this.trigger(), true);
+      },
+      error: (err: ApiError) => {
+        this.editVoucherSubmitting.set(false);
+        this.toast.error(err?.message || 'فشل تعديل السند');
+      },
+    });
   }
 
   /** Exports every voucher matching the active filters to a PDF. */

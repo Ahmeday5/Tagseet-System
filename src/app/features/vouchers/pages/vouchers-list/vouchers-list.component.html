@@ -136,6 +136,7 @@
           <th class="vc-w-party-name">الجهة</th>
           <th class="vc-w-ref">المرجع</th>
           <th class="vc-w-notes">ملاحظات</th>
+          <th>إجراء</th>
         </tr>
       </thead>
       <tbody>
@@ -171,10 +172,13 @@
               />
             </td>
             <td class="vc-notes" [title]="v.notes ?? ''">{{ cleanNotes(v.notes) }}</td>
+            <td>
+              <button type="button" class="btn btn-sm" (click)="openEdit(v); $event.stopPropagation()">تعديل</button>
+            </td>
           </tr>
         } @empty {
           <tr>
-            <td colspan="9" class="vc-empty">
+            <td colspan="10" class="vc-empty">
               @if (loading()) {
                 <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
                 <span>جاري تحميل السندات...</span>
@@ -296,3 +300,114 @@
   (closed)="closeForm()"
   (saved)="onVoucherCreated()"
 />
+
+<!-- ── EDIT VOUCHER MODAL ── -->
+<app-modal
+  [open]="editOpen()"
+  size="md"
+  title="تعديل السند"
+  [closeOnBackdrop]="!editSubmitting()"
+  [closeOnEsc]="!editSubmitting()"
+  (closed)="closeEdit()"
+>
+  @if (editTarget(); as v) {
+  <div class="vd-list mb-3" style="font-size:13px;color:var(--txt3)">
+    <span>{{ v.voucherNumber }}</span>
+    <span class="mx-2">|</span>
+    <span>{{ v.type | voucherTypeLabel }}</span>
+    <span class="mx-2">|</span>
+    <span>{{ v.relatedPartyName }}</span>
+  </div>
+
+  <div class="row g-2">
+    <div class="col-12 col-sm-6">
+      <label class="form-label">المبلغ (ج.م)</label>
+      <input
+        type="number"
+        class="form-control"
+        min="0.01"
+        step="0.01"
+        [ngModel]="editForm().amount"
+        (ngModelChange)="updateEditForm('amount', +$event)"
+      />
+    </div>
+
+    <div class="col-12 col-sm-6">
+      <label class="form-label">التاريخ</label>
+      <input
+        type="date"
+        class="form-control"
+        [ngModel]="editForm().date"
+        (ngModelChange)="updateEditForm('date', $event)"
+      />
+    </div>
+
+    <div class="col-12 col-sm-6">
+      <label class="form-label">الخزينة</label>
+      <select
+        class="form-select"
+        [ngModel]="editForm().treasuryId ?? ''"
+        (ngModelChange)="updateEditForm('treasuryId', $event ? +$event : null)"
+      >
+        <option value="">-- اختر الخزينة --</option>
+        @for (t of editTreasuries(); track t.id) {
+          <option [value]="t.id">{{ t.name }}</option>
+        }
+      </select>
+    </div>
+
+    <div class="col-12 col-sm-6">
+      <label class="form-label">نوع الجهة</label>
+      <select
+        class="form-select"
+        [ngModel]="editForm().relatedPartyType"
+        (ngModelChange)="onEditPartyTypeChange($event)"
+      >
+        @for (opt of partyTypeOptions; track opt.value) {
+          <option [value]="opt.value">{{ opt.label }}</option>
+        }
+      </select>
+    </div>
+
+    @if (editNeedsParty()) {
+    <div class="col-12">
+      <label class="form-label">الجهة</label>
+      @if (editPartyLoading()) {
+        <div class="form-control d-flex align-items-center gap-2" style="color:var(--txt3)">
+          <span class="spinner-border spinner-border-sm"></span>
+          <span>جاري التحميل...</span>
+        </div>
+      } @else {
+        <select
+          class="form-select"
+          [ngModel]="editForm().relatedPartyId ?? ''"
+          (ngModelChange)="updateEditForm('relatedPartyId', $event ? +$event : null)"
+        >
+          <option value="">-- اختر --</option>
+          @for (p of editPartyList(); track p.id) {
+            <option [value]="p.id">{{ p.name }}</option>
+          }
+        </select>
+      }
+    </div>
+    }
+
+    <div class="col-12">
+      <label class="form-label">ملاحظات</label>
+      <textarea
+        class="form-control"
+        rows="2"
+        [ngModel]="editForm().notes"
+        (ngModelChange)="updateEditForm('notes', $event)"
+      ></textarea>
+    </div>
+  </div>
+  }
+
+  <ng-container modal-footer>
+    <button type="button" class="btn" (click)="closeEdit()" [disabled]="editSubmitting()">إلغاء</button>
+    <button type="button" class="btn btn-bl" (click)="submitEdit()" [disabled]="editSubmitting()">
+      {{ editSubmitting() ? 'جارٍ الحفظ...' : 'حفظ التعديلات' }}
+    </button>
+  </ng-container>
+</app-modal>

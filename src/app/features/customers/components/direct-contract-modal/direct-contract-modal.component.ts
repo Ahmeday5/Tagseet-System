@@ -35,6 +35,7 @@ import {
   CreateDirectContractPayload,
 } from '../../../contracts/models/contract.model';
 import { DashboardClient } from '../../models/dashboard-client.model';
+import { ContractDetails } from '../../models/client-statement.model';
 
 @Component({
   selector: 'app-direct-contract-modal',
@@ -53,10 +54,12 @@ import { DashboardClient } from '../../models/dashboard-client.model';
 export class DirectContractModalComponent {
   // ── inputs ──
   readonly open = input.required<boolean>();
+  readonly editId = input<number | null>(null);
 
   // ── outputs ──
   readonly closed = output<void>();
   readonly created = output<CreatedDirectContract>();
+  readonly updated = output<void>();
 
   // ── deps ──
   private readonly fb = inject(FormBuilder);
@@ -69,8 +72,13 @@ export class DirectContractModalComponent {
   // ── state ──
   protected readonly submitting = signal(false);
   protected readonly loadingLookups = signal(false);
+  protected readonly loadingDetails = signal(false);
   protected readonly serverError = signal<string | null>(null);
   protected readonly lookupsLoaded = signal(false);
+
+  protected readonly isEditMode = computed(() => this.editId() !== null);
+  /** Original purchase price shown read-only in edit mode. */
+  protected readonly purchasePrice = signal(0);
 
   // ── lookup data ──
   protected readonly clients = signal<DashboardClient[]>([]);
@@ -149,6 +157,16 @@ export class DirectContractModalComponent {
       { allowSignalWrites: true },
     );
 
+    // Load details when editId changes
+    effect(
+      () => {
+        const id = this.editId();
+        if (!id) return;
+        this.loadDetails(id);
+      },
+      { allowSignalWrites: true },
+    );
+
     // Recalculate installment amount whenever form values change
     this.form.valueChanges.subscribe(() => this.recalculateInstallment());
   }
@@ -187,19 +205,39 @@ export class DirectContractModalComponent {
     this.serverError.set(null);
     this.submitting.set(true);
 
-    this.contractsService
-      .createDirect(payload)
-      .pipe(finalize(() => this.submitting.set(false)))
-      .subscribe({
-        next: (res) => {
-          this.toast.success('تم إنشاء العقد المباشر بنجاح');
-          this.resetForm();
-          this.created.emit(res);
-        },
-        error: (err: ApiError) => {
-          this.serverError.set(err.message || 'تعذّر إنشاء العقد');
-        },
-      });
+    const id = this.editId();
+
+    if (id) {
+      // Update mode
+      this.contractsService
+        .updateDirect(id, payload)
+        .pipe(finalize(() => this.submitting.set(false)))
+        .subscribe({
+          next: () => {
+            this.toast.success('تم تعديل العقد المباشر بنجاح');
+            this.resetForm();
+            this.updated.emit();
+          },
+          error: (err: ApiError) => {
+            this.serverError.set(err.message || 'تعذّر تعديل العقد');
+          },
+        });
+    } else {
+      // Create mode
+      this.contractsService
+        .createDirect(payload)
+        .pipe(finalize(() => this.submitting.set(false)))
+        .subscribe({
+          next: (res) => {
+            this.toast.success('تم إنشاء العقد المباشر بنجاح');
+            this.resetForm();
+            this.created.emit(res);
+          },
+          error: (err: ApiError) => {
+            this.serverError.set(err.message || 'تعذّر إنشاء العقد');
+          },
+        });
+    }
   }
 
   protected close(): void {
@@ -240,6 +278,37 @@ export class DirectContractModalComponent {
           this.toast.error('حدث خطأ أثناء تحميل البيانات');
         },
       });
+  }
+
+  private loadDetails(id: number): void {
+    this.loadingDetails.set(true);
+    this.contractsService.getDetails(id).subscribe({
+      next: (d) => {
+        this.loadingDetails.set(false);
+        this.purchasePrice.set(d.contract.purchasePrice);
+        this.form.patchValue({
+          clientId: d.client.id,
+          productName: d.contract.productName || '',
+          quantity: d.contract.quantity,
+          dateOfSale: d.contract.dateOfSale.split('T')[0],
+          purchasePrice: d.contract.purchasePrice,
+          cashPrice: d.contract.cashPrice,
+          downPayment: d.contract.downPayment,
+          profitRate: d.contract.profitRate,
+          installmentsCount: d.contract.installmentsCount,
+          paymentFrequency: d.contract.paymentFrequency as ContractPaymentFrequency,
+          firstInstallmentDate: d.contract.firstInstallmentDate.split('T')[0],
+          treasuryId: Number(d.contract.treasuryId),
+          representativeId: d.representative?.id ?? null,
+          notes: d.contract.notes || '',
+        });
+        this.form.get('installmentAmount')?.setValue(d.contract.installmentAmount, { emitEvent: false });
+      },
+      error: () => {
+        this.loadingDetails.set(false);
+        this.toast.error('تعذّر تحميل تفاصيل العقد');
+      },
+    });
   }
 
   private recalculateInstallment(): void {

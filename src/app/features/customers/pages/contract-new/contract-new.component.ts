@@ -253,10 +253,14 @@ export class ContractNewComponent implements OnInit {
   private prefillFromDetails(d: ContractDetails): void {
     this.purchasePrice.set(d.contract.purchasePrice);
     this.prefilling = true;
+    // productId / warehouseId come directly on contract (API v2 shape).
+    // Fall back to the nested product/warehouse objects for older responses.
+    const productId = d.contract.productId ?? d.product?.id ?? null;
+    const warehouseId = d.contract.warehouseId ?? d.warehouse?.id ?? null;
     this.form.patchValue({
       clientId: d.client.id,
-      productId: d.product?.id ?? null,
-      warehouseId: d.warehouse?.id ?? null,
+      productId,
+      warehouseId,
       quantity: d.contract.quantity,
       dateOfSale: d.contract.dateOfSale.split('T')[0],
       cashPrice: d.contract.cashPrice,
@@ -265,6 +269,7 @@ export class ContractNewComponent implements OnInit {
       installmentsCount: d.contract.installmentsCount,
       paymentFrequency: d.contract.paymentFrequency as ContractPaymentFrequency,
       firstInstallmentDate: d.contract.firstInstallmentDate.split('T')[0],
+      treasuryId: d.contract.treasuryId ?? null,
       representativeId: d.representative?.id ?? null,
       notes: d.contract.notes ?? '',
     });

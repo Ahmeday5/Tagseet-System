@@ -69,6 +69,14 @@ export interface CreateSubAccountVoucherPayload {
   notes: string;
 }
 
+/** PUT /dashboard/sub-accounts/vouchers/{voucherId} body. */
+export interface UpdateSubAccountVoucherPayload {
+  treasuryId: number;
+  amount: number;
+  date: string;
+  notes: string;
+}
+
 /** Query for `GET /dashboard/sub-accounts/vouchers` (all-vouchers log). */
 export interface SubAccountVouchersQuery {
   pageIndex?: number;

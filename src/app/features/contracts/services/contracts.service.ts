@@ -115,6 +115,31 @@ export class ContractsService {
   }
 
   /**
+   * Update an existing direct installment contract (no product/warehouse link).
+   *
+   * PUT /dashboard/contracts/{id}/direct
+   */
+  updateDirect(
+    id: number,
+    payload: CreateDirectContractPayload,
+  ): Observable<void> {
+    return this.api.put<void>(
+      API_ENDPOINTS.contracts.updateDirect(id),
+      buildDirectContractPayload(payload),
+      {
+        context: withInlineHandling(
+          withCacheInvalidate([
+            CONTRACTS_CACHE_KEY,
+            'client',
+            'treasur',
+            'financial-separation',
+          ]),
+        ),
+      },
+    );
+  }
+
+  /**
    * Type-guard for `create()`. `ContractFormState` carries a nullable
    * `representativeId`; `CreateContractPayload` only has it when it's
    * actually being sent.

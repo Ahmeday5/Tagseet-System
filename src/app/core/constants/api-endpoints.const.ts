@@ -34,6 +34,8 @@ export const API_ENDPOINTS = {
     vouchers: (id: number) => `dashboard/sub-accounts/${id}/vouchers`,
     /** GET (paged): every voucher across all sub-accounts — search + type + subAccount filters. */
     allVouchers: 'dashboard/sub-accounts/vouchers',
+    /** PUT: update an existing sub-account voucher by its own id. */
+    voucherById: (voucherId: number) => `dashboard/sub-accounts/vouchers/${voucherId}`,
     /** GET (paged): a single sub-account's full ledger (account header + vouchers page). */
     statement: (id: number) => `dashboard/sub-accounts/${id}/statement`,
   },
@@ -102,6 +104,7 @@ export const API_ENDPOINTS = {
     summary: 'dashboard/summary',
     homeSummary: 'dashboard/home-summary',
     vouchers: 'dashboard/vouchers',
+    voucherById: (id: number) => `dashboard/vouchers/${id}`,
   },
   charts: {
     profitsLast6Months: 'dashboard/charts/profits-last-6-months',
@@ -113,6 +116,8 @@ export const API_ENDPOINTS = {
      * Note: this endpoint is mounted at the API root (no /dashboard prefix).
      */
     pay: 'installments/pay',
+    /** POST: cancels a paid installment and reverts it to unpaid. */
+    cancelPayment: (id: number) => `installments/${id}/cancel-payment`,
   },
   clientOrders: {
     base: 'dashboard/client-orders',
@@ -155,5 +160,6 @@ export const API_ENDPOINTS = {
     details: (id: number) => `dashboard/contracts/${id}/details`,
     /** POST: create a direct installment contract (free-text product, no warehouse). */
     direct: 'dashboard/contracts/direct',
+    updateDirect: (id: number) => `dashboard/contracts/${id}/direct`,
   },
 } as const;

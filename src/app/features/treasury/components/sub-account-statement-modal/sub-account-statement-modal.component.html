@@ -72,6 +72,7 @@
           <th>المبلغ</th>
           <th>الرصيد بعد</th>
           <th>ملاحظات</th>
+          <th>إجراء</th>
         </tr>
       </thead>
       <tbody>
@@ -90,10 +91,13 @@
             </td>
             <td style="color:var(--bl);font-weight:700">{{ v.balanceAfter | currencyAr: true }}</td>
             <td class="trf-notes" [title]="v.notes ?? ''">{{ v.notes || '—' }}</td>
+            <td>
+              <button type="button" class="btn btn-sm" (click)="openEditVoucher(v)">تعديل</button>
+            </td>
           </tr>
         } @empty {
           <tr>
-            <td colspan="6" class="text-center py-4" style="color:var(--txt3);font-size:12px">
+            <td colspan="7" class="text-center py-4" style="color:var(--txt3);font-size:12px">
               @if (loading()) {
                 جاري التحميل...
               } @else {
@@ -111,7 +115,7 @@
               <span style="color:var(--gr)">+{{ pageReceipts() | currencyAr: true }}</span>
               <span style="color:var(--re,#c0392b)"> / −{{ pagePayments() | currencyAr: true }}</span>
             </td>
-            <td colspan="2"></td>
+            <td colspan="3"></td>
           </tr>
         </tfoot>
       }
@@ -132,5 +136,69 @@
 
   <ng-container modal-footer>
     <button type="button" class="btn" (click)="close()">إغلاق</button>
+  </ng-container>
+</app-modal>
+
+<!-- ── Edit Voucher Modal ── -->
+<app-modal
+  [open]="editVoucherOpen()"
+  size="md"
+  title="تعديل السند"
+  [closeOnBackdrop]="!editVoucherSubmitting()"
+  [closeOnEsc]="!editVoucherSubmitting()"
+  (closed)="closeEditVoucher()"
+>
+  @if (editVoucherTarget(); as v) {
+  <div class="row g-2">
+    <div class="col-12 col-sm-6">
+      <label class="form-label">المبلغ (ج.م)</label>
+      <input
+        type="number"
+        class="form-control"
+        min="0"
+        step="0.01"
+        [ngModel]="editVoucherForm().amount"
+        (ngModelChange)="updateEditVoucherForm('amount', +$event)"
+      />
+    </div>
+    <div class="col-12 col-sm-6">
+      <label class="form-label">التاريخ</label>
+      <input
+        type="date"
+        class="form-control"
+        [ngModel]="editVoucherForm().date"
+        (ngModelChange)="updateEditVoucherForm('date', $event)"
+      />
+    </div>
+    <div class="col-12 col-sm-6">
+      <label class="form-label">الخزينة</label>
+      <select
+        class="form-select"
+        [ngModel]="editVoucherForm().treasuryId ?? ''"
+        (ngModelChange)="updateEditVoucherForm('treasuryId', $event ? +$event : null)"
+      >
+        <option value="">-- اختر الخزينة --</option>
+        @for (t of treasuries(); track t.id) {
+          <option [value]="t.id">{{ t.name }}</option>
+        }
+      </select>
+    </div>
+    <div class="col-12">
+      <label class="form-label">ملاحظات</label>
+      <textarea
+        class="form-control"
+        rows="2"
+        [ngModel]="editVoucherForm().notes"
+        (ngModelChange)="updateEditVoucherForm('notes', $event)"
+      ></textarea>
+    </div>
+  </div>
+  }
+
+  <ng-container modal-footer>
+    <button class="btn" (click)="closeEditVoucher()" [disabled]="editVoucherSubmitting()">إلغاء</button>
+    <button class="btn btn-bl" (click)="submitEditVoucher()" [disabled]="editVoucherSubmitting()">
+      {{ editVoucherSubmitting() ? 'جارٍ الحفظ...' : 'حفظ التعديلات' }}
+    </button>
   </ng-container>
 </app-modal>

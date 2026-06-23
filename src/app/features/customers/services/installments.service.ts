@@ -8,6 +8,7 @@ import {
   withInlineHandling,
 } from '../../../core/http/http-context.tokens';
 import {
+  CancelInstallmentPaymentResponse,
   PayInstallmentPayload,
   PayInstallmentResponse,
 } from '../models/client-statement.model';
@@ -43,6 +44,24 @@ export class InstallmentsService {
     return this.api.post<PayInstallmentResponse>(
       API_ENDPOINTS.installments.pay,
       payload,
+      {
+        context: withInlineHandling(
+          withCacheInvalidate([...PAYMENT_INVALIDATE_KEYS]),
+        ),
+      },
+    );
+  }
+
+  /**
+   * POST /installments/{id}/cancel-payment
+   *
+   * Reverts a paid/partial installment back to unpaid. Invalidates the same
+   * cache scopes as `pay` so all downstream widgets refresh automatically.
+   */
+  cancelPayment(installmentId: number): Observable<CancelInstallmentPaymentResponse> {
+    return this.api.post<CancelInstallmentPaymentResponse>(
+      API_ENDPOINTS.installments.cancelPayment(installmentId),
+      {},
       {
         context: withInlineHandling(
           withCacheInvalidate([...PAYMENT_INVALIDATE_KEYS]),

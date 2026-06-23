@@ -1,15 +1,15 @@
 <app-modal
   [open]="open()"
-  title="عقد مباشر جديد"
+  [title]="isEditMode() ? 'تعديل العقد المباشر' : 'عقد مباشر جديد'"
   size="lg"
-  [closeOnBackdrop]="!submitting()"
-  [closeOnEsc]="!submitting()"
+  [closeOnBackdrop]="!submitting() && !loadingDetails()"
+  [closeOnEsc]="!submitting() && !loadingDetails()"
   (closed)="close()"
 >
-  @if (loadingLookups()) {
+  @if (loadingLookups() || loadingDetails()) {
     <div class="dcm-loading-lookups">
       <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-      <span>جاري تحميل البيانات...</span>
+      <span>{{ loadingDetails() ? 'جاري تحميل البيانات...' : 'جاري تحميل البيانات...' }}</span>
     </div>
   } @else {
     <form
@@ -76,7 +76,7 @@
 
         <!-- ── Purchase price (cost) ── -->
         <div class="col-6 col-md-3">
-          <label class="form-label">سعر التكلفة</label>
+          <label class="form-label">سعر التكلفة {{ isEditMode() ? '(قراءة فقط)' : '' }}</label>
           <input
             type="number"
             class="form-control"
@@ -85,6 +85,7 @@
             step="0.01"
             dir="ltr"
             placeholder="0.00"
+            [readonly]="isEditMode()"
             [class.is-invalid]="isInvalid('purchasePrice')"
           />
           <app-form-error [control]="form.controls.purchasePrice" label="سعر التكلفة" />
@@ -289,13 +290,21 @@
     <button
       type="button"
       class="btn btn-bl d-inline-flex align-items-center gap-2"
-      [disabled]="submitting() || loadingLookups()"
+      [disabled]="submitting() || loadingLookups() || loadingDetails()"
       (click)="onSubmit()"
     >
       @if (submitting()) {
         <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
       }
-      <span>{{ submitting() ? 'جاري الحفظ...' : 'حفظ العقد' }}</span>
+      <span>
+        @if (submitting()) {
+          جاري الحفظ...
+        } @else if (isEditMode()) {
+          تحديث العقد
+        } @else {
+          حفظ العقد
+        }
+      </span>
     </button>
   </ng-container>
 </app-modal>

@@ -19,6 +19,7 @@ import {
   SubAccountsQuery,
   SubAccountVoucher,
   SubAccountVouchersQuery,
+  UpdateSubAccountVoucherPayload,
 } from '../models/sub-account.model';
 
 /**
@@ -92,6 +93,22 @@ export class SubAccountsService {
   ): Observable<SubAccountVoucher> {
     return this.api.post<SubAccountVoucher>(
       API_ENDPOINTS.subAccounts.vouchers(subAccountId),
+      payload,
+      {
+        context: withInlineHandling(
+          withCacheInvalidate([SUB_ACCOUNTS_CACHE_KEY]),
+        ),
+      },
+    );
+  }
+
+  /** Updates an existing sub-account voucher. */
+  updateVoucher(
+    voucherId: number,
+    payload: UpdateSubAccountVoucherPayload,
+  ): Observable<SubAccountVoucher> {
+    return this.api.put<SubAccountVoucher>(
+      API_ENDPOINTS.subAccounts.voucherById(voucherId),
       payload,
       {
         context: withInlineHandling(

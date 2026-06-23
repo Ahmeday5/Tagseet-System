@@ -7,9 +7,10 @@ import {
   signal,
 } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 
 import { VouchersService } from '../../services/vouchers.service';
-import { VoucherDto } from '../../models/voucher.model';
+import { VoucherDto, UpdateVoucherPayload } from '../../models/voucher.model';
 import {
   ReferenceType,
   RelatedPartyType,
@@ -20,6 +21,7 @@ import {
   REFERENCE_TYPE_LABELS,
   RELATED_PARTY_TYPE_BADGE,
   RELATED_PARTY_TYPE_LABELS,
+  RELATED_PARTY_TYPE_OPTIONS,
   VOUCHER_TYPE_BADGE,
   VOUCHER_TYPE_LABELS,
   VOUCHER_TYPE_OPTIONS,
@@ -37,6 +39,7 @@ import { ModalComponent } from '../../../../shared/components/modal/modal.compon
 import { CurrencyArPipe } from '../../../../shared/pipes/currency-ar.pipe';
 import { DateArPipe } from '../../../../shared/pipes/date-ar.pipe';
 import { ApiError } from '../../../../core/models/api-response.model';
+import { apiErrorToMessage } from '../../../../core/utils/api-error.util';
 import { ToastService } from '../../../../core/services/toast.service';
 import { HttpCacheService } from '../../../../core/services/http-cache.service';
 import { onInvalidate } from '../../../../core/utils/auto-refresh.util';
@@ -45,6 +48,13 @@ import { PERMISSIONS } from '../../../../core/constants/permissions.const';
 import { VoucherFormModalComponent } from '../../components/voucher-form-modal/voucher-form-modal.component';
 import { PrintService } from '../../../../core/services/print.service';
 import { fetchAllPages } from '../../../../core/utils/api-list.util';
+
+import { TreasuryService } from '../../../treasury/services/treasury.service';
+import { CustomersService } from '../../../customers/services/customers.service';
+import { SuppliersService } from '../../../suppliers/services/suppliers.service';
+import { LookupItem } from '../../../../core/models/lookup.model';
+
+interface PartyOption { id: number; name: string; }
 
 const DEFAULT_PAGE_SIZE = 10;
 const REFETCH_DEBOUNCE_MS = 200;
@@ -55,6 +65,7 @@ const REFETCH_DEBOUNCE_MS = 200;
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     DecimalPipe,
+    FormsModule,
     BadgeComponent,
     PaginationComponent,
     ModalComponent,
@@ -74,6 +85,9 @@ export class VouchersListComponent {
   private readonly toast = inject(ToastService);
   private readonly cache = inject(HttpCacheService);
   private readonly printer = inject(PrintService);
+  private readonly treasuryService = inject(TreasuryService);
+  private readonly customersService = inject(CustomersService);
+  private readonly suppliersService = inject(SuppliersService);
 
   protected readonly isPrinting = signal(false);
 
@@ -120,6 +134,45 @@ export class VouchersListComponent {
 
   // ── select options ──
   protected readonly typeOptions = VOUCHER_TYPE_OPTIONS;
+  protected readonly partyTypeOptions = RELATED_PARTY_TYPE_OPTIONS;
+
+  // ── edit-voucher modal state ──
+  protected readonly editOpen = signal(false);
+  protected readonly editSubmitting = signal(false);
+  protected readonly editTarget = signal<VoucherDto | null>(null);
+  protected readonly editForm = signal<{
+    amount: number;
+    treasuryId: number | null;
+    date: string;
+    relatedPartyType: RelatedPartyType;
+    relatedPartyId: number | null;
+    notes: string;
+  }>({
+    amount: 0,
+    treasuryId: null,
+    date: '',
+    relatedPartyType: RelatedPartyType.Customer,
+    relatedPartyId: null,
+    notes: '',
+  });
+
+  // ── edit-voucher lookup data ──
+  protected readonly editTreasuries = signal<LookupItem[]>([]);
+  protected readonly editClients = signal<PartyOption[]>([]);
+  protected readonly editSuppliers = signal<PartyOption[]>([]);
+  protected readonly editPartyLoading = signal(false);
+
+  protected readonly editPartyList = computed<PartyOption[]>(() => {
+    switch (this.editForm().relatedPartyType) {
+      case RelatedPartyType.Customer: return this.editClients();
+      case RelatedPartyType.Supplier: return this.editSuppliers();
+      default: return [];
+    }
+  });
+
+  protected readonly editNeedsParty = computed(
+    () => this.editForm().relatedPartyType !== RelatedPartyType.Other,
+  );
 
   /** Combined trigger — any filter / page change refetches. */
   private readonly fetchTrigger = computed(() => ({
@@ -148,6 +201,113 @@ export class VouchersListComponent {
     onInvalidate(this.cache, 'invoice', () => this.refresh());
     onInvalidate(this.cache, 'payment', () => this.refresh());
     onInvalidate(this.cache, 'contract', () => this.refresh());
+  }
+
+  // ─────────── edit-voucher modal ───────────
+
+  protected openEdit(v: VoucherDto): void {
+    this.editTarget.set(v);
+    this.editForm.set({
+      amount: v.amount,
+      treasuryId: null,
+      date: v.date.split('T')[0],
+      relatedPartyType: v.relatedPartyType,
+      relatedPartyId: null,
+      notes: v.notes ?? '',
+    });
+    this.editOpen.set(true);
+    this.loadEditLookups(v.relatedPartyType);
+  }
+
+  protected closeEdit(): void {
+    if (this.editSubmitting()) return;
+    this.editOpen.set(false);
+    this.editTarget.set(null);
+  }
+
+  protected updateEditForm<K extends keyof ReturnType<typeof this.editForm>>(
+    key: K,
+    value: ReturnType<typeof this.editForm>[K],
+  ): void {
+    this.editForm.update((f) => ({ ...f, [key]: value }));
+  }
+
+  protected onEditPartyTypeChange(value: string): void {
+    const next = value as RelatedPartyType;
+    this.editForm.update((f) => ({ ...f, relatedPartyType: next, relatedPartyId: null }));
+    if (next !== RelatedPartyType.Other) this.loadEditParties(next);
+  }
+
+  protected submitEdit(): void {
+    const target = this.editTarget();
+    const f = this.editForm();
+    if (!target) return;
+
+    if (!f.amount || f.amount <= 0) { this.toast.error('أدخل مبلغًا صحيحًا'); return; }
+    if (!f.treasuryId) { this.toast.error('اختر الخزينة'); return; }
+    if (f.relatedPartyType !== RelatedPartyType.Other && !f.relatedPartyId) {
+      this.toast.error('اختر الجهة المرتبطة');
+      return;
+    }
+
+    const payload: UpdateVoucherPayload = {
+      amount: Number(f.amount),
+      treasuryId: f.treasuryId,
+      date: f.date,
+      relatedPartyType: f.relatedPartyType,
+      relatedPartyId: f.relatedPartyType === RelatedPartyType.Other
+        ? 0
+        : Number(f.relatedPartyId),
+      notes: f.notes?.trim() ?? '',
+    };
+
+    this.editSubmitting.set(true);
+    this.svc.update(target.id, payload).subscribe({
+      next: () => {
+        this.editSubmitting.set(false);
+        this.editOpen.set(false);
+        this.editTarget.set(null);
+        this.toast.success('تم تعديل السند بنجاح');
+        this.refresh();
+      },
+      error: (err: ApiError) => {
+        this.editSubmitting.set(false);
+        this.toast.error(apiErrorToMessage(err, 'فشل تعديل السند'));
+      },
+    });
+  }
+
+  private loadEditLookups(partyType: RelatedPartyType): void {
+    if (this.editTreasuries().length === 0) {
+      this.treasuryService.lookup().subscribe({
+        next: (list) => this.editTreasuries.set(list ?? []),
+        error: () => {},
+      });
+    }
+    if (partyType !== RelatedPartyType.Other) this.loadEditParties(partyType);
+  }
+
+  private loadEditParties(type: RelatedPartyType): void {
+    if (type === RelatedPartyType.Customer && this.editClients().length === 0) {
+      this.editPartyLoading.set(true);
+      this.customersService.listAllClients().subscribe({
+        next: (list) => {
+          this.editClients.set(list.map((c) => ({ id: c.id, name: c.fullName })));
+          this.editPartyLoading.set(false);
+        },
+        error: () => { this.editClients.set([]); this.editPartyLoading.set(false); },
+      });
+    }
+    if (type === RelatedPartyType.Supplier && this.editSuppliers().length === 0) {
+      this.editPartyLoading.set(true);
+      this.suppliersService.listAll().subscribe({
+        next: (list) => {
+          this.editSuppliers.set(list.map((s) => ({ id: s.id, name: s.fullName })));
+          this.editPartyLoading.set(false);
+        },
+        error: () => { this.editSuppliers.set([]); this.editPartyLoading.set(false); },
+      });
+    }
   }
 
   // ─────────── data loaders ───────────

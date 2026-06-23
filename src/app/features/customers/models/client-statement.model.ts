@@ -6,6 +6,7 @@ import { PagedResponse } from '../../../core/models/api-response.model';
  */
 export interface ClientContractRow {
   id: number;
+  isDirectContract: boolean;
   /** `null` for direct contracts that are not linked to an inventory product. */
   productId: number | null;
   productName: string;
@@ -25,6 +26,7 @@ export interface ClientContractRow {
   totalContractAmount: number;
   totalPaid: number;
   remainingAmount: number;
+  treasuryId: number | null;
 }
 
 export type ClientContractsPage = PagedResponse<ClientContractRow>;
@@ -47,12 +49,28 @@ export interface ContractDetails {
   summary: ContractDetailsSummary;
   nextInstallment: ContractNextInstallment | null;
   installments: ContractInstallmentRow[];
+  payments: ContractPaymentRow[];
+}
+
+export interface ContractPaymentRow {
+  /** Voucher DB id — present when the API exposes it; `undefined` otherwise. */
+  id?: number;
+  voucherNumber: string;
+  date: string;
+  amount: number;
+  kind: string;
+  notes: string | null;
 }
 
 export interface ContractDetailsContract {
   id: number;
   /** Free-text product name for direct contracts (no catalog product). Null for regular contracts. */
   productName: string | null;
+  isDirectContract: boolean;
+  /** Populated by the API directly on the contract object (regular contracts). */
+  productId: number | null;
+  warehouseId: number | null;
+  warehouseName: string | null;
   quantity: number;
   dateOfSale: string;
   purchasePrice: number;
@@ -67,6 +85,8 @@ export interface ContractDetailsContract {
   notes: string | null;
   createdAt: string;
   representativeCommission: number;
+  profitShareRate: number;
+  treasuryId: number | null;
 }
 
 export interface ContractDetailsClient {
@@ -115,6 +135,8 @@ export type ContractInstallmentStatus =
   | string;
 
 export interface ContractInstallmentRow {
+  /** Installment's own DB id — present when the API exposes it; `undefined` otherwise. */
+  id?: number;
   sequence: number;
   dueDate: string;
   dueAmount: number;
@@ -139,3 +161,9 @@ export interface PayInstallmentPayload {
 export interface PayInstallmentResponse {
   message: string;
 }
+
+/** POST /installments/{id}/cancel-payment */
+export interface CancelInstallmentPaymentResponse {
+  message: string;
+}
+

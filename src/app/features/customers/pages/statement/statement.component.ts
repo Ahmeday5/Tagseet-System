@@ -7,22 +7,25 @@ import {
   signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterModule } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 
 import { CustomersService } from '../../services/customers.service';
 import { InstallmentsService } from '../../services/installments.service';
 import { ContractsService } from '../../../contracts/services/contracts.service';
 import { TreasuryService } from '../../../treasury/services/treasury.service';
+import { VouchersService } from '../../../vouchers/services/vouchers.service';
+import { DialogService } from '../../../../core/services/dialog.service';
 import {
   ClientContractRow,
   ContractDetails,
   ContractInstallmentRow,
   ContractInstallmentStatus,
+  ContractPaymentRow,
   PayInstallmentPayload,
 } from '../../models/client-statement.model';
-import {
-  DashboardClient,
-} from '../../models/dashboard-client.model';
+import { UpdateVoucherPayload } from '../../../vouchers/models/voucher.model';
+import { RelatedPartyType } from '../../../vouchers/enums/voucher.enums';
+import { DashboardClient } from '../../models/dashboard-client.model';
 import { LookupItem } from '../../../../core/models/lookup.model';
 import {
   BadgeComponent,
@@ -43,6 +46,7 @@ import { onInvalidate } from '../../../../core/utils/auto-refresh.util';
 import { todayIsoDate } from '../../../../shared/utils/date-iso.util';
 import { PrintService } from '../../../../core/services/print.service';
 import { fetchAllPages } from '../../../../core/utils/api-list.util';
+import { DirectContractModalComponent } from '../../components/direct-contract-modal/direct-contract-modal.component';
 
 const DEFAULT_PAGE_SIZE = 10;
 
@@ -68,6 +72,7 @@ interface PaymentForm {
     PaginationComponent,
     CurrencyArPipe,
     SearchableSelectComponent,
+    DirectContractModalComponent,
   ],
   templateUrl: './statement.component.html',
   styleUrl: './statement.component.scss',
@@ -77,9 +82,12 @@ export class StatementComponent {
   private readonly contractsService = inject(ContractsService);
   private readonly installmentsService = inject(InstallmentsService);
   private readonly treasuryService = inject(TreasuryService);
+  private readonly vouchersService = inject(VouchersService);
+  private readonly dialog = inject(DialogService);
   private readonly toast = inject(ToastService);
   private readonly cache = inject(HttpCacheService);
   private readonly printer = inject(PrintService);
+  private readonly router = inject(Router);
 
   protected readonly isPrinting = signal(false);
 
@@ -88,8 +96,8 @@ export class StatementComponent {
   protected readonly clientsLoading = signal(false);
   protected readonly selectedClientId = signal<number | null>(null);
 
-  protected readonly selectedClient = computed(() =>
-    this.clients().find((c) => c.id === this.selectedClientId()) ?? null,
+  protected readonly selectedClient = computed(
+    () => this.clients().find((c) => c.id === this.selectedClientId()) ?? null,
   );
 
   /** Client list shaped for the searchable select (name + phone search). */
@@ -113,7 +121,7 @@ export class StatementComponent {
   protected readonly detailsOpen = signal(false);
   protected readonly detailsLoading = signal(false);
   protected readonly details = signal<ContractDetails | null>(null);
-  private readonly activeContractId = signal<number | null>(null);
+  protected readonly activeContractId = signal<number | null>(null);
 
   // ── payment modal ──────────────────────────────────────────────────
   protected readonly payOpen = signal(false);
@@ -128,6 +136,27 @@ export class StatementComponent {
     if (!d) return 0;
     return Math.max(0, (d.summary.totalRemaining ?? 0) - amt);
   });
+
+  // ── directContract edit modal ──────────────────────────────────────────────────
+  protected readonly directContractEditOpen = signal(false);
+  protected readonly directContractEditId = signal<number | null>(null);
+
+  // ── cancel installment (tracked by sequence within the active contract) ───────
+  protected readonly cancellingSequence = signal<number | null>(null);
+
+  // ── edit voucher modal ─────────────────────────────────────────────────────────
+  protected readonly editVoucherOpen = signal(false);
+  protected readonly editVoucherSubmitting = signal(false);
+  protected readonly editVoucherTarget = signal<ContractPaymentRow | null>(
+    null,
+  );
+
+  protected readonly editVoucherForm = signal<{
+    amount: number;
+    treasuryId: number | null;
+    date: string;
+    notes: string;
+  }>({ amount: 0, treasuryId: null, date: '', notes: '' });
 
   constructor() {
     this.loadClients();
@@ -154,9 +183,7 @@ export class StatementComponent {
     // (covers cross-tab events as well).
     onInvalidate(this.cache, 'contract', () => this.refreshAfterMutation());
     onInvalidate(this.cache, 'payment', () => this.refreshAfterMutation());
-    onInvalidate(this.cache, 'installment', () =>
-      this.refreshAfterMutation(),
-    );
+    onInvalidate(this.cache, 'installment', () => this.refreshAfterMutation());
   }
 
   // ─────────── loaders ───────────
@@ -260,31 +287,97 @@ export class StatementComponent {
     ).subscribe({
       next: (rows) => {
         this.isPrinting.set(false);
-        const totalSale = rows.reduce((s, r) => s + (r.totalContractAmount ?? 0), 0);
+        const totalSale = rows.reduce(
+          (s, r) => s + (r.totalContractAmount ?? 0),
+          0,
+        );
         const totalPaid = rows.reduce((s, r) => s + (r.totalPaid ?? 0), 0);
-        const totalRemaining = rows.reduce((s, r) => s + (r.remainingAmount ?? 0), 0);
+        const totalRemaining = rows.reduce(
+          (s, r) => s + (r.remainingAmount ?? 0),
+          0,
+        );
 
         this.printer.print<ClientContractRow>({
           title: 'كشف حساب العميل',
           subtitle: client.fullName,
           meta: [
             { label: 'العميل', value: client.fullName },
-            ...(client.phoneNumber ? [{ label: 'الهاتف', value: client.phoneNumber }] : []),
+            ...(client.phoneNumber
+              ? [{ label: 'الهاتف', value: client.phoneNumber }]
+              : []),
             { label: 'عدد العقود', value: String(rows.length) },
           ],
           orientation: 'landscape',
           columns: [
-            { key: 'id',                  header: 'العقد',         align: 'center', width: '52px', format: (v) => `#${v}` },
-            { key: 'productName',         header: 'المنتج',         align: 'start',  bold: true },
-            { key: 'quantity',            header: 'الكمية',         align: 'center', format: 'number' },
-            { key: 'dateOfSale',          header: 'تاريخ البيع',   align: 'center', format: 'shortDate' },
-            { key: 'cashPrice',           header: 'سعر النقد',     align: 'end',    format: 'currency' },
-            { key: 'downPayment',         header: 'المقدم',         align: 'end',    format: 'currency' },
-            { key: 'installmentsCount',   header: 'عدد الأقساط',    align: 'center', format: 'number' },
-            { key: 'installmentAmount',   header: 'قيمة القسط',     align: 'end',    format: 'currency' },
-            { key: 'totalContractAmount', header: 'إجمالي العقد',  align: 'end',    format: 'currency', bold: true },
-            { key: 'totalPaid',           header: 'المدفوع',        align: 'end',    format: 'currency' },
-            { key: 'remainingAmount',     header: 'المتبقي',        align: 'end',    format: 'currency', bold: true },
+            {
+              key: 'id',
+              header: 'العقد',
+              align: 'center',
+              width: '52px',
+              format: (v) => `#${v}`,
+            },
+            {
+              key: 'productName',
+              header: 'المنتج',
+              align: 'start',
+              bold: true,
+            },
+            {
+              key: 'quantity',
+              header: 'الكمية',
+              align: 'center',
+              format: 'number',
+            },
+            {
+              key: 'dateOfSale',
+              header: 'تاريخ البيع',
+              align: 'center',
+              format: 'shortDate',
+            },
+            {
+              key: 'cashPrice',
+              header: 'سعر النقد',
+              align: 'end',
+              format: 'currency',
+            },
+            {
+              key: 'downPayment',
+              header: 'المقدم',
+              align: 'end',
+              format: 'currency',
+            },
+            {
+              key: 'installmentsCount',
+              header: 'عدد الأقساط',
+              align: 'center',
+              format: 'number',
+            },
+            {
+              key: 'installmentAmount',
+              header: 'قيمة القسط',
+              align: 'end',
+              format: 'currency',
+            },
+            {
+              key: 'totalContractAmount',
+              header: 'إجمالي العقد',
+              align: 'end',
+              format: 'currency',
+              bold: true,
+            },
+            {
+              key: 'totalPaid',
+              header: 'المدفوع',
+              align: 'end',
+              format: 'currency',
+            },
+            {
+              key: 'remainingAmount',
+              header: 'المتبقي',
+              align: 'end',
+              format: 'currency',
+              bold: true,
+            },
             {
               key: 'status',
               header: 'الحالة',
@@ -324,6 +417,140 @@ export class StatementComponent {
     this.pageIndex.set(1);
   }
 
+  // ─────────── edit contract handler ───────────
+
+  /**
+   * Routes the user to the appropriate edit handler based on contract type:
+   * - Regular contract → navigate to contract-new page
+   * - Direct contract → open direct-contract-modal
+   */
+  protected editContract(row: ClientContractRow): void {
+    if (row.isDirectContract) {
+      this.directContractEditId.set(row.id);
+      this.directContractEditOpen.set(true);
+    } else {
+      this.router.navigate(['/customers/contract'], {
+        queryParams: { editId: row.id },
+      });
+    }
+  }
+
+  protected closeDirectContractModal(): void {
+    this.directContractEditOpen.set(false);
+    this.directContractEditId.set(null);
+  }
+
+  protected onDirectContractUpdated(): void {
+    this.directContractEditOpen.set(false);
+    this.directContractEditId.set(null);
+    const clientId = this.selectedClientId();
+    if (clientId !== null) {
+      this.fetchContracts(clientId, this.pageIndex(), this.pageSize(), true);
+    }
+  }
+
+  // ─────────── cancel installment payment ───────────
+
+  protected async confirmCancelInstallment(
+    it: ContractInstallmentRow,
+  ): Promise<void> {
+    const installmentId = it.id ?? 0;
+    if (!installmentId) {
+      this.toast.error('لا يمكن إلغاء هذا القسط — معرّف القسط غير متاح');
+      return;
+    }
+
+    const ok = await this.dialog.confirm({
+      title: 'إلغاء دفعة القسط',
+      message: `هل أنت متأكد من إلغاء سداد القسط رقم ${it.sequence}؟ سيتم إرجاعه إلى حالة غير مسدد.`,
+      confirmText: 'إلغاء الدفعة',
+      cancelText: 'تراجع',
+      type: 'danger',
+    });
+    if (!ok) return;
+
+    this.cancellingSequence.set(it.sequence);
+    this.installmentsService.cancelPayment(installmentId).subscribe({
+      next: () => {
+        this.cancellingSequence.set(null);
+        this.toast.success('تم إلغاء دفعة القسط بنجاح');
+      },
+      error: (err: ApiError) => {
+        this.cancellingSequence.set(null);
+        this.toast.error(apiErrorToMessage(err, 'فشل إلغاء دفعة القسط'));
+      },
+    });
+  }
+
+  // ─────────── edit voucher modal ───────────
+
+  protected openEditVoucher(payment: ContractPaymentRow): void {
+    this.editVoucherTarget.set(payment);
+    this.editVoucherForm.set({
+      amount: payment.amount,
+      treasuryId: this.treasuries()[0]?.id ?? null,
+      date: payment.date,
+      notes: payment.notes ?? '',
+    });
+    this.editVoucherOpen.set(true);
+  }
+
+  protected closeEditVoucher(): void {
+    if (this.editVoucherSubmitting()) return;
+    this.editVoucherOpen.set(false);
+    this.editVoucherTarget.set(null);
+  }
+
+  protected updateEditVoucherForm<
+    K extends keyof ReturnType<typeof this.editVoucherForm>,
+  >(key: K, value: ReturnType<typeof this.editVoucherForm>[K]): void {
+    this.editVoucherForm.update((f) => ({ ...f, [key]: value }));
+  }
+
+  protected submitEditVoucher(): void {
+    const target = this.editVoucherTarget();
+    const d = this.details();
+    const f = this.editVoucherForm();
+
+    if (!target || !d || !target.id) {
+      this.toast.error('فشل تحديد السند — معرف السند غير متاح');
+      return;
+    }
+    if (!f.amount || f.amount <= 0) {
+      this.toast.error('أدخل مبلغًا صحيحًا');
+      return;
+    }
+    if (!f.treasuryId) {
+      this.toast.error('اختر الخزينة');
+      return;
+    }
+
+    const payload: UpdateVoucherPayload = {
+      amount: Number(f.amount),
+      treasuryId: f.treasuryId,
+      date: f.date,
+      relatedPartyType: RelatedPartyType.Customer,
+      relatedPartyId: d.client.id,
+      notes: f.notes?.trim() ?? '',
+    };
+
+    this.editVoucherSubmitting.set(true);
+    this.vouchersService.update(target.id, payload).subscribe({
+      next: () => {
+        this.editVoucherSubmitting.set(false);
+        this.editVoucherOpen.set(false);
+        this.editVoucherTarget.set(null);
+        this.toast.success('تم تعديل السند بنجاح');
+        const contractId = this.activeContractId();
+        if (contractId !== null) this.reloadDetails(contractId);
+      },
+      error: (err: ApiError) => {
+        this.editVoucherSubmitting.set(false);
+        this.toast.error(apiErrorToMessage(err, 'فشل تعديل السند'));
+      },
+    });
+  }
+
   // ─────────── details modal ───────────
 
   protected openDetails(row: ClientContractRow): void {
@@ -358,7 +585,8 @@ export class StatementComponent {
   protected openPayment(): void {
     const d = this.details();
     if (!d) return;
-    const suggested = d.nextInstallment?.amount ?? d.summary.totalRemaining ?? 0;
+    const suggested =
+      d.nextInstallment?.amount ?? d.summary.totalRemaining ?? 0;
     const defaultTreasury = this.treasuries()[0]?.id ?? null;
     this.payForm.set({
       amount: Math.round(suggested * 100) / 100,
@@ -491,6 +719,15 @@ export class StatementComponent {
       default:
         return 'info';
     }
+  }
+
+  protected paymentKindLabel(kind: string): string {
+    const map: Record<string, string> = {
+      DownPayment: 'مقدم',
+      Installment: 'قسط',
+      Overpayment: 'دفعة زائدة',
+    };
+    return map[kind] ?? kind;
   }
 
   protected formatDate(value: string | null | undefined): string {

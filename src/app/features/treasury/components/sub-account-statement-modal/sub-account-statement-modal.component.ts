@@ -8,6 +8,7 @@ import {
   output,
   signal,
 } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { map } from 'rxjs/operators';
 
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';
@@ -26,12 +27,15 @@ import {
   VOUCHER_TYPE_LABELS,
 } from '../../../vouchers/constants/voucher-labels';
 
+import { TreasuryService } from '../../services/treasury.service';
 import { SubAccountsService } from '../../services/sub-accounts.service';
 import {
   SubAccount,
   SubAccountStatement,
   SubAccountVoucher,
+  UpdateSubAccountVoucherPayload,
 } from '../../models/sub-account.model';
+import { LookupItem } from '../../../../core/models/lookup.model';
 
 const DEFAULT_PAGE_SIZE = 10;
 
@@ -45,6 +49,7 @@ const DEFAULT_PAGE_SIZE = 10;
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    FormsModule,
     ModalComponent,
     PaginationComponent,
     BadgeComponent,
@@ -64,6 +69,7 @@ export class SubAccountStatementModalComponent {
 
   // ── deps ──
   private readonly service = inject(SubAccountsService);
+  private readonly treasuryService = inject(TreasuryService);
   private readonly printer = inject(PrintService);
   private readonly toast = inject(ToastService);
 
@@ -102,13 +108,22 @@ export class SubAccountStatementModalComponent {
       .reduce((s, v) => s + (v.amount ?? 0), 0),
   );
 
+  // ── edit-voucher modal state ──
+  protected readonly treasuries = signal<LookupItem[]>([]);
+  protected readonly editVoucherOpen = signal(false);
+  protected readonly editVoucherSubmitting = signal(false);
+  protected readonly editVoucherTarget = signal<SubAccountVoucher | null>(null);
+  protected readonly editVoucherForm = signal<{
+    amount: number;
+    treasuryId: number | null;
+    date: string;
+    notes: string;
+  }>({ amount: 0, treasuryId: null, date: '', notes: '' });
+
   private lastAccountId: number | null = null;
   private debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
-    // (Re)load when the modal opens for an account or the page changes. The
-    // fetch is debounced so the open → page-reset → re-run sequence collapses
-    // into a single request, and its signal writes run outside this context.
     effect(
       () => {
         if (!this.open()) return;
@@ -122,6 +137,18 @@ export class SubAccountStatementModalComponent {
           () => this.fetch(account.id, page, size, false),
           120,
         );
+      },
+      { allowSignalWrites: true },
+    );
+
+    // Load treasuries once for the edit-voucher form.
+    effect(
+      () => {
+        if (!this.open() || this.treasuries().length > 0) return;
+        this.treasuryService.lookup().subscribe({
+          next: (list) => this.treasuries.set(list),
+          error: () => {},
+        });
       },
       { allowSignalWrites: true },
     );
@@ -217,6 +244,69 @@ export class SubAccountStatementModalComponent {
       error: () => {
         this.isPrinting.set(false);
         this.toast.error('تعذر تجهيز ملف الطباعة');
+      },
+    });
+  }
+
+  // ─────────── edit-voucher handlers ───────────
+
+  protected openEditVoucher(v: SubAccountVoucher): void {
+    this.editVoucherTarget.set(v);
+    this.editVoucherForm.set({
+      amount: v.amount,
+      treasuryId: this.treasuries()[0]?.id ?? null,
+      date: v.date.split('T')[0],
+      notes: v.notes ?? '',
+    });
+    this.editVoucherOpen.set(true);
+  }
+
+  protected closeEditVoucher(): void {
+    if (this.editVoucherSubmitting()) return;
+    this.editVoucherOpen.set(false);
+    this.editVoucherTarget.set(null);
+  }
+
+  protected updateEditVoucherForm<K extends keyof ReturnType<typeof this.editVoucherForm>>(
+    key: K,
+    value: ReturnType<typeof this.editVoucherForm>[K],
+  ): void {
+    this.editVoucherForm.update((f) => ({ ...f, [key]: value }));
+  }
+
+  protected submitEditVoucher(): void {
+    const target = this.editVoucherTarget();
+    const f = this.editVoucherForm();
+    if (!target) return;
+    if (!f.amount || f.amount <= 0) {
+      this.toast.error('أدخل مبلغًا صحيحًا');
+      return;
+    }
+    if (!f.treasuryId) {
+      this.toast.error('اختر الخزينة');
+      return;
+    }
+
+    const payload: UpdateSubAccountVoucherPayload = {
+      treasuryId: f.treasuryId,
+      amount: Number(f.amount),
+      date: f.date,
+      notes: f.notes?.trim() ?? '',
+    };
+
+    this.editVoucherSubmitting.set(true);
+    this.service.updateVoucher(target.id, payload).subscribe({
+      next: () => {
+        this.editVoucherSubmitting.set(false);
+        this.editVoucherOpen.set(false);
+        this.editVoucherTarget.set(null);
+        this.toast.success('تم تعديل السند بنجاح');
+        const account = this.account();
+        if (account) this.fetch(account.id, this.pageIndex(), this.pageSize(), true);
+      },
+      error: (err: ApiError) => {
+        this.editVoucherSubmitting.set(false);
+        this.toast.error(err?.message || 'فشل تعديل السند');
       },
     });
   }
