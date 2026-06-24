@@ -10,7 +10,7 @@ import { DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
 import { VouchersService } from '../../services/vouchers.service';
-import { VoucherDto, UpdateVoucherPayload } from '../../models/voucher.model';
+import { VoucherDetailDto, VoucherDto, UpdateVoucherPayload } from '../../models/voucher.model';
 import {
   ReferenceType,
   RelatedPartyType,
@@ -139,6 +139,7 @@ export class VouchersListComponent {
   // ── edit-voucher modal state ──
   protected readonly editOpen = signal(false);
   protected readonly editSubmitting = signal(false);
+  protected readonly editLoading = signal(false);
   protected readonly editTarget = signal<VoucherDto | null>(null);
   protected readonly editForm = signal<{
     amount: number;
@@ -207,16 +208,29 @@ export class VouchersListComponent {
 
   protected openEdit(v: VoucherDto): void {
     this.editTarget.set(v);
-    this.editForm.set({
-      amount: v.amount,
-      treasuryId: null,
-      date: v.date.split('T')[0],
-      relatedPartyType: v.relatedPartyType,
-      relatedPartyId: null,
-      notes: v.notes ?? '',
-    });
     this.editOpen.set(true);
-    this.loadEditLookups(v.relatedPartyType);
+    this.editLoading.set(true);
+
+    this.svc.getById(v.id).subscribe({
+      next: (detail: VoucherDetailDto) => {
+        this.editForm.set({
+          amount: detail.amount,
+          treasuryId: detail.treasuryId,
+          date: detail.date.split('T')[0],
+          relatedPartyType: detail.relatedPartyType,
+          relatedPartyId: detail.relatedPartyId,
+          notes: detail.notes ?? '',
+        });
+        this.editLoading.set(false);
+        this.loadEditLookups(detail.relatedPartyType);
+      },
+      error: () => {
+        this.editLoading.set(false);
+        this.editOpen.set(false);
+        this.editTarget.set(null);
+        this.toast.error('تعذّر تحميل بيانات السند');
+      },
+    });
   }
 
   protected closeEdit(): void {

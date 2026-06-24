@@ -23,6 +23,9 @@ export enum ReferenceType {
   ShareholderCapital = 'ShareholderCapital',
   ProfitAccrual = 'ProfitAccrual',
   ProfitDistribution = 'ProfitDistribution',
+  SubAccountTransfer = 'SubAccountTransfer',
+  RepresentativeCommission = 'RepresentativeCommission',
+  ShareholderProfitCapitalization = 'ShareholderProfitCapitalization',
 }
 
 export enum RelatedPartyType {

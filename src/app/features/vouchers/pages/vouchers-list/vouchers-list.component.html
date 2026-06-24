@@ -310,13 +310,18 @@
   [closeOnEsc]="!editSubmitting()"
   (closed)="closeEdit()"
 >
-  @if (editTarget(); as v) {
+  @if (editLoading()) {
+    <div class="d-flex align-items-center justify-content-center gap-2 py-4" style="color:var(--txt3)">
+      <span class="spinner-border spinner-border-sm"></span>
+      <span>جاري تحميل بيانات السند...</span>
+    </div>
+  } @else if (editTarget()) {
   <div class="vd-list mb-3" style="font-size:13px;color:var(--txt3)">
-    <span>{{ v.voucherNumber }}</span>
+    <span>{{ editTarget()!.voucherNumber }}</span>
     <span class="mx-2">|</span>
-    <span>{{ v.type | voucherTypeLabel }}</span>
+    <span>{{ editTarget()!.type | voucherTypeLabel }}</span>
     <span class="mx-2">|</span>
-    <span>{{ v.relatedPartyName }}</span>
+    <span>{{ editTarget()!.relatedPartyName }}</span>
   </div>
 
   <div class="row g-2">
@@ -402,11 +407,14 @@
       ></textarea>
     </div>
   </div>
-  }
+  }<!-- end @else if editTarget -->
 
   <ng-container modal-footer>
-    <button type="button" class="btn" (click)="closeEdit()" [disabled]="editSubmitting()">إلغاء</button>
-    <button type="button" class="btn btn-bl" (click)="submitEdit()" [disabled]="editSubmitting()">
+    <button type="button" class="btn" (click)="closeEdit()" [disabled]="editSubmitting() || editLoading()">إلغاء</button>
+    <button type="button" class="btn btn-bl" (click)="submitEdit()" [disabled]="editSubmitting() || editLoading()">
+      @if (editSubmitting()) {
+        <span class="spinner-border spinner-border-sm me-1"></span>
+      }
       {{ editSubmitting() ? 'جارٍ الحفظ...' : 'حفظ التعديلات' }}
     </button>
   </ng-container>

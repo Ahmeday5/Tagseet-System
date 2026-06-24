@@ -14,6 +14,7 @@ import { forkJoin, of } from 'rxjs';
 import { catchError, finalize } from 'rxjs/operators';
 
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';
+import { ContractPrintModalComponent } from '../../../contracts/components/contract-print-modal/contract-print-modal.component';
 import { FormErrorComponent } from '../../../../shared/components/form-error/form-error.component';
 import {
   SearchableSelectComponent,
@@ -35,7 +36,6 @@ import {
   CreateDirectContractPayload,
 } from '../../../contracts/models/contract.model';
 import { DashboardClient } from '../../models/dashboard-client.model';
-import { ContractDetails } from '../../models/client-statement.model';
 
 @Component({
   selector: 'app-direct-contract-modal',
@@ -47,6 +47,7 @@ import { ContractDetails } from '../../models/client-statement.model';
     FormErrorComponent,
     SearchableSelectComponent,
     CurrencyArPipe,
+    ContractPrintModalComponent,
   ],
   templateUrl: './direct-contract-modal.component.html',
   styleUrl: './direct-contract-modal.component.scss',
@@ -79,6 +80,10 @@ export class DirectContractModalComponent {
   protected readonly isEditMode = computed(() => this.editId() !== null);
   /** Original purchase price shown read-only in edit mode. */
   protected readonly purchasePrice = signal(0);
+  /** Set after a successful create — triggers the print modal. */
+  protected readonly printContractId = signal<number | null>(null);
+  /** Holds the full create response until print modal is dismissed. */
+  private pendingCreated: CreatedDirectContract | null = null;
 
   // ── lookup data ──
   protected readonly clients = signal<DashboardClient[]>([]);
@@ -231,7 +236,8 @@ export class DirectContractModalComponent {
           next: (res) => {
             this.toast.success('تم إنشاء العقد المباشر بنجاح');
             this.resetForm();
-            this.created.emit(res);
+            this.pendingCreated = res;
+            this.printContractId.set(res.id);
           },
           error: (err: ApiError) => {
             this.serverError.set(err.message || 'تعذّر إنشاء العقد');
@@ -243,6 +249,14 @@ export class DirectContractModalComponent {
   protected close(): void {
     if (this.submitting()) return;
     this.closed.emit();
+  }
+
+  protected closePrintModal(): void {
+    this.printContractId.set(null);
+    if (this.pendingCreated) {
+      this.created.emit(this.pendingCreated);
+      this.pendingCreated = null;
+    }
   }
 
   protected isInvalid(field: string): boolean {

@@ -1,0 +1,200 @@
+<!-- ════════════════════════════════════════════════════════
+     MODAL OVERLAY  (screen only — hidden during print)
+════════════════════════════════════════════════════════ -->
+<div class="cpm-overlay" (click)="onClose()">
+  <div class="cpm-dialog" (click)="$event.stopPropagation()">
+
+    <!-- ── Header Bar ── -->
+    <div class="cpm-header no-print">
+      <span class="cpm-title">أقساط العقد — جاهزة للطباعة</span>
+      <div class="cpm-actions">
+        @if (!loading() && !error() && details()) {
+          <button class="btn-print" (click)="print()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 6 2 18 2 18 9"/>
+              <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+              <rect x="6" y="14" width="12" height="8"/>
+            </svg>
+            طباعة الأقساط ({{ details()!.installments.length }} ورقة)
+          </button>
+        }
+        <button class="btn-close-cpm" (click)="onClose()">✕</button>
+      </div>
+    </div>
+
+    <!-- ── Loading / Error ── -->
+    @if (loading()) {
+      <div class="cpm-state no-print">
+        <div class="spinner"></div>
+        <span>جاري تحميل بيانات العقد…</span>
+      </div>
+    } @else if (error()) {
+      <div class="cpm-state no-print">
+        <span class="err-icon">⚠</span>
+        <span>تعذّر تحميل بيانات العقد</span>
+        <button class="btn-print" (click)="onClose()">إغلاق</button>
+      </div>
+    } @else if (details()) {
+      <!-- ════════════════════════════════════════════
+           PRINT PAGES — one <div class="receipt-page"> per installment
+      ════════════════════════════════════════════ -->
+      <div class="pages-wrapper">
+        @for (inst of details()!.installments; track inst.sequence) {
+          <div class="receipt-page">
+
+            <!-- ── Company Logo + Name ── -->
+            <div class="rc-header">
+              <div class="rc-logo-area">
+                <div class="rc-logo-circle">
+                  <svg viewBox="0 0 60 60" fill="none">
+                    <circle cx="30" cy="30" r="28" stroke="#1a3a5c" stroke-width="2.5"/>
+                    <path d="M14 38 C14 28 22 20 30 20 C38 20 46 28 46 38" stroke="#1a3a5c" stroke-width="2.5" fill="none"/>
+                    <circle cx="30" cy="20" r="5" fill="#1a3a5c"/>
+                    <line x1="14" y1="38" x2="46" y2="38" stroke="#1a3a5c" stroke-width="2"/>
+                  </svg>
+                </div>
+                <div class="rc-company-ar">شركة الايمان</div>
+              </div>
+
+              <div class="rc-meta-grid">
+                <div class="rc-meta-row">
+                  <span class="rc-meta-val">{{ details()!.contract.id }}</span>
+                  <span class="rc-meta-key">الكود</span>
+                </div>
+                <div class="rc-meta-row">
+                  <span class="rc-meta-val">{{ inst.sequence }}</span>
+                  <span class="rc-meta-key">{{ inst.sequence }}</span>
+                </div>
+                <div class="rc-meta-row">
+                  <span class="rc-meta-val">{{ details()!.client.address || '—' }}</span>
+                  <span class="rc-meta-key">المنطقة</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="rc-divider"></div>
+
+            <!-- ── Main Data Grid ── -->
+            <div class="rc-body">
+
+              <!-- Row 1: الاجمالي | المقدم | الاقساط -->
+              <div class="rc-row-3">
+                <div class="rc-cell">
+                  <span class="rc-lbl">الاقساط</span>
+                  <span class="rc-val">{{ details()!.contract.installmentsCount }} × {{ details()!.contract.installmentAmount | number:'1.0-0' }}</span>
+                </div>
+                <div class="rc-cell">
+                  <span class="rc-lbl">المقدم</span>
+                  <span class="rc-val">{{ details()!.contract.downPayment | number:'1.0-0' }}</span>
+                </div>
+                <div class="rc-cell">
+                  <span class="rc-lbl">الاجمالي</span>
+                  <span class="rc-val">{{ totalAmount() | number:'1.0-0' }}</span>
+                </div>
+              </div>
+
+              <div class="rc-divider-thin"></div>
+
+              <!-- Row: الاسم -->
+              <div class="rc-row-2">
+                <div class="rc-cell">
+                  <span class="rc-lbl">الاسم</span>
+                  <span class="rc-val rc-val--name">{{ details()!.client.fullName }}</span>
+                </div>
+                <div class="rc-cell">
+                  <span class="rc-lbl">الموبايل</span>
+                  <span class="rc-val">{{ details()!.client.phoneNumber }}</span>
+                </div>
+              </div>
+
+              <!-- Row: العمل + الوظيفة -->
+              <div class="rc-row-2">
+                <div class="rc-cell">
+                  <span class="rc-lbl">الوظيفة</span>
+                  <span class="rc-val">—</span>
+                </div>
+                <div class="rc-cell">
+                  <span class="rc-lbl">العمل</span>
+                  <span class="rc-val">—</span>
+                </div>
+              </div>
+
+              <!-- Row: قيمة القسط -->
+              <div class="rc-row-installment">
+                <div class="rc-cell rc-cell--highlight">
+                  <span class="rc-lbl">قيمة القسط</span>
+                  <span class="rc-val rc-val--big">{{ details()!.contract.installmentAmount | number:'1.0-0' }}</span>
+                  <span class="rc-lbl rc-lbl--sub">جنيها فقط لا غير</span>
+                </div>
+                <div class="rc-cell">
+                  <span class="rc-lbl">المبلغ المتبقى بعد القسط الحالى</span>
+                  <span class="rc-val">{{ remainingAfterInstallment()(inst.sequence) | number:'1.0-0' }}</span>
+                </div>
+              </div>
+
+              <!-- Row: المنتج -->
+              <div class="rc-row-full">
+                <span class="rc-lbl">المنتج</span>
+                <span class="rc-val">
+                  {{ details()!.product?.name ?? details()!.contract.productName ?? '—' }}
+                  @if (details()!.contract.quantity > 1) {
+                    &nbsp;(عدد {{ details()!.contract.quantity }})
+                  }
+                </span>
+              </div>
+
+              <div class="rc-divider-thin"></div>
+
+              <!-- Row: التواريخ -->
+              <div class="rc-dates-grid">
+                <div class="rc-date-cell">
+                  <span class="rc-lbl">يحصل فى</span>
+                  <span class="rc-val">{{ inst.dueDate ? formatDate(inst.dueDate) : installmentDueDate(details()!.contract.firstInstallmentDate, inst.sequence - 1, details()!.contract.paymentFrequency) }}</span>
+                </div>
+                <div class="rc-date-cell">
+                  <span class="rc-lbl">تاريخ البيع</span>
+                  <span class="rc-val">{{ formatDate(details()!.contract.dateOfSale) }}</span>
+                </div>
+                <div class="rc-date-cell">
+                  <span class="rc-lbl">المندوب</span>
+                  <span class="rc-val">{{ details()!.representative?.name ?? '—' }}</span>
+                </div>
+              </div>
+
+              <div class="rc-dates-grid">
+                <div class="rc-date-cell">
+                  <span class="rc-lbl">تاريخ بداية الاقساط</span>
+                  <span class="rc-val">{{ formatDate(details()!.contract.firstInstallmentDate) }}</span>
+                </div>
+                <div class="rc-date-cell">
+                  <span class="rc-lbl">موبايل المندوب</span>
+                  <span class="rc-val">—</span>
+                </div>
+                <div class="rc-date-cell">
+                  <span class="rc-lbl">للتواصل مع الشركة</span>
+                  <span class="rc-val">—</span>
+                </div>
+              </div>
+
+              <!-- Sequence badge -->
+              <div class="rc-seq-badge">
+                القسط رقم {{ inst.sequence }} من {{ details()!.contract.installmentsCount }}
+                &nbsp;|&nbsp;
+                {{ frequencyLabel(details()!.contract.paymentFrequency) }}
+              </div>
+            </div>
+
+            <!-- ── Footer ── -->
+            <div class="rc-footer">
+              <div class="rc-footer-box">توقيع العميل</div>
+              <div class="rc-footer-box">توقيع المندوب</div>
+              <div class="rc-footer-box">ختم الشركة</div>
+            </div>
+
+          </div><!-- /receipt-page -->
+        }
+      </div><!-- /pages-wrapper -->
+    }
+
+  </div><!-- /cpm-dialog -->
+</div><!-- /cpm-overlay -->

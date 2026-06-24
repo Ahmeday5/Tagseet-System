@@ -12,6 +12,7 @@ import { PagedResponse } from '../../../core/models/api-response.model';
 import {
   CreateVoucherPayload,
   UpdateVoucherPayload,
+  VoucherDetailDto,
   VoucherDto,
   VouchersQuery,
 } from '../models/voucher.model';
@@ -50,6 +51,13 @@ export class VouchersService {
         params: this.toParams(query),
         context: withCacheBypass(withCache({ ttlMs: VOUCHERS_TTL_MS })),
       },
+    );
+  }
+
+  /** Full voucher record — used to pre-populate the edit form with IDs. */
+  getById(id: number): Observable<VoucherDetailDto> {
+    return this.api.get<VoucherDetailDto>(
+      API_ENDPOINTS.dashboard.voucherById(id),
     );
   }
 

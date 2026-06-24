@@ -289,7 +289,7 @@
             {{ notesLabel(it.notes) }}
           </td>
           <td>
-
+            @if (it.status === 'Paid') {
               <button
                 class="btn btn-sm btn-re"
                 [disabled]="cancellingSequence() === it.sequence"
@@ -302,7 +302,7 @@
                   إلغاء
                 }
               </button>
-            
+            }
           </td>
         </tr>
         }

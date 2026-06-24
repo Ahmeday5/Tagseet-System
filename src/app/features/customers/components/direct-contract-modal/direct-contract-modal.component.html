@@ -308,3 +308,10 @@
     </button>
   </ng-container>
 </app-modal>
+
+@if (printContractId()) {
+  <app-contract-print-modal
+    [contractId]="printContractId()!"
+    [onClose]="closePrintModal.bind(this)"
+  />
+}

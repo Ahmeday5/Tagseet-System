@@ -25,6 +25,27 @@ export interface VoucherDto {
 }
 
 /**
+ * Full voucher record returned by `GET /dashboard/vouchers/{id}`.
+ * Extends the list DTO with the IDs needed to pre-populate the edit form.
+ */
+export interface VoucherDetailDto {
+  id: number;
+  voucherNumber: string;
+  type: VoucherType;
+  amount: number;
+  date: string;
+  treasuryId: number;
+  treasuryName: string;
+  relatedPartyType: RelatedPartyType;
+  relatedPartyId: number | null;
+  relatedPartyName: string | null;
+  referenceType: ReferenceType;
+  referenceId: number | null;
+  installmentId: number | null;
+  notes: string;
+}
+
+/**
  * POST /dashboard/vouchers body.
  *
  * `relatedPartyId` is `null` when `relatedPartyType` is `Other` (no entity

@@ -13,6 +13,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { forkJoin, finalize, of, catchError } from 'rxjs';
 
 import { CurrencyArPipe } from '../../../../shared/pipes/currency-ar.pipe';
+import { ContractPrintModalComponent } from '../../../contracts/components/contract-print-modal/contract-print-modal.component';
 import { ToastService } from '../../../../core/services/toast.service';
 import { FormErrorComponent } from '../../../../shared/components/form-error/form-error.component';
 import { LoaderComponent } from '../../../../shared/components/loader/loader.component';
@@ -51,6 +52,7 @@ import { LookupItem } from '../../../../core/models/lookup.model';
     FormErrorComponent,
     LoaderComponent,
     SearchableSelectComponent,
+    ContractPrintModalComponent,
   ],
   templateUrl: './contract-new.component.html',
   styleUrl: './contract-new.component.scss',
@@ -81,6 +83,7 @@ export class ContractNewComponent implements OnInit {
   // ───────────────── UI state ─────────────────
   protected readonly loading = signal(true);
   protected readonly isSaving = signal(false);
+  protected readonly printContractId = signal<number | null>(null);
 
   // ───────────────── lookup data ─────────────────
   protected readonly clients = signal<DashboardClient[]>([]);
@@ -391,9 +394,9 @@ export class ContractNewComponent implements OnInit {
       .create(payload)
       .pipe(finalize(() => this.isSaving.set(false)))
       .subscribe({
-        next: () => {
+        next: (created) => {
           this.toast.success('تم إنشاء العقد بنجاح');
-          this.router.navigate(['/customers/customer-list']);
+          this.printContractId.set(created.id);
         },
         error: (err: ApiError) => {
           this.toast.error(apiErrorToMessage(err, 'فشل في إنشاء العقد'));
@@ -429,6 +432,11 @@ export class ContractNewComponent implements OnInit {
   }
 
   // ───────────────── helpers ─────────────────
+  protected closePrintModal(): void {
+    this.printContractId.set(null);
+    this.router.navigate(['/customers/customer-list']);
+  }
+
   protected reset(): void {
     this.form.reset({
       quantity: 1,

@@ -8,6 +8,7 @@ import {
 } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { forkJoin, finalize, of, catchError } from 'rxjs';
+import { ContractPrintModalComponent } from '../../components/contract-print-modal/contract-print-modal.component';
 
 import { ContractsService } from '../../services/contracts.service';
 import { CustomersService } from '../../../customers/services/customers.service';
@@ -47,6 +48,7 @@ import { PERMISSIONS } from '../../../../core/constants/permissions.const';
     LoaderComponent,
     CurrencyArPipe,
     SearchableSelectComponent,
+    ContractPrintModalComponent,
   ],
   templateUrl: './create-contract.component.html',
   styleUrl: './create-contract.component.scss',
@@ -100,6 +102,7 @@ export class CreateContractComponent implements OnInit {
   // --- UI State ---
   loading = signal(true);
   submitting = signal(false);
+  printContractId = signal<number | null>(null);
 
   form!: FormGroup;
 
@@ -236,6 +239,11 @@ export class CreateContractComponent implements OnInit {
       ?.setValue(Number(amount.toFixed(2)), { emitEvent: false });
   }
 
+  closePrintModal(): void {
+    this.printContractId.set(null);
+    this.router.navigate(['/contracts']);
+  }
+
   onSubmit(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
@@ -265,9 +273,9 @@ export class CreateContractComponent implements OnInit {
       .create(payload)
       .pipe(finalize(() => this.submitting.set(false)))
       .subscribe({
-        next: () => {
+        next: (created) => {
           this.toast.success('تم إنشاء العقد بنجاح');
-          this.router.navigate(['/contracts']);
+          this.printContractId.set(created.id);
         },
         error: (err: ApiError) => {
           this.toast.error(apiErrorToMessage(err, 'فشل في إنشاء العقد'));

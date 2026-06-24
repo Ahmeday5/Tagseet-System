@@ -357,3 +357,10 @@
 </form>
 
 }
+
+@if (printContractId()) {
+  <app-contract-print-modal
+    [contractId]="printContractId()!"
+    [onClose]="closePrintModal.bind(this)"
+  />
+}
