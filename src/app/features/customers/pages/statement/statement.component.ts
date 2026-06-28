@@ -141,6 +141,10 @@ export class StatementComponent {
   protected readonly directContractEditOpen = signal(false);
   protected readonly directContractEditId = signal<number | null>(null);
 
+  // ── contract actions ──────────────────────────────────────────────────────────
+  protected readonly contractActioningId = signal<number | null>(null);
+  protected readonly contractActionName = signal<'cancel' | 'return' | null>(null);
+
   // ── cancel installment (tracked by sequence within the active contract) ───────
   protected readonly cancellingSequence = signal<number | null>(null);
 
@@ -447,6 +451,65 @@ export class StatementComponent {
     if (clientId !== null) {
       this.fetchContracts(clientId, this.pageIndex(), this.pageSize(), true);
     }
+  }
+
+  // ─────────── contract action handlers ───────────
+
+  protected isContractActionPending(
+    contractId: number,
+    action: 'cancel' | 'return',
+  ): boolean {
+    return (
+      this.contractActioningId() === contractId &&
+      this.contractActionName() === action
+    );
+  }
+
+  protected async confirmContractAction(
+    row: ClientContractRow,
+    action: 'cancel' | 'return',
+  ): Promise<void> {
+    const actionLabel = action === 'cancel' ? 'إلغاء' : 'إرجاع';
+    const ok = await this.dialog.confirm({
+      title: `${actionLabel} العقد`,
+      message: `هل أنت متأكد من ${actionLabel.toLowerCase()} هذا العقد؟`,
+      confirmText: actionLabel,
+      cancelText: 'تراجع',
+      type: 'danger',
+    });
+    if (!ok) return;
+
+    this.contractActioningId.set(row.id);
+    this.contractActionName.set(action);
+
+    const request$ =
+      action === 'cancel'
+        ? this.contractsService.cancel(row.id)
+        : this.contractsService.returnContract(row.id);
+
+    request$.subscribe({
+      next: () => {
+        this.contractActioningId.set(null);
+        this.contractActionName.set(null);
+        this.toast.success(
+          action === 'cancel' ? 'تم إلغاء العقد بنجاح' : 'تم إرجاع العقد بنجاح',
+        );
+        this.refreshContracts();
+        if (this.activeContractId() === row.id) {
+          this.reloadDetails(row.id);
+        }
+      },
+      error: (err: ApiError) => {
+        this.contractActioningId.set(null);
+        this.contractActionName.set(null);
+        this.toast.error(
+          apiErrorToMessage(
+            err,
+            action === 'cancel' ? 'فشل إلغاء العقد' : 'فشل إرجاع العقد',
+          ),
+        );
+      },
+    });
   }
 
   // ─────────── cancel installment payment ───────────

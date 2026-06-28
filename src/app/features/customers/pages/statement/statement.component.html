@@ -83,11 +83,11 @@
       <tbody>
         @if (contractsLoading()) {
         <tr>
-          <td colspan="17" class="st-loading">جارٍ التحميل...</td>
+          <td colspan="18" class="st-loading">جارٍ التحميل...</td>
         </tr>
         } @else if (contracts().length === 0) {
         <tr>
-          <td colspan="17" class="st-empty">لا توجد عقود لهذا العميل بعد</td>
+          <td colspan="18" class="st-empty">لا توجد عقود لهذا العميل بعد</td>
         </tr>
         } @else {
         @for (row of contracts(); track row.id) {
@@ -119,9 +119,31 @@
             {{ notesLabel(row.notes) }}
           </td>
           <td>
-            <div class="d-flex gap-1">
+            <div class="d-flex gap-1 flex-wrap">
               <button class="btn btn-sm btn-bl" (click)="openDetails(row)">التفاصيل</button>
               <button class="btn btn-sm" (click)="editContract(row)">تعديل</button>
+              <button
+                class="btn btn-sm"
+                [disabled]="isContractActionPending(row.id, 'return')"
+                (click)="confirmContractAction(row, 'return')"
+              >
+                @if (isContractActionPending(row.id, 'return')) {
+                  <span class="spinner-border spinner-border-sm"></span>
+                } @else {
+                  إرجاع
+                }
+              </button>
+              <button
+                class="btn btn-sm btn-re"
+                [disabled]="isContractActionPending(row.id, 'cancel')"
+                (click)="confirmContractAction(row, 'cancel')"
+              >
+                @if (isContractActionPending(row.id, 'cancel')) {
+                  <span class="spinner-border spinner-border-sm"></span>
+                } @else {
+                  إلغاء
+                }
+              </button>
             </div>
           </td>
         </tr>
@@ -265,7 +287,6 @@
           <th>المتبقي</th>
           <th>تاريخ السداد</th>
           <th>الحالة</th>
-          <th>ملاحظات</th>
           <th>إجراء</th>
         </tr>
       </thead>
@@ -284,9 +305,6 @@
           <td>{{ formatDate(it.paidDate) }}</td>
           <td>
             <app-badge [text]="installmentLabel(it.status)" [type]="installmentBadge(it)" />
-          </td>
-          <td class="st-notes" [class.st-notes-empty]="!it.notes?.trim()" [title]="notesLabel(it.notes)">
-            {{ notesLabel(it.notes) }}
           </td>
           <td>
             @if (it.status === 'Paid') {
@@ -396,12 +414,6 @@
         <option value="STCPay">STC Pay</option>
         <option value="ApplePay">Apple Pay</option>
       </select>
-    </div>
-
-    <div class="col-12">
-      <label class="form-label">ملاحظات</label>
-      <textarea class="form-control" rows="2" [ngModel]="payForm().notes"
-        (ngModelChange)="updatePayForm('notes', $event)"></textarea>
     </div>
   </div>
 

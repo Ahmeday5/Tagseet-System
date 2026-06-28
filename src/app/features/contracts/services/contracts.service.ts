@@ -139,6 +139,32 @@ export class ContractsService {
     );
   }
 
+  cancel(id: number): Observable<void> {
+    return this.api.post<void>(API_ENDPOINTS.contracts.cancel(id), {}, {
+      context: withInlineHandling(
+        withCacheInvalidate([
+          CONTRACTS_CACHE_KEY,
+          'client',
+          'treasur',
+          'financial-separation',
+        ]),
+      ),
+    });
+  }
+
+  returnContract(id: number): Observable<void> {
+    return this.api.post<void>(API_ENDPOINTS.contracts.returnContract(id), {}, {
+      context: withInlineHandling(
+        withCacheInvalidate([
+          CONTRACTS_CACHE_KEY,
+          'client',
+          'treasur',
+          'financial-separation',
+        ]),
+      ),
+    });
+  }
+
   /**
    * Type-guard for `create()`. `ContractFormState` carries a nullable
    * `representativeId`; `CreateContractPayload` only has it when it's
