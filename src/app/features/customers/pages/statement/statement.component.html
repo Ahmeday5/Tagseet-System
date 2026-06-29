@@ -191,12 +191,15 @@
     </div>
     <div class="st-d-block">
       <div class="st-d-block-l">المنتج</div>
-      <div class="st-d-block-v">{{ d.product?.name ?? d.contract.productName ?? '—' }}</div>
-      <div class="st-d-block-s">الكمية: {{ d.contract.quantity }}</div>
+      <div class="st-d-block-v">{{ d.items.length > 0 ? d.items[0].productName : '—' }}</div>
+      <div class="st-d-block-s">
+        @if (d.items.length > 1) { {{ d.items.length }} منتجات }
+        @else if (d.items.length === 1) { الكمية: {{ d.items[0].quantity }} }
+      </div>
     </div>
     <div class="st-d-block">
       <div class="st-d-block-l">المخزن</div>
-      <div class="st-d-block-v">{{ d.warehouse?.name ?? '—' }}</div>
+      <div class="st-d-block-v">{{ d.items.length > 0 ? (d.items[0].warehouseName || '—') : '—' }}</div>
       <div class="st-d-block-s">
         المندوب: {{ d.representative?.name ?? '—' }}
       </div>
@@ -375,7 +378,7 @@
 
   @if (details(); as d) {
   <div class="st-pay-intro">
-    <span>العقد #{{ d.contract.id }} — {{ d.product?.name }}</span>
+    <span>العقد #{{ d.contract.id }} — {{ d.items[0]?.productName }}</span>
     <span class="st-pay-intro-sep">|</span>
     <span>المتبقي: <strong style="color:var(--re)">
         {{ d.summary.totalRemaining | currencyAr : true }}

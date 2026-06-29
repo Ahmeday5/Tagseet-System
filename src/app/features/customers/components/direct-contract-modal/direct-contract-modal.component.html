@@ -9,18 +9,13 @@
   @if (loadingLookups() || loadingDetails()) {
     <div class="dcm-loading-lookups">
       <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-      <span>{{ loadingDetails() ? 'جاري تحميل البيانات...' : 'جاري تحميل البيانات...' }}</span>
+      <span>جاري تحميل البيانات...</span>
     </div>
   } @else {
-    <form
-      [formGroup]="form"
-      (ngSubmit)="onSubmit()"
-      novalidate
-      autocomplete="off"
-    >
+    <form [formGroup]="form" (ngSubmit)="onSubmit()" novalidate autocomplete="off">
       <div class="row g-3">
 
-        <!-- ── Client ── -->
+        <!-- العميل -->
         <div class="col-12 col-md-6">
           <label class="form-label">العميل <span class="text-danger">*</span></label>
           <app-searchable-select
@@ -32,37 +27,8 @@
           <app-form-error [control]="form.controls.clientId" label="العميل" />
         </div>
 
-        <!-- ── Product name ── -->
+        <!-- تاريخ البيع -->
         <div class="col-12 col-md-6">
-          <label class="form-label">اسم المنتج <span class="text-danger">*</span></label>
-          <input
-            type="text"
-            class="form-control"
-            formControlName="productName"
-            placeholder="مثال: شاشة سامسونج 55 بوصة"
-            autocomplete="off"
-            [class.is-invalid]="isInvalid('productName')"
-          />
-          <app-form-error [control]="form.controls.productName" label="اسم المنتج" />
-        </div>
-
-        <!-- ── Quantity ── -->
-        <div class="col-6 col-md-3">
-          <label class="form-label">الكمية <span class="text-danger">*</span></label>
-          <input
-            type="number"
-            class="form-control"
-            formControlName="quantity"
-            min="1"
-            step="1"
-            dir="ltr"
-            [class.is-invalid]="isInvalid('quantity')"
-          />
-          <app-form-error [control]="form.controls.quantity" label="الكمية" />
-        </div>
-
-        <!-- ── Date of sale ── -->
-        <div class="col-6 col-md-3">
           <label class="form-label">تاريخ البيع <span class="text-danger">*</span></label>
           <input
             type="date"
@@ -74,26 +40,74 @@
           <app-form-error [control]="form.controls.dateOfSale" label="تاريخ البيع" />
         </div>
 
-        <!-- ── Purchase price (cost) ── -->
-        <div class="col-6 col-md-3">
-          <label class="form-label">سعر التكلفة {{ isEditMode() ? '(قراءة فقط)' : '' }}</label>
-          <input
-            type="number"
-            class="form-control"
-            formControlName="purchasePrice"
-            min="0"
-            step="0.01"
-            dir="ltr"
-            placeholder="0.00"
-            [readonly]="isEditMode()"
-            [class.is-invalid]="isInvalid('purchasePrice')"
-          />
-          <app-form-error [control]="form.controls.purchasePrice" label="سعر التكلفة" />
+        <!-- ── المنتجات ── -->
+        <div class="col-12">
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <label class="form-label mb-0 fw-600">المنتجات <span class="text-danger">*</span></label>
+            <button type="button" class="btn btn-sm btn-outline-primary" (click)="addItem()">
+              + إضافة منتج
+            </button>
+          </div>
+
+          <div formArrayName="items">
+            @for (item of itemsArray.controls; track item; let i = $index) {
+              <div [formGroupName]="i" class="border rounded-2 p-3 mb-2" style="background:var(--bg2,#f8f9fa)">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                  <span class="text-muted" style="font-size:11px;font-weight:600">منتج {{ i + 1 }}</span>
+                  @if (itemsArray.length > 1) {
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-outline-danger"
+                      style="padding:1px 10px;font-size:12px"
+                      (click)="removeItem(i)"
+                    >× حذف</button>
+                  }
+                </div>
+                <div class="row g-2">
+                  <div class="col-12 col-md-5">
+                    <label class="form-label" style="font-size:12px">اسم المنتج <span class="text-danger">*</span></label>
+                    <input
+                      type="text"
+                      class="form-control form-control-sm"
+                      formControlName="productName"
+                      placeholder="مثال: شاشة سامسونج 55 بوصة"
+                      autocomplete="off"
+                    />
+                    <app-form-error [control]="getItemControl(i, 'productName')!" label="اسم المنتج" />
+                  </div>
+                  <div class="col-6 col-md-4">
+                    <label class="form-label" style="font-size:12px">سعر التكلفة {{ isEditMode() ? '(ثابت)' : '' }}</label>
+                    <input
+                      type="number"
+                      class="form-control form-control-sm"
+                      formControlName="purchasePrice"
+                      min="0"
+                      dir="ltr"
+                      placeholder="0.00"
+                      [readonly]="isEditMode()"
+                    />
+                  </div>
+                  <div class="col-6 col-md-3">
+                    <label class="form-label" style="font-size:12px">الكمية <span class="text-danger">*</span></label>
+                    <input
+                      type="number"
+                      class="form-control form-control-sm"
+                      formControlName="quantity"
+                      min="1"
+                      step="1"
+                      dir="ltr"
+                    />
+                    <app-form-error [control]="getItemControl(i, 'quantity')!" label="الكمية" />
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
         </div>
 
-        <!-- ── Cash price ── -->
+        <!-- سعر البيع الكاش (إجمالي) -->
         <div class="col-6 col-md-3">
-          <label class="form-label">سعر البيع الكاش <span class="text-danger">*</span></label>
+          <label class="form-label">سعر البيع الإجمالي <span class="text-danger">*</span></label>
           <input
             type="number"
             class="form-control"
@@ -107,8 +121,8 @@
           <app-form-error [control]="form.controls.cashPrice" label="سعر البيع الكاش" />
         </div>
 
-        <!-- ── Down payment ── -->
-        <div class="col-6 col-md-4">
+        <!-- المقدم -->
+        <div class="col-6 col-md-3">
           <label class="form-label">المقدم</label>
           <input
             type="number"
@@ -118,13 +132,11 @@
             step="0.01"
             dir="ltr"
             placeholder="0.00"
-            [class.is-invalid]="isInvalid('downPayment')"
           />
-          <app-form-error [control]="form.controls.downPayment" label="المقدم" />
         </div>
 
-        <!-- ── Profit rate ── -->
-        <div class="col-6 col-md-4">
+        <!-- نسبة الربح -->
+        <div class="col-6 col-md-2">
           <label class="form-label">نسبة الربح % <span class="text-danger">*</span></label>
           <input
             type="number"
@@ -135,13 +147,11 @@
             step="0.1"
             dir="ltr"
             placeholder="20"
-            [class.is-invalid]="isInvalid('profitRate')"
           />
-          <app-form-error [control]="form.controls.profitRate" label="نسبة الربح" />
         </div>
 
-        <!-- ── Installments count ── -->
-        <div class="col-6 col-md-4">
+        <!-- عدد الأقساط -->
+        <div class="col-6 col-md-2">
           <label class="form-label">عدد الأقساط <span class="text-danger">*</span></label>
           <input
             type="number"
@@ -149,19 +159,16 @@
             formControlName="installmentsCount"
             min="1"
             max="120"
-            step="1"
             dir="ltr"
             placeholder="12"
-            [class.is-invalid]="isInvalid('installmentsCount')"
           />
-          <app-form-error [control]="form.controls.installmentsCount" label="عدد الأقساط" />
         </div>
 
-        <!-- ── Installment amount (calculated) ── -->
-        <div class="col-6 col-md-4">
+        <!-- قيمة القسط -->
+        <div class="col-6 col-md-2">
           <label class="form-label d-flex justify-content-between">
             <span>قيمة القسط</span>
-            <span class="dcm-calc-badge">محسوب تلقائياً</span>
+            <span class="dcm-calc-badge">تلقائي</span>
           </label>
           <input
             type="number"
@@ -173,35 +180,28 @@
           />
         </div>
 
-        <!-- ── Payment frequency ── -->
-        <div class="col-6 col-md-4">
+        <!-- دورية الدفع -->
+        <div class="col-6 col-md-3">
           <label class="form-label">طريقة التقسيط <span class="text-danger">*</span></label>
-          <select
-            class="form-select"
-            formControlName="paymentFrequency"
-            [class.is-invalid]="isInvalid('paymentFrequency')"
-          >
+          <select class="form-select" formControlName="paymentFrequency">
             @for (f of frequencies; track f.value) {
               <option [value]="f.value">{{ f.label }}</option>
             }
           </select>
-          <app-form-error [control]="form.controls.paymentFrequency" label="طريقة التقسيط" />
         </div>
 
-        <!-- ── First installment date ── -->
-        <div class="col-12 col-md-4">
+        <!-- تاريخ أول قسط -->
+        <div class="col-6 col-md-3">
           <label class="form-label">تاريخ أول قسط <span class="text-danger">*</span></label>
           <input
             type="date"
             class="form-control"
             formControlName="firstInstallmentDate"
             dir="ltr"
-            [class.is-invalid]="isInvalid('firstInstallmentDate')"
           />
-          <app-form-error [control]="form.controls.firstInstallmentDate" label="تاريخ أول قسط" />
         </div>
 
-        <!-- ── Treasury ── -->
+        <!-- الخزينة -->
         <div class="col-12 col-md-6">
           <label class="form-label">الخزينة <span class="text-danger">*</span></label>
           <app-searchable-select
@@ -213,7 +213,7 @@
           <app-form-error [control]="form.controls.treasuryId" label="الخزينة" />
         </div>
 
-        <!-- ── Representative ── -->
+        <!-- المندوب -->
         <div class="col-12 col-md-6">
           <label class="form-label">المندوب <span class="dcm-optional">(اختياري)</span></label>
           <app-searchable-select
@@ -224,7 +224,7 @@
           />
         </div>
 
-        <!-- ── Notes ── -->
+        <!-- ملاحظات -->
         <div class="col-12">
           <label class="form-label">ملاحظات <span class="dcm-optional">(اختياري)</span></label>
           <input
@@ -237,11 +237,17 @@
         </div>
       </div>
 
-      <!-- ── Financial summary ── -->
+      <!-- ملخص العقد -->
       @if (summary().cashPrice > 0) {
         <div class="dcm-summary">
           <div class="dcm-summary-title">ملخص العقد</div>
           <div class="dcm-summary-grid">
+            @if (summary().totalCost > 0) {
+              <div class="dcm-summary-row">
+                <span>إجمالي سعر التكلفة</span>
+                <span>{{ summary().totalCost | currencyAr: true }}</span>
+              </div>
+            }
             <div class="dcm-summary-row">
               <span>إجمالي سعر البيع</span>
               <span class="fw-600">{{ summary().cashPrice | currencyAr: true }}</span>
@@ -271,22 +277,13 @@
       }
     </form>
 
-    <!-- ── Server error ── -->
     @if (serverError(); as msg) {
-      <div class="alert alert-danger mt-3 mb-0" role="alert" style="font-size:11px;">
-        {{ msg }}
-      </div>
+      <div class="alert alert-danger mt-3 mb-0" role="alert" style="font-size:11px;">{{ msg }}</div>
     }
   }
 
   <ng-container modal-footer>
-    <button
-      type="button"
-      class="btn"
-      [disabled]="submitting()"
-      (click)="close()"
-    >إلغاء</button>
-
+    <button type="button" class="btn" [disabled]="submitting()" (click)="close()">إلغاء</button>
     <button
       type="button"
       class="btn btn-bl d-inline-flex align-items-center gap-2"
@@ -297,13 +294,9 @@
         <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
       }
       <span>
-        @if (submitting()) {
-          جاري الحفظ...
-        } @else if (isEditMode()) {
-          تحديث العقد
-        } @else {
-          حفظ العقد
-        }
+        @if (submitting()) { جاري الحفظ... }
+        @else if (isEditMode()) { تحديث العقد }
+        @else { حفظ العقد }
       </span>
     </button>
   </ng-container>

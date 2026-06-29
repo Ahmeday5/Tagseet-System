@@ -14,7 +14,6 @@ import {
   Contract,
   ContractFormState,
   CreatedContract,
-  CreateContractPayload,
   buildCreateContractPayload,
   CreateDirectContractPayload,
   CreatedDirectContract,
@@ -33,35 +32,26 @@ export class ContractsService {
   // ─────────── live API ───────────
 
   /**
-   * Direct installment-contract creation.
-   *
-   * Accepts either the form-state object (preferred — `representativeId`
-   * is stripped automatically when not selected) or a fully-formed
-   * payload built by the caller.
-   *
-   * The backend can reject with `400 Insufficient inventory quantity.`
-   * when the requested product isn't fully in stock at the chosen
-   * warehouse — surface that message verbatim to the user.
+   * Regular installment-contract creation.
+   * POST /dashboard/contracts
    */
-  create(
-    formOrPayload: ContractFormState | CreateContractPayload,
-  ): Observable<CreatedContract> {
-    const body = this.isFormState(formOrPayload)
-      ? buildCreateContractPayload(formOrPayload)
-      : formOrPayload;
-
-    return this.api.post<CreatedContract>(API_ENDPOINTS.contracts.base, body, {
-      context: withInlineHandling(
-        withCacheInvalidate([
-          CONTRACTS_CACHE_KEY,
-          'client', // contracts affect client receivables
-          'warehous', // stock is decremented at the warehouse
-          'treasur', // down payment moves into the treasury
-          'invoice', // related invoice aggregates change
-          'financial-separation',
-        ]),
-      ),
-    });
+  create(form: ContractFormState): Observable<CreatedContract> {
+    return this.api.post<CreatedContract>(
+      API_ENDPOINTS.contracts.base,
+      buildCreateContractPayload(form),
+      {
+        context: withInlineHandling(
+          withCacheInvalidate([
+            CONTRACTS_CACHE_KEY,
+            'client',
+            'warehous',
+            'treasur',
+            'invoice',
+            'financial-separation',
+          ]),
+        ),
+      },
+    );
   }
 
   /**
@@ -163,22 +153,6 @@ export class ContractsService {
         ]),
       ),
     });
-  }
-
-  /**
-   * Type-guard for `create()`. `ContractFormState` carries a nullable
-   * `representativeId`; `CreateContractPayload` only has it when it's
-   * actually being sent.
-   */
-  private isFormState(
-    value: ContractFormState | CreateContractPayload,
-  ): value is ContractFormState {
-    // ContractFormState always includes representativeId (even if null),
-    // and it doesn't have the 'status' or other fields of CreatedContract
-    // (though CreateContractPayload also doesn't have them).
-    // The key difference is that ContractFormState is intended to be processed
-    // by buildCreateContractPayload.
-    return 'representativeId' in value;
   }
 
   /**

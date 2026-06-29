@@ -96,9 +96,8 @@ export interface UpdateClientPayload {
 }
 
 /**
- * Full client record returned by POST /dashboard/clients and
- * GET/PUT /dashboard/clients/{id}. `nationalId` is nullable since it is
- * optional on creation.
+ * Full client record returned by POST /dashboard/clients.
+ * `nationalId` is nullable since it is optional on creation.
  */
 export interface CreatedClient {
   id: number;
@@ -109,4 +108,32 @@ export interface CreatedClient {
   phoneNumber: string;
   whatsappNumber: string;
   createdAt: string;
+}
+
+/**
+ * Detailed client object from `GET /dashboard/clients/{id}`.
+ * Includes extended fields not present in the paged list.
+ */
+export interface ClientProfileClient {
+  id: number;
+  fullName: string;
+  email: string | null;
+  nationalId: string | null;
+  address: string;
+  phoneNumber: string;
+  whatsappNumber: string;
+  createdAt: string;
+  clientCode: string | null;
+  region: string | null;
+  occupation: string | null;
+  building: string | null;
+  floor: string | null;
+  department: string | null;
+}
+
+/** Full response of `GET /dashboard/clients/{id}`. */
+export interface ClientProfileResponse {
+  client: ClientProfileClient;
+  totalContractsCount: number;
+  overdueContractsCount: number;
 }

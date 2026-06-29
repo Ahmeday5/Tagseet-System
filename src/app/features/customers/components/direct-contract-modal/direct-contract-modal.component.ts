@@ -8,7 +8,14 @@ import {
   output,
   signal,
 } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import {
+  AbstractControl,
+  FormArray,
+  FormBuilder,
+  FormGroup,
+  ReactiveFormsModule,
+  Validators,
+} from '@angular/forms';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { forkJoin, of } from 'rxjs';
 import { catchError, finalize } from 'rxjs/operators';
@@ -34,6 +41,7 @@ import {
   ContractPaymentFrequency,
   CreatedDirectContract,
   CreateDirectContractPayload,
+  DirectContractItem,
 } from '../../../contracts/models/contract.model';
 import { DashboardClient } from '../../models/dashboard-client.model';
 
@@ -53,11 +61,10 @@ import { DashboardClient } from '../../models/dashboard-client.model';
   styleUrl: './direct-contract-modal.component.scss',
 })
 export class DirectContractModalComponent {
-  // ── inputs ──
+  // ── inputs / outputs ──
   readonly open = input.required<boolean>();
   readonly editId = input<number | null>(null);
 
-  // ── outputs ──
   readonly closed = output<void>();
   readonly created = output<CreatedDirectContract>();
   readonly updated = output<void>();
@@ -76,13 +83,8 @@ export class DirectContractModalComponent {
   protected readonly loadingDetails = signal(false);
   protected readonly serverError = signal<string | null>(null);
   protected readonly lookupsLoaded = signal(false);
-
   protected readonly isEditMode = computed(() => this.editId() !== null);
-  /** Original purchase price shown read-only in edit mode. */
-  protected readonly purchasePrice = signal(0);
-  /** Set after a successful create — triggers the print modal. */
   protected readonly printContractId = signal<number | null>(null);
-  /** Holds the full create response until print modal is dismissed. */
   private pendingCreated: CreatedDirectContract | null = null;
 
   // ── lookup data ──
@@ -90,26 +92,18 @@ export class DirectContractModalComponent {
   protected readonly treasuries = signal<LookupItem[]>([]);
   protected readonly representatives = signal<LookupItem[]>([]);
 
-  // ── payment frequency options ──
   protected readonly frequencies: { value: ContractPaymentFrequency; label: string }[] = [
     { value: 'Monthly', label: 'شهري' },
     { value: 'Quarterly', label: 'ربع سنوي' },
     { value: 'SemiAnnual', label: 'نصف سنوي' },
   ];
 
-  // ── derived options ──
   protected readonly clientOptions = computed<SearchableSelectOption[]>(() =>
-    this.clients().map((c) => ({
-      value: c.id,
-      label: c.fullName,
-      hint: c.phoneNumber,
-    })),
+    this.clients().map((c) => ({ value: c.id, label: c.fullName, hint: c.phoneNumber })),
   );
-
   protected readonly treasuryOptions = computed<SearchableSelectOption[]>(() =>
     this.treasuries().map((t) => ({ value: t.id, label: t.name })),
   );
-
   protected readonly representativeOptions = computed<SearchableSelectOption[]>(() =>
     this.representatives().map((r) => ({ value: r.id, label: r.name })),
   );
@@ -117,15 +111,13 @@ export class DirectContractModalComponent {
   // ── form ──
   protected readonly form = this.fb.nonNullable.group({
     clientId: this.fb.control<number | null>(null, [Validators.required]),
-    productName: ['', [Validators.required, Validators.maxLength(200)]],
-    quantity: [1, [Validators.required, Validators.min(1)]],
+    items: this.fb.array([this.createItemGroup()]),
     dateOfSale: [this.todayStr(), [Validators.required]],
-    purchasePrice: [0, [Validators.required, Validators.min(0)]],
     cashPrice: [0, [Validators.required, Validators.min(1)]],
     downPayment: [0, [Validators.required, Validators.min(0)]],
     profitRate: [20, [Validators.required, Validators.min(0), Validators.max(100)]],
     installmentsCount: [12, [Validators.required, Validators.min(1), Validators.max(120)]],
-    installmentAmount: [{ value: 0, disabled: true }, [Validators.required]],
+    installmentAmount: [{ value: 0, disabled: true }],
     paymentFrequency: ['Monthly' as ContractPaymentFrequency, [Validators.required]],
     firstInstallmentDate: [this.nextMonthStr(), [Validators.required]],
     treasuryId: this.fb.control<number | null>(null, [Validators.required]),
@@ -140,7 +132,7 @@ export class DirectContractModalComponent {
 
   protected readonly summary = computed(() => {
     const v = this.values();
-    const cashPrice = Number(v.cashPrice ?? 0) * Number(v.quantity ?? 1);
+    const cashPrice = Number(v.cashPrice ?? 0); // total selling price (contract level)
     const downPayment = Number(v.downPayment ?? 0);
     const profitRate = Number(v.profitRate ?? 0);
     const count = Math.max(1, Number(v.installmentsCount ?? 1));
@@ -148,39 +140,60 @@ export class DirectContractModalComponent {
     const profitAmount = afterDown * (profitRate / 100);
     const totalAmount = afterDown + profitAmount;
     const installmentAmt = totalAmount / count;
-    return { cashPrice, downPayment, afterDown, profitAmount, totalAmount, installmentAmt, count };
+    // Total cost of goods (for reference)
+    const totalCost = ((v as any).items ?? []).reduce((sum: number, item: any) => {
+      return sum + (Number(item?.purchasePrice ?? 0) * Math.max(1, Number(item?.quantity ?? 1)));
+    }, 0);
+    return { cashPrice, downPayment, afterDown, profitAmount, totalAmount, installmentAmt, count, totalCost };
   });
 
   constructor() {
-    // Load lookups once when modal first opens
-    effect(
-      () => {
-        if (!this.open()) return;
-        if (this.lookupsLoaded()) return;
-        this.loadLookups();
-      },
-      { allowSignalWrites: true },
-    );
+    effect(() => {
+      if (!this.open()) return;
+      if (this.lookupsLoaded()) return;
+      this.loadLookups();
+    }, { allowSignalWrites: true });
 
-    // Load details when editId changes
-    effect(
-      () => {
-        const id = this.editId();
-        if (!id) return;
-        this.loadDetails(id);
-      },
-      { allowSignalWrites: true },
-    );
+    effect(() => {
+      const id = this.editId();
+      if (!id) return;
+      this.loadDetails(id);
+    }, { allowSignalWrites: true });
 
-    // Recalculate installment amount whenever form values change
     this.form.valueChanges.subscribe(() => this.recalculateInstallment());
   }
 
-  // ─────────── template handlers ───────────
+  // ── FormArray helpers ──
+
+  get itemsArray(): FormArray {
+    return this.form.get('items') as FormArray;
+  }
+
+  private createItemGroup(): FormGroup {
+    return this.fb.nonNullable.group({
+      productName: ['', [Validators.required, Validators.maxLength(200)]],
+      purchasePrice: [0, [Validators.required, Validators.min(0)]],
+      quantity: [1, [Validators.required, Validators.min(1)]],
+    });
+  }
+
+  protected addItem(): void {
+    this.itemsArray.push(this.createItemGroup());
+  }
+
+  protected removeItem(index: number): void {
+    if (this.itemsArray.length <= 1) return;
+    this.itemsArray.removeAt(index);
+  }
+
+  protected getItemControl(index: number, field: string): AbstractControl | null {
+    return this.itemsArray.at(index)?.get(field) ?? null;
+  }
+
+  // ── template handlers ──
 
   protected onSubmit(): void {
     if (this.submitting()) return;
-
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       this.toast.error(this.firstInvalidLabel() ?? 'يرجى تعبئة الحقول المطلوبة');
@@ -189,12 +202,16 @@ export class DirectContractModalComponent {
 
     const raw = this.form.getRawValue();
 
+    const items: DirectContractItem[] = (raw.items as any[]).map((item) => ({
+      productName: String(item.productName ?? '').trim(),
+      purchasePrice: Number(item.purchasePrice ?? 0),
+      quantity: Number(item.quantity ?? 1),
+    }));
+
     const payload: CreateDirectContractPayload = {
       clientId: Number(raw.clientId),
-      productName: raw.productName.trim(),
-      quantity: Number(raw.quantity),
+      items,
       dateOfSale: new Date(raw.dateOfSale).toISOString(),
-      purchasePrice: Number(raw.purchasePrice),
       cashPrice: Number(raw.cashPrice),
       downPayment: Number(raw.downPayment),
       profitRate: Number(raw.profitRate),
@@ -213,7 +230,6 @@ export class DirectContractModalComponent {
     const id = this.editId();
 
     if (id) {
-      // Update mode
       this.contractsService
         .updateDirect(id, payload)
         .pipe(finalize(() => this.submitting.set(false)))
@@ -228,7 +244,6 @@ export class DirectContractModalComponent {
           },
         });
     } else {
-      // Create mode
       this.contractsService
         .createDirect(payload)
         .pipe(finalize(() => this.submitting.set(false)))
@@ -264,21 +279,15 @@ export class DirectContractModalComponent {
     return !!ctrl && ctrl.invalid && (ctrl.dirty || ctrl.touched);
   }
 
-  // ─────────── internals ───────────
+  // ── internals ──
 
   private loadLookups(): void {
     this.loadingLookups.set(true);
 
     forkJoin({
-      clients: this.customersService
-        .listAllClients()
-        .pipe(catchError(() => of([] as DashboardClient[]))),
-      treasuries: this.treasuryService
-        .lookup()
-        .pipe(catchError(() => of([] as LookupItem[]))),
-      reps: this.repsService
-        .lookup()
-        .pipe(catchError(() => of([] as LookupItem[]))),
+      clients: this.customersService.listAllClients().pipe(catchError(() => of([] as DashboardClient[]))),
+      treasuries: this.treasuryService.lookup().pipe(catchError(() => of([] as LookupItem[]))),
+      reps: this.repsService.lookup().pipe(catchError(() => of([] as LookupItem[]))),
     })
       .pipe(finalize(() => this.loadingLookups.set(false)))
       .subscribe({
@@ -288,9 +297,7 @@ export class DirectContractModalComponent {
           this.representatives.set(res.reps);
           this.lookupsLoaded.set(true);
         },
-        error: () => {
-          this.toast.error('حدث خطأ أثناء تحميل البيانات');
-        },
+        error: () => this.toast.error('حدث خطأ أثناء تحميل البيانات'),
       });
   }
 
@@ -299,13 +306,23 @@ export class DirectContractModalComponent {
     this.contractsService.getDetails(id).subscribe({
       next: (d) => {
         this.loadingDetails.set(false);
-        this.purchasePrice.set(d.contract.purchasePrice);
+
+        // Repopulate items FormArray
+        while (this.itemsArray.length > 0) this.itemsArray.removeAt(0);
+        const sourceItems = d.items.length > 0 ? d.items : [{ productName: '', purchasePrice: 0, quantity: 1 }];
+        sourceItems.forEach((item) => {
+          const group = this.createItemGroup();
+          group.patchValue({
+            productName: item.productName ?? '',
+            purchasePrice: item.purchasePrice ?? 0,
+            quantity: item.quantity ?? 1,
+          });
+          this.itemsArray.push(group);
+        });
+
         this.form.patchValue({
           clientId: d.client.id,
-          productName: d.contract.productName || '',
-          quantity: d.contract.quantity,
           dateOfSale: d.contract.dateOfSale.split('T')[0],
-          purchasePrice: d.contract.purchasePrice,
           cashPrice: d.contract.cashPrice,
           downPayment: d.contract.downPayment,
           profitRate: d.contract.profitRate,
@@ -326,7 +343,7 @@ export class DirectContractModalComponent {
   }
 
   private recalculateInstallment(): void {
-    const cashPrice = Number(this.form.get('cashPrice')?.value ?? 0) * Number(this.form.get('quantity')?.value ?? 1);
+    const cashPrice = Number(this.form.get('cashPrice')?.value ?? 0);
     const downPayment = Number(this.form.get('downPayment')?.value ?? 0);
     const profitRate = Number(this.form.get('profitRate')?.value ?? 0);
     const count = Math.max(1, Number(this.form.get('installmentsCount')?.value ?? 1));
@@ -343,12 +360,10 @@ export class DirectContractModalComponent {
   }
 
   private resetForm(): void {
+    while (this.itemsArray.length > 1) this.itemsArray.removeAt(1);
     this.form.reset({
       clientId: null,
-      productName: '',
-      quantity: 1,
       dateOfSale: this.todayStr(),
-      purchasePrice: 0,
       cashPrice: 0,
       downPayment: 0,
       profitRate: 20,
@@ -360,15 +375,14 @@ export class DirectContractModalComponent {
       representativeId: null,
       notes: '',
     });
+    // Reset first item
+    this.itemsArray.at(0)?.reset({ productName: '', purchasePrice: 0, quantity: 1 });
     this.serverError.set(null);
   }
 
   private firstInvalidLabel(): string | null {
     const labels: Record<string, string> = {
       clientId: 'العميل',
-      productName: 'اسم المنتج',
-      quantity: 'الكمية',
-      dateOfSale: 'تاريخ البيع',
       cashPrice: 'سعر البيع الكاش',
       profitRate: 'نسبة الربح',
       installmentsCount: 'عدد الأقساط',
@@ -379,6 +393,7 @@ export class DirectContractModalComponent {
     for (const [key, label] of Object.entries(labels)) {
       if (this.form.get(key)?.invalid) return `يرجى مراجعة الحقل: ${label}`;
     }
+    if (this.itemsArray.invalid) return 'يرجى مراجعة بيانات المنتجات';
     return null;
   }
 

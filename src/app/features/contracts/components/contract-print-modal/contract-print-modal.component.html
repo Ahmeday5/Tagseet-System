@@ -136,9 +136,16 @@
               <div class="rc-row-full">
                 <span class="rc-lbl">المنتج</span>
                 <span class="rc-val">
-                  {{ details()!.product?.name ?? details()!.contract.productName ?? '—' }}
-                  @if (details()!.contract.quantity > 1) {
-                    &nbsp;(عدد {{ details()!.contract.quantity }})
+                  @if (details()!.items.length > 0) {
+                    {{ details()!.items[0].productName }}
+                    @if (details()!.items[0].quantity > 1) {
+                      &nbsp;(عدد {{ details()!.items[0].quantity }})
+                    }
+                    @if (details()!.items.length > 1) {
+                      &nbsp;+ {{ details()!.items.length - 1 }} منتجات أخرى
+                    }
+                  } @else {
+                    —
                   }
                 </span>
               </div>

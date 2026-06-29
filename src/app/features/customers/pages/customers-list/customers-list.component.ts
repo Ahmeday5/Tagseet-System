@@ -26,6 +26,7 @@ import { onInvalidate } from '../../../../core/utils/auto-refresh.util';
 import { HasPermissionDirective } from '../../../../shared/directives/has-permission.directive';
 import { ClientFormModalComponent } from '../../components/client-form-modal/client-form-modal.component';
 import { DirectContractModalComponent } from '../../components/direct-contract-modal/direct-contract-modal.component';
+import { ClientProfileModalComponent } from '../../components/client-profile-modal/client-profile-modal.component';
 import { PERMISSIONS } from '../../../../core/constants/permissions.const';
 import { PrintService } from '../../../../core/services/print.service';
 import { map } from 'rxjs/operators';
@@ -45,6 +46,7 @@ const SEARCH_DEBOUNCE_MS = 300;
     HasPermissionDirective,
     ClientFormModalComponent,
     DirectContractModalComponent,
+    ClientProfileModalComponent,
   ],
   templateUrl: './customers-list.component.html',
   styleUrl: './customers-list.component.scss',
@@ -82,6 +84,10 @@ export class CustomersListComponent {
 
   // ── direct contract modal ──
   protected readonly showDirectContract = signal(false);
+
+  // ── client profile modal ──
+  protected readonly showProfile = signal(false);
+  protected readonly profileClientId = signal<number | null>(null);
 
   // ── derived ──
   protected readonly hasFilters = computed(
@@ -270,6 +276,16 @@ export class CustomersListComponent {
 
   protected closeDirectContract(): void {
     this.showDirectContract.set(false);
+  }
+
+  protected openProfile(id: number): void {
+    this.profileClientId.set(id);
+    this.showProfile.set(true);
+  }
+
+  protected closeProfile(): void {
+    this.showProfile.set(false);
+    this.profileClientId.set(null);
   }
 
   protected onDirectContractCreated(): void {

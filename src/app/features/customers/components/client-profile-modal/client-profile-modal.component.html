@@ -1,0 +1,100 @@
+<app-modal
+  [open]="open()"
+  title="بيانات العميل"
+  size="lg"
+  [closeOnBackdrop]="true"
+  [closeOnEsc]="true"
+  (closed)="close()"
+>
+  @if (profile(); as p) {
+
+    <!-- ── Header: avatar + name + stats ── -->
+    <div class="cpm-header">
+      <div class="cpm-avatar" aria-hidden="true">{{ initials(p.client.fullName) }}</div>
+      <div class="cpm-header-body">
+        <div class="cpm-name">{{ p.client.fullName }}</div>
+        @if (p.client.clientCode) {
+          <div class="cpm-code">كود العميل: {{ p.client.clientCode }}</div>
+        }
+        <div class="cpm-since">عضو منذ: {{ formatDate(p.client.createdAt) }}</div>
+      </div>
+      <div class="cpm-stat-cards">
+        <div class="cpm-stat-card cpm-stat-total">
+          <div class="cpm-stat-val">{{ p.totalContractsCount }}</div>
+          <div class="cpm-stat-lbl">إجمالي العقود</div>
+        </div>
+        <div class="cpm-stat-card" [class.cpm-stat-overdue]="p.overdueContractsCount > 0" [class.cpm-stat-ok]="p.overdueContractsCount === 0">
+          <div class="cpm-stat-val">{{ p.overdueContractsCount }}</div>
+          <div class="cpm-stat-lbl">عقود متأخرة</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Contact info ── -->
+    <div class="cpm-section-title">بيانات التواصل</div>
+    <div class="cpm-grid">
+      <div class="cpm-field">
+        <span class="cpm-lbl">رقم الهاتف</span>
+        <span class="cpm-val" dir="ltr">{{ field(p.client.phoneNumber) }}</span>
+      </div>
+      <div class="cpm-field">
+        <span class="cpm-lbl">واتساب</span>
+        <span class="cpm-val" dir="ltr">{{ field(p.client.whatsappNumber) }}</span>
+      </div>
+      <div class="cpm-field">
+        <span class="cpm-lbl">البريد الإلكتروني</span>
+        <span class="cpm-val" dir="ltr">{{ field(p.client.email) }}</span>
+      </div>
+      <div class="cpm-field">
+        <span class="cpm-lbl">الرقم القومي</span>
+        <span class="cpm-val" dir="ltr">{{ field(p.client.nationalId) }}</span>
+      </div>
+    </div>
+
+    <!-- ── Address info ── -->
+    <div class="cpm-section-title">بيانات العنوان</div>
+    <div class="cpm-grid">
+      <div class="cpm-field cpm-field-wide">
+        <span class="cpm-lbl">العنوان</span>
+        <span class="cpm-val">{{ field(p.client.address) }}</span>
+      </div>
+      <div class="cpm-field">
+        <span class="cpm-lbl">المنطقة</span>
+        <span class="cpm-val">{{ field(p.client.region) }}</span>
+      </div>
+      <div class="cpm-field">
+        <span class="cpm-lbl">المبنى</span>
+        <span class="cpm-val">{{ field(p.client.building) }}</span>
+      </div>
+      <div class="cpm-field">
+        <span class="cpm-lbl">الدور</span>
+        <span class="cpm-val">{{ field(p.client.floor) }}</span>
+      </div>
+      <div class="cpm-field">
+        <span class="cpm-lbl">الشقة / الوحدة</span>
+        <span class="cpm-val">{{ field(p.client.department) }}</span>
+      </div>
+    </div>
+
+    <!-- ── Personal info ── -->
+    <div class="cpm-section-title">بيانات شخصية</div>
+    <div class="cpm-grid">
+      <div class="cpm-field">
+        <span class="cpm-lbl">المهنة</span>
+        <span class="cpm-val">{{ field(p.client.occupation) }}</span>
+      </div>
+    </div>
+
+  } @else if (loading()) {
+    <div class="cpm-loading">
+      <span class="spinner-border" role="status" aria-hidden="true"></span>
+      <span>جاري تحميل البيانات...</span>
+    </div>
+  } @else {
+    <div class="cpm-loading">لا توجد بيانات</div>
+  }
+
+  <ng-container modal-footer>
+    <button type="button" class="btn btn-bl" (click)="close()">إغلاق</button>
+  </ng-container>
+</app-modal>

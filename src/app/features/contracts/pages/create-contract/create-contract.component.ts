@@ -1,6 +1,14 @@
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import {
+  Component,
+  computed,
+  inject,
+  OnInit,
+  signal,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
+  AbstractControl,
+  FormArray,
   FormBuilder,
   FormGroup,
   ReactiveFormsModule,
@@ -19,6 +27,7 @@ import { RepsService } from '../../../reps/services/reps.service';
 
 import {
   ContractFormState,
+  ContractItem,
   ContractPaymentFrequency,
 } from '../../models/contract.model';
 import { DashboardClient } from '../../../customers/models/dashboard-client.model';
@@ -65,14 +74,13 @@ export class CreateContractComponent implements OnInit {
   private readonly toast = inject(ToastService);
   private readonly auth = inject(AuthService);
 
-  // --- Signals for Lookups ---
+  // ── Lookup signals ──
   clients = signal<DashboardClient[]>([]);
   products = signal<LookupItem[]>([]);
   warehouses = signal<LookupItem[]>([]);
   treasuries = signal<LookupItem[]>([]);
   representatives = signal<LookupItem[]>([]);
 
-  /** Client list shaped for the searchable select (name + phone search). */
   protected readonly clientOptions = computed<SearchableSelectOption[]>(() =>
     this.clients().map((c) => ({
       value: c.id,
@@ -80,8 +88,6 @@ export class CreateContractComponent implements OnInit {
       hint: c.phoneNumber,
     })),
   );
-
-  /** `{id,name}` lookups → searchable-select options (shared shape). */
   protected readonly productOptions = computed<SearchableSelectOption[]>(() =>
     this.toOptions(this.products()),
   );
@@ -99,7 +105,7 @@ export class CreateContractComponent implements OnInit {
     return items.map((i) => ({ value: i.id, label: i.name }));
   }
 
-  // --- UI State ---
+  // ── UI state ──
   loading = signal(true);
   submitting = signal(false);
   printContractId = signal<number | null>(null);
@@ -112,11 +118,47 @@ export class CreateContractComponent implements OnInit {
     { value: 'SemiAnnual', label: 'نصف سنوي' },
   ];
 
+  // Per-item sell prices fetched from product catalog (index = item index)
+  private itemSellPrices: (number | null)[] = [null];
+
   ngOnInit(): void {
     this.initForm();
     this.loadLookups();
     this.setupCalculations();
   }
+
+  // ─────────────── FormArray helpers ───────────────
+
+  get itemsArray(): FormArray {
+    return this.form.get('items') as FormArray;
+  }
+
+  private createItemGroup(): FormGroup {
+    return this.fb.nonNullable.group({
+      productId: this.fb.control<number | null>(null, [Validators.required]),
+      warehouseId: this.fb.control<number | null>(null, [Validators.required]),
+      quantity: [1, [Validators.required, Validators.min(1)]],
+    });
+  }
+
+  addItem(): void {
+    const group = this.createItemGroup();
+    this.itemsArray.push(group);
+    this.itemSellPrices.push(null);
+    this.watchItemProduct(group, this.itemsArray.length - 1);
+  }
+
+  removeItem(index: number): void {
+    if (this.itemsArray.length <= 1) return;
+    this.itemsArray.removeAt(index);
+    this.itemSellPrices.splice(index, 1);
+  }
+
+  protected getItemControl(index: number, field: string): AbstractControl | null {
+    return this.itemsArray.at(index)?.get(field) ?? null;
+  }
+
+  // ─────────────── Form init ───────────────
 
   private initForm(): void {
     const today = new Date().toISOString().split('T')[0];
@@ -125,32 +167,24 @@ export class CreateContractComponent implements OnInit {
     const firstInstallmentDate = nextMonth.toISOString().split('T')[0];
 
     this.form = this.fb.nonNullable.group({
-      clientId: [null, [Validators.required]],
-      productId: [null, [Validators.required]],
-      warehouseId: [null, [Validators.required]],
-      quantity: [1, [Validators.required, Validators.min(1)]],
+      clientId: [null as number | null, [Validators.required]],
+      items: this.fb.array([this.createItemGroup()]),
       dateOfSale: [today, [Validators.required]],
-      purchasePrice: [0, [Validators.required, Validators.min(0)]],
-      cashPrice: [0, [Validators.required, Validators.min(0)]],
+      cashPrice: [0, [Validators.required, Validators.min(1)]],
       downPayment: [0, [Validators.required, Validators.min(0)]],
       profitRate: [18, [Validators.required, Validators.min(0)]],
       installmentsCount: [12, [Validators.required, Validators.min(1)]],
-      installmentAmount: [{ value: 0, disabled: true }, [Validators.required]],
-      paymentFrequency: ['Monthly', [Validators.required]],
+      installmentAmount: [{ value: 0, disabled: true }],
+      paymentFrequency: ['Monthly' as ContractPaymentFrequency, [Validators.required]],
       firstInstallmentDate: [firstInstallmentDate, [Validators.required]],
-      treasuryId: [null, [Validators.required]],
-      representativeId: [null],
+      treasuryId: [null as number | null, [Validators.required]],
+      representativeId: [null as number | null],
       notes: [''],
     });
   }
 
-  /**
-   * Loads every picker source independently. `forkJoin` is all-or-nothing —
-   * one rejected call (e.g. a Representative has no `Treasury.View` and
-   * cannot list reps) would otherwise blank *every* dropdown. Wrapping each
-   * stream in `catchError` degrades that source to an empty list while the
-   * ones the user is allowed to see still populate.
-   */
+  // ─────────────── Lookups ───────────────
+
   private loadLookups(): void {
     this.loading.set(true);
 
@@ -184,43 +218,49 @@ export class CreateContractComponent implements OnInit {
       });
   }
 
-  private setupCalculations(): void {
-    // Re-calculate installment amount whenever relevant fields change
-    this.form.valueChanges.subscribe(() => {
-      this.calculateInstallment();
-    });
+  // ─────────────── Calculations ───────────────
 
-    // Auto-fill prices when product changes. The picker now carries only
-    // `{id,name}` (lookup endpoint), so prices come from the cached detail.
-    this.form.get('productId')?.valueChanges.subscribe((id) => {
+  private setupCalculations(): void {
+    this.form.valueChanges.subscribe(() => this.calculateInstallment());
+    // Watch first item's product on init
+    this.watchItemProduct(this.itemsArray.at(0) as FormGroup, 0);
+  }
+
+  private watchItemProduct(group: FormGroup, index: number): void {
+    if (!this.auth.hasPermission(PERMISSIONS.suppliersView)) return;
+
+    group.get('productId')?.valueChanges.subscribe((id) => {
       const productId = Number(id);
-      if (!productId) return;
-      // The product detail endpoint is gated by Suppliers.View; reps pick from
-      // the lookup (id + name) and would 403 here, so skip the price prefill
-      // for them and let them enter the prices manually.
-      if (!this.auth.hasPermission(PERMISSIONS.suppliersView)) return;
+      if (!productId) { this.itemSellPrices[index] = null; return; }
 
       this.productsService.getById(productId).subscribe({
-        next: (product) =>
-          this.form.patchValue(
-            {
-              purchasePrice: product.purchasePrice,
-              cashPrice: product.sellingPrice,
-            },
-            { emitEvent: true }
-          ),
-        error: () => {
-          /* leave prices for manual entry */
+        next: (product) => {
+          this.itemSellPrices[index] = product.sellingPrice;
+          this.refreshCashPriceSuggestion();
         },
+        error: () => { this.itemSellPrices[index] = null; },
       });
     });
   }
 
+  private refreshCashPriceSuggestion(): void {
+    let total = 0;
+    for (let i = 0; i < this.itemsArray.length; i++) {
+      const price = this.itemSellPrices[i];
+      if (price == null) return; // don't auto-fill unless all items have known prices
+      const qty = Math.max(1, Number(this.itemsArray.at(i).get('quantity')?.value ?? 1));
+      total += price * qty;
+    }
+    if (total > 0) {
+      this.form.patchValue({ cashPrice: total }, { emitEvent: true });
+    }
+  }
+
   private calculateInstallment(): void {
-    const cashPrice = this.form.get('cashPrice')?.value || 0;
-    const downPayment = this.form.get('downPayment')?.value || 0;
-    const profitRate = this.form.get('profitRate')?.value || 0;
-    const count = this.form.get('installmentsCount')?.value || 1;
+    const cashPrice = Number(this.form.get('cashPrice')?.value ?? 0);
+    const downPayment = Number(this.form.get('downPayment')?.value ?? 0);
+    const profitRate = Number(this.form.get('profitRate')?.value ?? 0);
+    const count = Math.max(1, Number(this.form.get('installmentsCount')?.value ?? 1));
 
     const remaining = cashPrice - downPayment;
     if (remaining <= 0) {
@@ -228,16 +268,13 @@ export class CreateContractComponent implements OnInit {
       return;
     }
 
-    // Standard Simple Profit Calculation:
-    // Total = (CashPrice - DownPayment) * (1 + ProfitRate/100)
-    // Installment = Total / Count
     const totalWithProfit = remaining * (1 + profitRate / 100);
-    const amount = totalWithProfit / count;
-
     this.form
       .get('installmentAmount')
-      ?.setValue(Number(amount.toFixed(2)), { emitEvent: false });
+      ?.setValue(Number((totalWithProfit / count).toFixed(2)), { emitEvent: false });
   }
+
+  // ─────────────── Submit ───────────────
 
   closePrintModal(): void {
     this.printContractId.set(null);
@@ -251,22 +288,28 @@ export class CreateContractComponent implements OnInit {
     }
 
     this.submitting.set(true);
-    const formValue = this.form.getRawValue();
+    const raw = this.form.getRawValue();
 
-    // The backend expects ISO strings for dates
+    const items: ContractItem[] = (raw.items as any[]).map((item) => ({
+      productId: Number(item.productId),
+      warehouseId: Number(item.warehouseId),
+      quantity: Number(item.quantity),
+    }));
+
     const payload: ContractFormState = {
-      ...formValue,
-      dateOfSale: new Date(formValue.dateOfSale).toISOString(),
-      firstInstallmentDate: new Date(
-        formValue.firstInstallmentDate
-      ).toISOString(),
-      clientId: Number(formValue.clientId),
-      productId: Number(formValue.productId),
-      warehouseId: Number(formValue.warehouseId),
-      treasuryId: Number(formValue.treasuryId),
-      representativeId: formValue.representativeId
-        ? Number(formValue.representativeId)
-        : null,
+      clientId: Number(raw.clientId),
+      items,
+      dateOfSale: new Date(raw.dateOfSale).toISOString(),
+      cashPrice: Number(raw.cashPrice),
+      downPayment: Number(raw.downPayment),
+      profitRate: Number(raw.profitRate),
+      installmentsCount: Number(raw.installmentsCount),
+      installmentAmount: Number(raw.installmentAmount),
+      paymentFrequency: raw.paymentFrequency as ContractPaymentFrequency,
+      firstInstallmentDate: new Date(raw.firstInstallmentDate).toISOString(),
+      treasuryId: Number(raw.treasuryId),
+      representativeId: raw.representativeId ? Number(raw.representativeId) : null,
+      notes: raw.notes?.trim() || undefined,
     };
 
     this.contractsService

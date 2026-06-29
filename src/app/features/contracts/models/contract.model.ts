@@ -51,6 +51,13 @@ export type ContractStatus =
   | 'Defaulted'
   | 'Cancelled';
 
+/** Single item line in a regular (inventory-linked) contract. */
+export interface ContractItem {
+  productId: number;
+  warehouseId: number;
+  quantity: number;
+}
+
 /**
  * Payload for `POST /dashboard/contracts`.
  *
@@ -66,9 +73,7 @@ export type ContractStatus =
  */
 export interface CreateContractPayload {
   clientId: number;
-  productId: number;
-  warehouseId: number;
-  quantity: number;
+  items: ContractItem[];
   /** ISO datetime (date of sale) — e.g. `2026-05-11T08:19:34.462Z`. */
   dateOfSale: string;
   cashPrice: number;
@@ -90,11 +95,7 @@ export interface CreateContractPayload {
 export interface CreatedContract {
   id: number;
   clientId: number;
-  productId: number;
-  warehouseId: number;
-  quantity: number;
   dateOfSale: string;
-  purchasePrice: number;
   cashPrice: number;
   downPayment: number;
   profitRate: number;
@@ -110,16 +111,13 @@ export interface CreatedContract {
 }
 
 /**
- * Form-state shape consumed by the contract creation UI. Mirrors the
- * payload but keeps `representativeId` typed as `number | null` so the
- * select control can bind to it directly; the payload builder takes
- * care of stripping the field when it's nullish or zero.
+ * Form-state shape consumed by the contract creation UI.
+ * `representativeId` stays typed as `number | null` so the select
+ * control can bind directly; the payload builder strips it when nullish.
  */
 export interface ContractFormState {
   clientId: number;
-  productId: number;
-  warehouseId: number;
-  quantity: number;
+  items: ContractItem[];
   dateOfSale: string;
   cashPrice: number;
   downPayment: number;
@@ -138,21 +136,24 @@ export interface ContractFormState {
 //  Direct contract — free-text product name, no warehouse/inventory.
 // ─────────────────────────────────────────────────────────────────
 
+/** Single item line in a direct (free-text) contract. */
+export interface DirectContractItem {
+  productName: string;
+  purchasePrice: number;
+  quantity: number;
+}
+
 /**
  * Payload for `POST /dashboard/contracts/direct`.
  *
- * Identical to `CreateContractPayload` except:
- *  - `productName` replaces `productId`
- *  - no `warehouseId` — not inventory-linked
- *  - has `purchasePrice` (the dealer's cost price)
+ * Uses `items[]` (like the regular contract) except each item carries
+ * a free-text `productName` and `purchasePrice` instead of `productId`/`warehouseId`.
  */
 export interface CreateDirectContractPayload {
   clientId: number;
-  productName: string;
-  quantity: number;
+  items: DirectContractItem[];
   /** ISO datetime. */
   dateOfSale: string;
-  purchasePrice: number;
   cashPrice: number;
   downPayment: number;
   /** 0..100. */
@@ -172,10 +173,7 @@ export interface CreateDirectContractPayload {
 export interface CreatedDirectContract {
   id: number;
   clientId: number;
-  productName: string;
-  quantity: number;
   dateOfSale: string;
-  purchasePrice: number;
   cashPrice: number;
   downPayment: number;
   profitRate: number;
@@ -191,17 +189,19 @@ export interface CreatedDirectContract {
 
 /**
  * Build a `POST /dashboard/contracts/direct` body from raw form values.
- * Strips `representativeId` when null/zero, trims/drops empty notes.
+ * Wraps item fields into `items[]`, strips `representativeId` when null/zero.
  */
 export function buildDirectContractPayload(
   form: CreateDirectContractPayload,
 ): CreateDirectContractPayload {
   const payload: CreateDirectContractPayload = {
     clientId: form.clientId,
-    productName: form.productName.trim(),
-    quantity: form.quantity,
+    items: form.items.map((item) => ({
+      productName: item.productName.trim(),
+      purchasePrice: item.purchasePrice,
+      quantity: item.quantity,
+    })),
     dateOfSale: form.dateOfSale,
-    purchasePrice: form.purchasePrice,
     cashPrice: form.cashPrice,
     downPayment: form.downPayment,
     profitRate: form.profitRate,
@@ -229,17 +229,15 @@ export function buildDirectContractPayload(
 /**
  * Payload for `PUT /dashboard/contracts/{id}`.
  *
- * Identical to `CreateContractPayload` except `purchasePrice` is NOT
- * sent — it is immutable after creation.
+ * Same structure as `CreateContractPayload` (items array) except
+ * `purchasePrice` is NOT sent — it is immutable after creation.
  *
  * Same rule as create: OMIT `representativeId` when not selected.
  * Use `buildUpdateContractPayload()` to assemble the body safely.
  */
 export interface UpdateContractPayload {
   clientId: number;
-  productId: number;
-  warehouseId: number;
-  quantity: number;
+  items: ContractItem[];
   dateOfSale: string;
   cashPrice: number;
   downPayment: number;
@@ -256,9 +254,7 @@ export interface UpdateContractPayload {
 /** Form-state shape for the edit page. */
 export interface UpdateContractFormState {
   clientId: number;
-  productId: number;
-  warehouseId: number;
-  quantity: number;
+  items: ContractItem[];
   dateOfSale: string;
   cashPrice: number;
   downPayment: number;
@@ -272,15 +268,13 @@ export interface UpdateContractFormState {
   notes?: string;
 }
 
-/** Build a `PUT /dashboard/contracts/{id}` body. Strips representativeId when absent. */
+/** Build a `PUT /dashboard/contracts/{id}` body. */
 export function buildUpdateContractPayload(
   form: UpdateContractFormState,
 ): UpdateContractPayload {
   const payload: UpdateContractPayload = {
     clientId: form.clientId,
-    productId: form.productId,
-    warehouseId: form.warehouseId,
-    quantity: form.quantity,
+    items: form.items,
     dateOfSale: form.dateOfSale,
     cashPrice: form.cashPrice,
     downPayment: form.downPayment,
@@ -302,23 +296,13 @@ export function buildUpdateContractPayload(
   return payload;
 }
 
-/**
- * Build a `POST /dashboard/contracts` body from form state.
- *
- * - Trims `notes` and drops the field when empty.
- * - OMITS `representativeId` entirely when the form has no rep
- *   selected (`null`, `undefined`, or `0`) — never sends `0`/`null`.
- *
- * Returning a fresh object also keeps the form state immutable.
- */
+/** Build a `POST /dashboard/contracts` body from form state. */
 export function buildCreateContractPayload(
   form: ContractFormState,
 ): CreateContractPayload {
   const payload: CreateContractPayload = {
     clientId: form.clientId,
-    productId: form.productId,
-    warehouseId: form.warehouseId,
-    quantity: form.quantity,
+    items: form.items,
     dateOfSale: form.dateOfSale,
     cashPrice: form.cashPrice,
     downPayment: form.downPayment,
@@ -330,7 +314,6 @@ export function buildCreateContractPayload(
     treasuryId: form.treasuryId,
   };
 
-  // Omit — DO NOT send 0/null — when no rep is attached.
   if (form.representativeId && form.representativeId > 0) {
     payload.representativeId = form.representativeId;
   }

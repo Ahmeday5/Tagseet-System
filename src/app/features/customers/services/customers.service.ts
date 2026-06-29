@@ -3,6 +3,7 @@ import { Observable, of } from 'rxjs';
 import { delay, map } from 'rxjs/operators';
 import { asPaged, fetchAllPages } from '../../../core/utils/api-list.util';
 import {
+  ClientProfileResponse,
   CreateClientPayload,
   CreatedClient,
   DashboardClient,
@@ -113,14 +114,23 @@ export class CustomersService {
   }
 
   /**
-   * Fetches a single client's full record (incl. email / nationalId /
-   * whatsappNumber that the paged list omits) — used to pre-fill the edit
-   * form. Bypasses the cache so the form always opens on fresh server data.
+   * Full client profile — `GET /dashboard/clients/{id}`.
+   * Returns the extended client object plus contract summary counters.
    */
-  getClient(id: number): Observable<CreatedClient> {
-    return this.api.get<CreatedClient>(API_ENDPOINTS.clients.byId(id), {
+  getClientProfile(id: number): Observable<ClientProfileResponse> {
+    return this.api.get<ClientProfileResponse>(API_ENDPOINTS.clients.byId(id), {
       context: withCacheBypass(withCache({ ttlMs: CLIENTS_TTL_MS })),
     });
+  }
+
+  /**
+   * Fetches a single client's record used to pre-fill the edit form.
+   * Maps from the full profile response to the `CreatedClient` shape.
+   */
+  getClient(id: number): Observable<CreatedClient> {
+    return this.getClientProfile(id).pipe(
+      map((res) => res.client as unknown as CreatedClient),
+    );
   }
 
   /**

@@ -1,12 +1,234 @@
-.edit-banner {
-  display: inline-flex;
+.pgh {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
+  gap: 12px;
+
+  .pgt {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--txt);
+  }
+
+  .pgs {
+    font-size: 12px;
+    color: var(--txt3);
+    margin-top: 2px;
+  }
+
+  @media (max-width: 576px) {
+    flex-direction: column;
+    .d-flex { width: 100%; justify-content: flex-end; }
+  }
+}
+
+.loader-container {
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 6px;
-  background: rgba(var(--bl-rgb), 0.08);
-  color: var(--bl);
-  border: 1px solid rgba(var(--bl-rgb), 0.2);
-  border-radius: 8px;
-  padding: 6px 14px;
+  justify-content: center;
+  min-height: 360px;
+}
+
+/* card header title — matches global .ct usage */
+.ct {
   font-size: 13px;
+  font-weight: 700;
+  color: var(--txt);
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--brd);
+  margin-bottom: 0;
+}
+
+/* summary rows — reuse same pattern as other pages */
+.cr {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: var(--txt2);
+  padding: 5px 0;
+  border-bottom: 1px solid var(--bg3);
+
+  &:last-of-type { border-bottom: none; }
+}
+
+.ct2 {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--txt);
+  padding: 8px 0 4px;
+  border-top: 1px solid var(--brd);
+  margin-top: 4px;
+}
+
+.ci {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--bl-d);
+  background: var(--bl);
+  border-radius: var(--r);
+  padding: 10px 12px;
+  margin-top: 6px;
+}
+
+/* optional label */
+.cn-opt {
+  font-weight: 400;
+  color: var(--txt3);
+  font-size: 11px;
+}
+
+/* ── Item block ── */
+.cn-item {
+  border: 1px solid var(--brd);
+  border-radius: var(--r);
+  padding: 12px;
+  margin-bottom: 10px;
+  background: var(--bg3);
+
+  &:last-child { margin-bottom: 0; }
+}
+
+.cn-item-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.cn-item-num {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--bl);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.cn-remove {
+  margin-right: auto;
+  background: none;
+  border: 1px solid var(--brd2);
+  border-radius: var(--r);
+  color: var(--txt3);
+  font-size: 10px;
+  padding: 2px 8px;
+  cursor: pointer;
+
+  &:hover { border-color: var(--re); color: var(--re); }
+}
+
+.cn-price-hint {
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--txt3);
+  direction: ltr;
+  unicode-bidi: embed;
+
+  strong { color: var(--bl); font-weight: 700; }
+}
+
+/* ── Breakdown (auto-computed total) ── */
+.cn-breakdown {
+  border: 1px solid var(--brd);
+  border-radius: var(--r);
+  padding: 10px 12px;
+  margin-bottom: 14px;
+  background: var(--bg3);
+}
+
+.cn-bd-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--txt2);
+  padding: 3px 0;
+  border-bottom: 1px dashed var(--brd);
+
+  &:last-of-type { border-bottom: none; }
+}
+
+.cn-bd-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cn-bd-val {
+  flex-shrink: 0;
+  direction: ltr;
+  unicode-bidi: embed;
+
+  strong { color: var(--bl); font-weight: 700; }
+}
+
+.cn-bd-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--txt);
+  padding-top: 8px;
+  margin-top: 4px;
+  border-top: 1px solid var(--brd2);
+}
+
+/* ── Finance fields ── */
+.cn-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+/* ── Apply hint ── */
+.cn-apply-hint {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--txt2);
+  margin-top: 5px;
+
+  strong { color: var(--bl); }
+}
+
+.cn-apply {
+  background: none;
+  border: 1px solid var(--bl);
+  border-radius: 4px;
+  color: var(--bl);
+  font-size: 10px;
   font-weight: 600;
+  padding: 1px 8px;
+  cursor: pointer;
+  flex-shrink: 0;
+
+  &:hover { background: var(--bl); color: #fff; }
+}
+
+/* ── Summary section ── */
+.cn-summary {
+  border-top: 1px solid var(--brd);
+  padding-top: 10px;
+  margin-top: 2px;
 }

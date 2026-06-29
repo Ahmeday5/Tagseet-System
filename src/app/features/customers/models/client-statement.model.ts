@@ -36,15 +36,24 @@ export interface ClientContractsQuery {
   pageSize?: number;
 }
 
+/** Single item line returned inside `ContractDetails`. */
+export interface ContractDetailsItem {
+  productId: number | null;
+  productName: string;
+  warehouseId: number | null;
+  warehouseName: string | null;
+  quantity: number;
+  purchasePrice: number;
+}
+
 /**
  * Wire shape of `GET /dashboard/contracts/{id}/details`.
  */
 export interface ContractDetails {
   contract: ContractDetailsContract;
+  /** All product/service lines on this contract (one or more). */
+  items: ContractDetailsItem[];
   client: ContractDetailsClient;
-  /** `null` for direct contracts that are not linked to a catalog product. */
-  product: ContractDetailsProduct | null;
-  warehouse: ContractDetailsWarehouse | null;
   representative: ContractDetailsRepresentative | null;
   summary: ContractDetailsSummary;
   nextInstallment: ContractNextInstallment | null;
@@ -64,16 +73,8 @@ export interface ContractPaymentRow {
 
 export interface ContractDetailsContract {
   id: number;
-  /** Free-text product name for direct contracts (no catalog product). Null for regular contracts. */
-  productName: string | null;
   isDirectContract: boolean;
-  /** Populated by the API directly on the contract object (regular contracts). */
-  productId: number | null;
-  warehouseId: number | null;
-  warehouseName: string | null;
-  quantity: number;
   dateOfSale: string;
-  purchasePrice: number;
   cashPrice: number;
   downPayment: number;
   profitRate: number;

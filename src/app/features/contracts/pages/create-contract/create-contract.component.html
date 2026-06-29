@@ -26,13 +26,13 @@
 } @else {
   <form [formGroup]="form" (ngSubmit)="onSubmit()">
     <div class="row g-4">
-      <!-- بيانات العميل والمنتج -->
+      <!-- Right: main form -->
       <div class="col-12 col-lg-8">
-        <div class="card h-100">
-          <div class="ct mb-4">البيانات الأساسية</div>
 
+        <!-- العميل والمندوب -->
+        <div class="card mb-3">
+          <div class="ct mb-3">بيانات العميل</div>
           <div class="row g-3">
-            <!-- العميل -->
             <div class="col-12 col-md-6">
               <label class="form-label required">العميل</label>
               <app-searchable-select
@@ -43,110 +43,128 @@
               />
               <app-form-error [control]="form.controls['clientId']" label="العميل" />
             </div>
-
-            <!-- المنتج -->
             <div class="col-12 col-md-6">
-              <label class="form-label required">المنتج</label>
+              <label class="form-label">المندوب <span class="text-muted" style="font-size:11px">(اختياري)</span></label>
               <app-searchable-select
-                formControlName="productId"
-                placeholder="اختر المنتج"
-                searchPlaceholder="ابحث باسم المنتج…"
-                [options]="productOptions()"
+                formControlName="representativeId"
+                placeholder="بدون مندوب"
+                searchPlaceholder="ابحث باسم المندوب…"
+                [options]="representativeOptions()"
               />
-              <app-form-error [control]="form.controls['productId']" label="المنتج" />
             </div>
+          </div>
+        </div>
 
-            <!-- المخزن -->
-            <div class="col-12 col-md-6">
-              <label class="form-label required">المخزن</label>
-              <app-searchable-select
-                formControlName="warehouseId"
-                placeholder="اختر المخزن"
-                searchPlaceholder="ابحث باسم المخزن…"
-                [options]="warehouseOptions()"
-              />
-              <app-form-error [control]="form.controls['warehouseId']" label="المخزن" />
-            </div>
+        <!-- المنتجات -->
+        <div class="card mb-3">
+          <div class="d-flex align-items-center justify-content-between mb-3">
+            <div class="ct mb-0">المنتجات</div>
+            <button type="button" class="btn btn-sm btn-outline-primary" (click)="addItem()">
+              + إضافة منتج
+            </button>
+          </div>
 
-            <!-- الكمية -->
-            <div class="col-12 col-md-6">
-              <label class="form-label required">الكمية</label>
-              <input type="number" class="form-control" formControlName="quantity" />
-              <app-form-error [control]="form.controls['quantity']" label="الكمية" />
-            </div>
+          <div formArrayName="items">
+            @for (item of itemsArray.controls; track i; let i = $index) {
+              <div [formGroupName]="i">
+                @if (i > 0) { <hr class="my-3"/> }
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                  <span class="text-muted" style="font-size:12px">منتج {{ i + 1 }}</span>
+                  @if (itemsArray.length > 1) {
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-outline-danger"
+                      style="padding:2px 10px;font-size:13px"
+                      (click)="removeItem(i)"
+                    >× حذف</button>
+                  }
+                </div>
+                <div class="row g-2">
+                  <div class="col-12 col-md-5">
+                    <label class="form-label required">المنتج</label>
+                    <app-searchable-select
+                      formControlName="productId"
+                      placeholder="اختر المنتج"
+                      searchPlaceholder="ابحث باسم المنتج…"
+                      [options]="productOptions()"
+                    />
+                    <app-form-error [control]="getItemControl(i, 'productId')!" label="المنتج" />
+                  </div>
+                  <div class="col-12 col-md-5">
+                    <label class="form-label required">المخزن</label>
+                    <app-searchable-select
+                      formControlName="warehouseId"
+                      placeholder="اختر المخزن"
+                      searchPlaceholder="ابحث باسم المخزن…"
+                      [options]="warehouseOptions()"
+                    />
+                    <app-form-error [control]="getItemControl(i, 'warehouseId')!" label="المخزن" />
+                  </div>
+                  <div class="col-12 col-md-2">
+                    <label class="form-label required">الكمية</label>
+                    <input type="number" class="form-control" formControlName="quantity" min="1" />
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
 
-            <!-- تاريخ البيع -->
+        <!-- التواريخ والملاحظات -->
+        <div class="card">
+          <div class="ct mb-3">تفاصيل العقد</div>
+          <div class="row g-3">
             <div class="col-12 col-md-6">
               <label class="form-label required">تاريخ البيع</label>
               <input type="date" class="form-control" formControlName="dateOfSale" />
-              <app-form-error [control]="form.controls['dateOfSale']" label="تاريخ البيع" />
             </div>
-
-            <!-- موعد أول قسط -->
             <div class="col-12 col-md-6">
               <label class="form-label required">موعد أول قسط</label>
               <input type="date" class="form-control" formControlName="firstInstallmentDate" />
-              <app-form-error [control]="form.controls['firstInstallmentDate']" label="موعد أول قسط" />
             </div>
-
-            <!-- ملاحظات -->
             <div class="col-12">
               <label class="form-label">ملاحظات</label>
-              <textarea class="form-control" rows="3" formControlName="notes" placeholder="أضف أي ملاحظات إضافية هنا..."></textarea>
+              <textarea class="form-control" rows="2" formControlName="notes" placeholder="اختياري..."></textarea>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- الحسابات المالية -->
+      <!-- Left: financial summary -->
       <div class="col-12 col-lg-4">
-        <div class="card h-100 financial-card">
+        <div class="card h-100 financial-card" style="position:sticky;top:0">
           <div class="ct mb-4">التفاصيل المالية</div>
 
           <div class="row g-3">
-            <!-- سعر الشراء (التكلفة) -->
             <div class="col-12">
-              <label class="form-label required">سعر الشراء (التكلفة)</label>
+              <label class="form-label required">سعر البيع الإجمالي (كاش)</label>
               <div class="input-group">
-                <input type="number" class="form-control" formControlName="purchasePrice" />
+                <input type="number" class="form-control" formControlName="cashPrice" min="1" />
                 <span class="input-group-text">ج.م</span>
               </div>
             </div>
 
-            <!-- سعر البيع كاش -->
             <div class="col-12">
-              <label class="form-label required">سعر البيع (كاش)</label>
+              <label class="form-label">المقدم المدفوع</label>
               <div class="input-group">
-                <input type="number" class="form-control" formControlName="cashPrice" />
+                <input type="number" class="form-control" formControlName="downPayment" min="0" />
                 <span class="input-group-text">ج.م</span>
               </div>
             </div>
 
-            <!-- المقدم -->
-            <div class="col-12">
-              <label class="form-label required">المقدم المدفوع</label>
-              <div class="input-group">
-                <input type="number" class="form-control" formControlName="downPayment" />
-                <span class="input-group-text">ج.م</span>
-              </div>
-            </div>
-
-            <!-- نسبة الربح -->
             <div class="col-12">
               <label class="form-label required">نسبة الربح (إجمالي)</label>
               <div class="input-group">
-                <input type="number" class="form-control" formControlName="profitRate" />
+                <input type="number" class="form-control" formControlName="profitRate" min="0" />
                 <span class="input-group-text">%</span>
               </div>
             </div>
 
-            <!-- عدد الأقساط -->
             <div class="col-12">
               <label class="form-label required">عدد الأقساط</label>
-              <input type="number" class="form-control" formControlName="installmentsCount" />
+              <input type="number" class="form-control" formControlName="installmentsCount" min="1" />
             </div>
 
-            <!-- دورية الدفع -->
             <div class="col-12">
               <label class="form-label required">دورية الدفع</label>
               <select class="form-select" formControlName="paymentFrequency">
@@ -158,7 +176,6 @@
 
             <hr class="my-2" />
 
-            <!-- قيمة القسط (محسوبة) -->
             <div class="col-12">
               <div class="installment-result">
                 <div class="label">قيمة القسط</div>
@@ -166,7 +183,6 @@
               </div>
             </div>
 
-            <!-- الخزنة -->
             <div class="col-12">
               <label class="form-label required">الخزنة (لإيداع المقدم)</label>
               <app-searchable-select
@@ -177,23 +193,12 @@
               />
               <app-form-error [control]="form.controls['treasuryId']" label="الخزنة" />
             </div>
-
-            <!-- المندوب -->
-            <div class="col-12">
-              <label class="form-label">المندوب (اختياري)</label>
-              <app-searchable-select
-                formControlName="representativeId"
-                placeholder="بدون مندوب"
-                searchPlaceholder="ابحث باسم المندوب…"
-                [options]="representativeOptions()"
-              />
-            </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Submit Button Mobile -->
+    <!-- Submit — mobile -->
     <div class="d-lg-none mt-4 pb-4">
       <button
         type="submit"
