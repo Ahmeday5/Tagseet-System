@@ -8,7 +8,7 @@ import {
 } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { DashboardService } from '../../services/dashboard.service';
+import { DashboardService, DUE_WEEK_PAGE_SIZE } from '../../services/dashboard.service';
 import {
   ClientRating,
   DueInstallmentDto,
@@ -16,6 +16,7 @@ import {
   ProfitMonthDto,
   TopClientDto,
 } from '../../models/dashboard.model';
+import { PagedResponse } from '../../../../core/models/api-response.model';
 import { FinancialService } from '../../services/financial.service';
 import { FinancialSeparation } from '../../models/financial.model';
 import { CurrencyArPipe } from '../../../../shared/pipes/currency-ar.pipe';
@@ -25,8 +26,8 @@ import {
   BadgeComponent,
   BadgeType,
 } from '../../../../shared/components/badge/badge.component';
-import { HasPermissionDirective } from '../../../../shared/directives/has-permission.directive';
-import { PERMISSIONS } from '../../../../core/constants/permissions.const';
+import { PaginationComponent } from '../../../../shared/components/pagination/pagination.component';
+import { AuthService } from '../../../../core/services/auth.service';
 @Component({
   selector: 'app-dashboard-home',
   standalone: true,
@@ -36,7 +37,7 @@ import { PERMISSIONS } from '../../../../core/constants/permissions.const';
     CurrencyArPipe,
     BadgeComponent,
     DecimalPipe,
-    HasPermissionDirective,
+    PaginationComponent,
   ],
   templateUrl: './dashboard-home.component.html',
   styleUrl: './dashboard-home.component.scss',
@@ -45,14 +46,25 @@ export class DashboardHomeComponent implements OnInit {
   private readonly dashService = inject(DashboardService);
   private readonly financialService = inject(FinancialService);
   private readonly cache = inject(HttpCacheService);
+  private readonly auth = inject(AuthService);
 
-  /** Exposed so the template can gate write actions with `*appHasPermission`. */
-  protected readonly PERMS = PERMISSIONS;
+  protected readonly isRepresentative = computed(() =>
+    this.auth.hasAnyRole(['Representative']),
+  );
 
   // ── live home widgets ──
   protected readonly profitMonths = signal<ProfitMonthDto[]>([]);
   protected readonly topClients = signal<TopClientDto[]>([]);
-  protected readonly dueInstallments = signal<DueInstallmentDto[]>([]);
+  protected readonly duePage = signal<PagedResponse<DueInstallmentDto>>({
+    pageIndex: 1,
+    pageSize: DUE_WEEK_PAGE_SIZE,
+    count: 0,
+    totalPages: 0,
+    data: [],
+  });
+  protected readonly duePageIndex = signal(1);
+  protected readonly duePageSize  = signal(DUE_WEEK_PAGE_SIZE);
+  protected readonly dueLoading   = signal(false);
 
   // ── financial-separation block ──
   protected readonly financial = signal<FinancialSeparation | null>(null);
@@ -252,6 +264,7 @@ export class DashboardHomeComponent implements OnInit {
   }
 
   private loadFinancial(force: boolean): void {
+    if (this.isRepresentative()) return;
     this.financialLoading.set(true);
     const stream$ = force
       ? this.financialService.refreshSeparation()
@@ -274,9 +287,6 @@ export class DashboardHomeComponent implements OnInit {
     const clients$ = force
       ? this.dashService.refreshTopClientsThisMonth()
       : this.dashService.topClientsThisMonth();
-    const installments$ = force
-      ? this.dashService.refreshInstallmentsDueThisWeek()
-      : this.dashService.installmentsDueThisWeek();
 
     profits$.subscribe({
       next: (rows) => this.profitMonths.set(rows),
@@ -286,10 +296,29 @@ export class DashboardHomeComponent implements OnInit {
       next: (rows) => this.topClients.set(rows),
       error: () => {},
     });
-    installments$.subscribe({
-      next: (rows) => this.dueInstallments.set(rows),
-      error: () => {},
+
+    this.loadDuePage(1, force);
+  }
+
+  protected loadDuePage(pageIndex: number, force = false): void {
+    this.dueLoading.set(true);
+    this.duePageIndex.set(pageIndex);
+    const size = this.duePageSize();
+    const stream$ = force
+      ? this.dashService.refreshInstallmentsDueThisWeek(pageIndex, size)
+      : this.dashService.installmentsDueThisWeek(pageIndex, size);
+    stream$.subscribe({
+      next: (page) => {
+        this.duePage.set(page);
+        this.dueLoading.set(false);
+      },
+      error: () => this.dueLoading.set(false),
     });
+  }
+
+  protected onDuePageSizeChange(size: number): void {
+    this.duePageSize.set(size);
+    this.loadDuePage(1);
   }
 
   protected refreshFinancial(): void {

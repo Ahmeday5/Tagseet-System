@@ -12,7 +12,10 @@ import {
   withCache,
   withCacheBypass,
 } from '../../../core/http/http-context.tokens';
-import { toList } from '../../../core/utils/api-list.util';
+import { toList, toPaged } from '../../../core/utils/api-list.util';
+import { PagedResponse } from '../../../core/models/api-response.model';
+
+export const DUE_WEEK_PAGE_SIZE = 20;
 
 /** All three dashboard widgets share the same staleness profile — a minute is plenty. */
 const HOME_WIDGET_TTL_MS = 60 * 1000;
@@ -54,20 +57,34 @@ export class DashboardService {
       .pipe(toList<TopClientDto>());
   }
 
-  installmentsDueThisWeek(): Observable<DueInstallmentDto[]> {
+  installmentsDueThisWeek(
+    pageIndex: number = 1,
+    pageSize: number = DUE_WEEK_PAGE_SIZE,
+  ): Observable<PagedResponse<DueInstallmentDto>> {
     return this.api
-      .get<DueInstallmentDto[]>(API_ENDPOINTS.installments.dueThisWeek, {
-        context: withCache({ ttlMs: HOME_WIDGET_TTL_MS }),
-      })
-      .pipe(toList<DueInstallmentDto>());
+      .get<PagedResponse<DueInstallmentDto>>(
+        API_ENDPOINTS.installments.dueThisWeek,
+        {
+          params: { pageIndex, pageSize },
+          context: withCache({ ttlMs: HOME_WIDGET_TTL_MS }),
+        },
+      )
+      .pipe(toPaged<DueInstallmentDto>());
   }
 
-  refreshInstallmentsDueThisWeek(): Observable<DueInstallmentDto[]> {
+  refreshInstallmentsDueThisWeek(
+    pageIndex: number = 1,
+    pageSize: number = DUE_WEEK_PAGE_SIZE,
+  ): Observable<PagedResponse<DueInstallmentDto>> {
     return this.api
-      .get<DueInstallmentDto[]>(API_ENDPOINTS.installments.dueThisWeek, {
-        context: withCacheBypass(withCache({ ttlMs: HOME_WIDGET_TTL_MS })),
-      })
-      .pipe(toList<DueInstallmentDto>());
+      .get<PagedResponse<DueInstallmentDto>>(
+        API_ENDPOINTS.installments.dueThisWeek,
+        {
+          params: { pageIndex, pageSize },
+          context: withCacheBypass(withCache({ ttlMs: HOME_WIDGET_TTL_MS })),
+        },
+      )
+      .pipe(toPaged<DueInstallmentDto>());
   }
 
   homeSummary(): Observable<HomeSummaryDto> {
