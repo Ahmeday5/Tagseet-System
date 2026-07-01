@@ -378,7 +378,7 @@
 
   @if (details(); as d) {
   <div class="st-pay-intro">
-    <span>العقد #{{ d.contract.id }} — {{ d.items[0]?.productName }}</span>
+    <span>العقد #{{ d.contract.id }} — {{ d.items[0].productName }}</span>
     <span class="st-pay-intro-sep">|</span>
     <span>المتبقي: <strong style="color:var(--re)">
         {{ d.summary.totalRemaining | currencyAr : true }}

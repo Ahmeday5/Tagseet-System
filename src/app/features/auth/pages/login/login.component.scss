@@ -1,18 +1,326 @@
-.border-error {
-  border-color: var(--re) !important;
+// ============================================
+// Login — two-column enterprise layout
+// ============================================
+
+:host {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
 }
 
-.field-error {
-  font-size: 10px;
-  color: var(--re);
-  margin-top: 3px;
-  display: block;
+.login-page {
+  flex: 1;
+  min-height: 100%;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  overflow-y: auto;
+  background: linear-gradient(160deg, var(--bg) 0%, var(--bg3) 100%);
 }
 
-/* Bootstrap's spinner-border is white-on-button — slim it down so it lines up
-   nicely with our smaller-than-default button text. */
-.btn .spinner-border-sm {
-  width: 0.95rem;
-  height: 0.95rem;
-  border-width: 0.14em;
+.login-card {
+  width: 100%;
+  max-width: 980px;
+  min-height: 600px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: var(--bg2);
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06);
+  animation: card-in 0.5s ease-out both;
+}
+
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+// ── Left: form side ──
+.login-form-side {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px;
+}
+
+.login-form-inner {
+  width: 100%;
+  max-width: 360px;
+  animation: fade-slide-in 0.55s ease-out 0.1s both;
+}
+
+@keyframes fade-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 28px;
+}
+
+.brand-logo {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+.brand-name {
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--txt);
+}
+
+.login-title {
+  font-size: 20px;
+  color: var(--txt);
+}
+
+.login-subtitle {
+  font-size: 12.5px;
+  color: var(--txt2);
+}
+
+.input-icon-group {
+  position: relative;
+
+  .input-icon {
+    position: absolute;
+    inset-inline-start: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--txt3);
+    font-size: 13px;
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  > input.form-control {
+    padding-inline-start: 34px;
+  }
+
+  // app-password-input renders its own .pw-input inside a host element —
+  // pad it too so the leading icon doesn't overlap the typed text.
+  ::ng-deep .pw-input {
+    padding-inline-start: 34px !important;
+  }
+}
+
+.form-check-label {
+  font-size: 11.5px;
+}
+
+.login-alert {
+  font-size: 11.5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  animation: fade-slide-in 0.25s ease-out both;
+}
+
+.login-submit {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(27, 95, 168, 0.25);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0);
+  }
+}
+
+// ── Right: info side ──
+.login-info-side {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px;
+  background: linear-gradient(155deg, var(--bl) 0%, var(--bl-d) 100%);
+  color: #fff;
+  overflow: hidden;
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(circle at 15% 20%, rgba(255, 255, 255, 0.08) 0%, transparent 45%),
+      radial-gradient(circle at 85% 85%, rgba(255, 255, 255, 0.08) 0%, transparent 45%);
+    pointer-events: none;
+  }
+}
+
+.login-info-inner {
+  position: relative;
+  z-index: 1;
+  max-width: 380px;
+  animation: fade-slide-in 0.55s ease-out 0.2s both;
+}
+
+.info-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.14);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+
+  i {
+    font-size: 22px;
+    line-height: 1;
+  }
+}
+
+.info-title {
+  font-size: 26px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.info-lead {
+  font-size: 13px;
+  line-height: 1.8;
+  color: rgba(255, 255, 255, 0.85);
+  margin-bottom: 28px;
+}
+
+.info-features {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  li {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    opacity: 0;
+    animation: fade-slide-in 0.4s ease-out both;
+
+    @for $i from 1 through 4 {
+      &:nth-child(#{$i}) {
+        animation-delay: #{0.25 + $i * 0.08}s;
+      }
+    }
+
+    strong {
+      display: block;
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 2px;
+    }
+
+    span {
+      display: block;
+      font-size: 11.5px;
+      color: rgba(255, 255, 255, 0.75);
+      line-height: 1.6;
+    }
+  }
+}
+
+.feature-icon {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.14);
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s ease, background 0.15s ease;
+
+  i {
+    font-size: 14px;
+    line-height: 1;
+  }
+}
+
+.info-features li:hover .feature-icon {
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.info-footer {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.65);
+  padding-top: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+
+  strong {
+    color: #fff;
+  }
+}
+
+// ── Responsive ──
+@media (max-width: 900px) {
+  .login-card {
+    grid-template-columns: 1fr;
+    max-width: 480px;
+  }
+
+  .login-info-side {
+    order: -1;
+    padding: 32px;
+  }
+
+  .info-features {
+    display: none;
+  }
+
+  .login-form-side {
+    padding: 32px;
+  }
+}
+
+@media (max-width: 480px) {
+  .login-page {
+    padding: 0;
+  }
+
+  .login-card {
+    border-radius: 0;
+    min-height: 100dvh;
+  }
+
+  .login-form-side,
+  .login-info-side {
+    padding: 28px 20px;
+  }
+
+  .info-icon {
+    width: 44px;
+    height: 44px;
+    font-size: 18px;
+  }
+
+  .info-title {
+    font-size: 22px;
+  }
 }
