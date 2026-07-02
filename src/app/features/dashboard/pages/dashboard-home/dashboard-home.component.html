@@ -51,6 +51,12 @@
         <div class="hs-tile-meta">هامش {{ s.monthlyProfit.marginPercent | number: '1.0-0' }}%</div>
       </div>
 
+      <div class="hs-tile hs-tile--purple">
+        <div class="hs-tile-label">إجمالي الأرباح</div>
+        <div class="hs-tile-value">{{ s.totalProfit.amount | currencyAr: true }}</div>
+        <div class="hs-tile-meta">منذ البداية</div>
+      </div>
+
       <div class="hs-tile hs-tile--green">
         <div class="hs-tile-label">معدل التحصيل</div>
         <div class="hs-tile-value">{{ s.collectionRate.percent | number: '1.0-0' }}%</div>
@@ -147,6 +153,22 @@
       <div class="fs-tile-body">
         <div class="fs-tile-label">مستحقات علينا</div>
         <div class="fs-tile-value">{{ f.payables | currencyAr: true }}</div>
+      </div>
+    </div>
+
+    <div class="fs-tile fs-tile--shareholders">
+      <div class="fs-tile-icon" aria-hidden="true">🤝</div>
+      <div class="fs-tile-body">
+        <div class="fs-tile-label">مستحقات الشركاء</div>
+        <div class="fs-tile-value">{{ f.shareholdersDue | currencyAr: true }}</div>
+      </div>
+    </div>
+
+    <div class="fs-tile fs-tile--subaccounts">
+      <div class="fs-tile-icon" aria-hidden="true">🏦</div>
+      <div class="fs-tile-body">
+        <div class="fs-tile-label">أرصدة الحسابات الفرعية</div>
+        <div class="fs-tile-value">{{ f.companySubAccountsBalance | currencyAr: true }}</div>
       </div>
     </div>
   </div>

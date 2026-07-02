@@ -376,6 +376,22 @@
       background: var(--re-l);
     }
   }
+  &--shareholders {
+    &::before {
+      background: var(--pu);
+    }
+    .fs-tile-icon {
+      background: var(--pu-l);
+    }
+  }
+  &--subaccounts {
+    &::before {
+      background: var(--gr);
+    }
+    .fs-tile-icon {
+      background: var(--gr-l);
+    }
+  }
 }
 
 .fs-tile-icon {
@@ -474,11 +490,10 @@
 
 .hs-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
   margin-bottom: 0;
 
-  @media (max-width: 1200px) { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   @media (max-width: 900px)  { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   @media (max-width: 600px)  { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
@@ -532,3 +547,4 @@
   color: var(--txt3);
   font-weight: 500;
 }
+
