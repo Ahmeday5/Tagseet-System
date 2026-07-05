@@ -392,6 +392,30 @@
       background: var(--gr-l);
     }
   }
+  &--reps {
+    &::before {
+      background: var(--pi);
+    }
+    .fs-tile-icon {
+      background: var(--pi-l);
+    }
+  }
+  &--capital {
+    &::before {
+      background: var(--bl-d, var(--bl));
+    }
+    .fs-tile-icon {
+      background: var(--bl-l);
+    }
+  }
+  &--count {
+    &::before {
+      background: var(--am);
+    }
+    .fs-tile-icon {
+      background: var(--am-l);
+    }
+  }
 }
 
 .fs-tile-icon {

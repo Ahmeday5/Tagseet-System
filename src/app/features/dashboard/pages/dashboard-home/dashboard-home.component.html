@@ -171,6 +171,30 @@
         <div class="fs-tile-value">{{ f.companySubAccountsBalance | currencyAr: true }}</div>
       </div>
     </div>
+
+    <div class="fs-tile fs-tile--reps">
+      <div class="fs-tile-icon" aria-hidden="true">🧑‍💼</div>
+      <div class="fs-tile-body">
+        <div class="fs-tile-label">مستحقات حسابات المندوبين</div>
+        <div class="fs-tile-value">{{ f.representativesSubAccountsDue | currencyAr: true }}</div>
+      </div>
+    </div>
+
+    <div class="fs-tile fs-tile--capital">
+      <div class="fs-tile-icon" aria-hidden="true">💰</div>
+      <div class="fs-tile-body">
+        <div class="fs-tile-label">إجمالي رأس مال الشركاء</div>
+        <div class="fs-tile-value">{{ f.totalShareholdersCapital | currencyAr: true }}</div>
+      </div>
+    </div>
+
+    <div class="fs-tile fs-tile--count">
+      <div class="fs-tile-icon" aria-hidden="true">👥</div>
+      <div class="fs-tile-body">
+        <div class="fs-tile-label">عدد الشركاء</div>
+        <div class="fs-tile-value">{{ f.totalShareholdersCount }}</div>
+      </div>
+    </div>
   </div>
   } @else if (financialLoading()) {
   <div class="fs-loading">
