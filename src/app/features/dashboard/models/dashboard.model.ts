@@ -65,6 +65,10 @@ export interface HomeSummaryDto {
     amount: number;
   };
 
+  distributedProfit: {
+    amount: number;
+  };
+
   collectionRate: {
     percent: number;
     targetPercent: number;

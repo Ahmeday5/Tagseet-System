@@ -76,6 +76,18 @@
                 <button class="btn btn-sm btn-bl" (click)="openVoucher(a)" title="إضافة سند قبض/صرف">إضافة سند</button>
                 <button class="btn btn-sm" (click)="openStatement(a)" title="كشف حساب">كشف</button>
                 <button class="btn btn-sm" (click)="openEdit(a)" title="تعديل">تعديل</button>
+                <button
+                  type="button"
+                  class="btn btn-sm btn-re d-inline-flex align-items-center gap-1"
+                  [disabled]="deletingId() === a.id"
+                  (click)="confirmDelete(a)"
+                  title="حذف"
+                >
+                  @if (deletingId() === a.id) {
+                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                  }
+                  <span>حذف</span>
+                </button>
               </div>
             </td>
           </tr>

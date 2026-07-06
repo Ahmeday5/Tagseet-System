@@ -84,6 +84,17 @@ export class SubAccountsService {
     );
   }
 
+  delete(id: number): Observable<{ message: string }> {
+    return this.api.delete<{ message: string }>(
+      API_ENDPOINTS.subAccounts.byId(id),
+      {
+        context: withInlineHandling(
+          withCacheInvalidate([SUB_ACCOUNTS_CACHE_KEY]),
+        ),
+      },
+    );
+  }
+
   // ─────────────── vouchers ───────────────
 
   /** Records a receipt/payment against one sub-account. */

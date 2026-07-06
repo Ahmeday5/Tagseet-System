@@ -10,6 +10,7 @@ import {
 import { PaginationComponent } from '../../../../shared/components/pagination/pagination.component';
 import { CurrencyArPipe } from '../../../../shared/pipes/currency-ar.pipe';
 import { FormMode } from '../../../../shared/models/form-mode.model';
+import { DialogService } from '../../../../core/services/dialog.service';
 import { ToastService } from '../../../../core/services/toast.service';
 import { HttpCacheService } from '../../../../core/services/http-cache.service';
 import { onInvalidate } from '../../../../core/utils/auto-refresh.util';
@@ -56,6 +57,7 @@ export class SubAccountsPanelComponent {
   private readonly service = inject(SubAccountsService);
   private readonly treasuryService = inject(TreasuryService);
   private readonly repsService = inject(RepsService);
+  private readonly dialog = inject(DialogService);
   private readonly toast = inject(ToastService);
   private readonly cache = inject(HttpCacheService);
 
@@ -76,6 +78,9 @@ export class SubAccountsPanelComponent {
   protected readonly formOpen = signal(false);
   protected readonly formMode = signal<FormMode>('create');
   protected readonly formAccount = signal<SubAccount | null>(null);
+
+  /** Tracks which row is currently being deleted, for inline button state. */
+  protected readonly deletingId = signal<number | null>(null);
 
   // ── voucher modal ──
   protected readonly voucherOpen = signal(false);
@@ -216,6 +221,36 @@ export class SubAccountsPanelComponent {
         list.map((a) => (a.id === saved.id ? saved : a)),
       );
     }
+  }
+
+  // ─────────── delete ───────────
+
+  protected async confirmDelete(account: SubAccount): Promise<void> {
+    const ok = await this.dialog.confirm({
+      title: 'حذف حساب فرعي',
+      message: `هل أنت متأكد من حذف "${account.name}"؟ هذا الإجراء لا يمكن التراجع عنه.`,
+      confirmText: 'حذف',
+      cancelText: 'إلغاء',
+      type: 'danger',
+    });
+    if (!ok) return;
+
+    this.deletingId.set(account.id);
+    this.service.delete(account.id).subscribe({
+      next: () => {
+        this.deletingId.set(null);
+        this.toast.success('تم حذف الحساب الفرعي بنجاح');
+        if (this.accounts().length === 1 && this.pageIndex() > 1) {
+          this.pageIndex.update((p) => p - 1);
+        } else {
+          this.refresh();
+        }
+      },
+      error: (err: ApiError) => {
+        this.deletingId.set(null);
+        this.toast.error(err.message || 'تعذّر حذف الحساب الفرعي');
+      },
+    });
   }
 
   // ─────────── voucher modal ───────────

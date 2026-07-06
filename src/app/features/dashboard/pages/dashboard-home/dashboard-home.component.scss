@@ -416,6 +416,14 @@
       background: var(--am-l);
     }
   }
+  &--net-subaccounts {
+    &::before {
+      background: var(--gr);
+    }
+    .fs-tile-icon {
+      background: var(--gr-l);
+    }
+  }
 }
 
 .fs-tile-icon {

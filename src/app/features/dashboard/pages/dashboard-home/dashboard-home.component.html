@@ -57,6 +57,12 @@
         <div class="hs-tile-meta">منذ البداية</div>
       </div>
 
+      <div class="hs-tile hs-tile--teal">
+        <div class="hs-tile-label">الأرباح الموزعة</div>
+        <div class="hs-tile-value">{{ s.distributedProfit.amount | currencyAr: true }}</div>
+        <div class="hs-tile-meta">منذ البداية</div>
+      </div>
+
       <div class="hs-tile hs-tile--green">
         <div class="hs-tile-label">معدل التحصيل</div>
         <div class="hs-tile-value">{{ s.collectionRate.percent | number: '1.0-0' }}%</div>
@@ -177,6 +183,14 @@
       <div class="fs-tile-body">
         <div class="fs-tile-label">مستحقات حسابات المندوبين</div>
         <div class="fs-tile-value">{{ f.representativesSubAccountsDue | currencyAr: true }}</div>
+      </div>
+    </div>
+
+    <div class="fs-tile fs-tile--net-subaccounts">
+      <div class="fs-tile-icon" aria-hidden="true">🧮</div>
+      <div class="fs-tile-body">
+        <div class="fs-tile-label">صافي أرصدة الحسابات الفرعية</div>
+        <div class="fs-tile-value">{{ f.netSubAccountsBalance | currencyAr: true }}</div>
       </div>
     </div>
 
