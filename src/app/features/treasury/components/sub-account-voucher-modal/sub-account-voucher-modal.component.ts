@@ -17,7 +17,6 @@ import { ApiError } from '../../../../core/models/api-response.model';
 import { ToastService } from '../../../../core/services/toast.service';
 
 import { VoucherType } from '../../../vouchers/enums/voucher.enums';
-import { VOUCHER_TYPE_OPTIONS } from '../../../vouchers/constants/voucher-labels';
 
 import { SubAccountsService } from '../../services/sub-accounts.service';
 import {
@@ -56,8 +55,16 @@ export class SubAccountVoucherModalComponent {
   private readonly service = inject(SubAccountsService);
   private readonly toast = inject(ToastService);
 
-  // ── option table (shared with the vouchers feature) ──
-  protected readonly typeOptions = VOUCHER_TYPE_OPTIONS;
+  /**
+   * Labels are swapped for sub-account vouchers only: choosing "سند صرف"
+   * here submits `Receipt`, and choosing "سند قبض" submits `Payment`. This
+   * is a display-only inversion scoped to this modal — do not reuse the
+   * shared VOUCHER_TYPE_OPTIONS/labels here.
+   */
+  protected readonly typeOptions: ReadonlyArray<{ value: VoucherType; label: string }> = [
+    { value: VoucherType.Receipt, label: 'سند صرف' },
+    { value: VoucherType.Payment, label: 'سند قبض' },
+  ];
   protected readonly VoucherType = VoucherType;
 
   // ── state ──
