@@ -55,6 +55,8 @@ export interface ContractDetails {
   items: ContractDetailsItem[];
   client: ContractDetailsClient;
   representative: ContractDetailsRepresentative | null;
+  /** Only set for direct contracts that have a supplier attached. */
+  supplier: ContractDetailsSupplier | null;
   summary: ContractDetailsSummary;
   nextInstallment: ContractNextInstallment | null;
   installments: ContractInstallmentRow[];
@@ -88,6 +90,8 @@ export interface ContractDetailsContract {
   representativeCommission: number;
   profitShareRate: number;
   treasuryId: number | null;
+  /** Only present on direct contracts; `null` when no supplier is attached. */
+  supplierId: number | null;
 }
 
 export interface ContractDetailsClient {
@@ -95,6 +99,18 @@ export interface ContractDetailsClient {
   fullName: string;
   phoneNumber: string;
   address: string;
+}
+
+/**
+ * Supplier attached to a direct contract. `amountOwed` is informational —
+ * the cost of the contract's items — and is not linked to any supplier
+ * payment/settlement flow.
+ */
+export interface ContractDetailsSupplier {
+  id: number;
+  fullName: string;
+  phoneNumber: string;
+  amountOwed: number;
 }
 
 export interface ContractDetailsProduct {

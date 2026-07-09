@@ -5,11 +5,12 @@
     <div class="pgs">تصنيف المنتجات لتنظيم أفضل في الكتالوج والتقارير</div>
   </div>
   <div class="d-flex gap-2">
+    @if (canWrite()) {
     <button
-      *appHasPermission="PERMS.suppliersFullAccess"
       class="btn btn-sm btn-bl"
       (click)="openCreate()"
     >+ فئة جديدة</button>
+    }
   </div>
 </div>
 
@@ -109,7 +110,8 @@
               </div>
             </td>
             <td>
-              <div class="d-flex gap-1 justify-content-center" *appHasPermission="PERMS.suppliersFullAccess">
+              @if (canWrite()) {
+              <div class="d-flex gap-1 justify-content-center">
                 <button
                   type="button"
                   class="btn btn-sm btn-bl"
@@ -127,6 +129,7 @@
                   <span>حذف</span>
                 </button>
               </div>
+              }
             </td>
           </tr>
         } @empty {
@@ -159,11 +162,12 @@
                   </div>
                   <div class="cat-empty-title">لا توجد فئات بعد</div>
                   <div class="cat-empty-sub">ابدأ بتصنيف منتجاتك بإضافة أول فئة.</div>
+                  @if (canWrite()) {
                   <button
-                    *appHasPermission="PERMS.suppliersFullAccess"
                     class="btn btn-sm btn-bl mt-2"
                     (click)="openCreate()"
                   >+ إضافة فئة جديدة</button>
+                  }
                 </div>
               }
             </td>

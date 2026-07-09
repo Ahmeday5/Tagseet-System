@@ -20,6 +20,7 @@ import {
 import { CurrencyArPipe } from '../../../../shared/pipes/currency-ar.pipe';
 import { DateArPipe } from '../../../../shared/pipes/date-ar.pipe';
 import { ApiError } from '../../../../core/models/api-response.model';
+import { DialogService } from '../../../../core/services/dialog.service';
 import { PrintService } from '../../../../core/services/print.service';
 import { ToastService } from '../../../../core/services/toast.service';
 import { fetchAllPages } from '../../../../core/utils/api-list.util';
@@ -80,6 +81,7 @@ export class SubAccountVouchersModalComponent {
   private readonly treasuryService = inject(TreasuryService);
   private readonly printer = inject(PrintService);
   private readonly toast = inject(ToastService);
+  private readonly dialog = inject(DialogService);
 
   // ── option tables ──
   protected readonly typeOptions = VOUCHER_TYPE_OPTIONS;
@@ -89,6 +91,7 @@ export class SubAccountVouchersModalComponent {
   protected readonly loading = signal(false);
   protected readonly isPrinting = signal(false);
   protected readonly accountOptions = signal<SearchableSelectOption[]>([]);
+  protected readonly deletingId = signal<number | null>(null);
 
   // ── edit-voucher modal state ──
   protected readonly treasuries = signal<LookupItem[]>([]);
@@ -293,6 +296,32 @@ export class SubAccountVouchersModalComponent {
       error: (err: ApiError) => {
         this.editVoucherSubmitting.set(false);
         this.toast.error(err?.message || 'فشل تعديل السند');
+      },
+    });
+  }
+
+  // ── delete ──
+
+  protected async confirmDeleteVoucher(v: SubAccountVoucher): Promise<void> {
+    const ok = await this.dialog.confirm({
+      title: 'حذف السند',
+      message: `هل أنت متأكد من حذف سند "${v.voucherNumber}"؟ سيتم عكس أثره على رصيد الحساب. هذا الإجراء لا يمكن التراجع عنه.`,
+      confirmText: 'حذف',
+      cancelText: 'إلغاء',
+      type: 'danger',
+    });
+    if (!ok) return;
+
+    this.deletingId.set(v.id);
+    this.service.deleteVoucher(v.id).subscribe({
+      next: () => {
+        this.deletingId.set(null);
+        this.toast.success('تم حذف السند بنجاح');
+        this.fetch(this.trigger(), true);
+      },
+      error: (err: ApiError) => {
+        this.deletingId.set(null);
+        this.toast.error(err?.message || 'فشل حذف السند');
       },
     });
   }

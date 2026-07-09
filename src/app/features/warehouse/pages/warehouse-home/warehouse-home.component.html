@@ -15,11 +15,12 @@
       }
       <span>تحديث</span>
     </button>
+    @if (canWrite()) {
     <button
-      *appHasPermission="PERMS.suppliersFullAccess"
       class="btn btn-sm btn-bl"
       (click)="openCreate()"
     >+ مخزن جديد</button>
+    }
   </div>
 </div>
 
@@ -72,7 +73,8 @@
       }
 
       <!-- Card actions -->
-      <div class="wh-card-actions" *appHasPermission="PERMS.suppliersFullAccess">
+      @if (canWrite()) {
+      <div class="wh-card-actions">
         <button type="button" class="link-btn" (click)="openEdit(w)">تعديل</button>
         <span class="sep">·</span>
         <button
@@ -87,6 +89,7 @@
           حذف
         </button>
       </div>
+      }
     </div>
   } @empty {
     <div class="wh-empty">

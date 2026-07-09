@@ -36,6 +36,7 @@ import { ContractsService } from '../../../contracts/services/contracts.service'
 import { CustomersService } from '../../services/customers.service';
 import { TreasuryService } from '../../../treasury/services/treasury.service';
 import { RepsService } from '../../../reps/services/reps.service';
+import { SuppliersService } from '../../../suppliers/services/suppliers.service';
 
 import {
   ContractPaymentFrequency,
@@ -75,6 +76,7 @@ export class DirectContractModalComponent {
   private readonly customersService = inject(CustomersService);
   private readonly treasuryService = inject(TreasuryService);
   private readonly repsService = inject(RepsService);
+  private readonly suppliersService = inject(SuppliersService);
   private readonly toast = inject(ToastService);
 
   // ── state ──
@@ -91,6 +93,7 @@ export class DirectContractModalComponent {
   protected readonly clients = signal<DashboardClient[]>([]);
   protected readonly treasuries = signal<LookupItem[]>([]);
   protected readonly representatives = signal<LookupItem[]>([]);
+  protected readonly suppliers = signal<LookupItem[]>([]);
 
   protected readonly frequencies: { value: ContractPaymentFrequency; label: string }[] = [
     { value: 'Monthly', label: 'شهري' },
@@ -107,6 +110,9 @@ export class DirectContractModalComponent {
   protected readonly representativeOptions = computed<SearchableSelectOption[]>(() =>
     this.representatives().map((r) => ({ value: r.id, label: r.name })),
   );
+  protected readonly supplierOptions = computed<SearchableSelectOption[]>(() =>
+    this.suppliers().map((s) => ({ value: s.id, label: s.name })),
+  );
 
   // ── form ──
   protected readonly form = this.fb.nonNullable.group({
@@ -122,6 +128,7 @@ export class DirectContractModalComponent {
     firstInstallmentDate: [this.nextMonthStr(), [Validators.required]],
     treasuryId: this.fb.control<number | null>(null, [Validators.required]),
     representativeId: this.fb.control<number | null>(null),
+    supplierId: this.fb.control<number | null>(null),
     notes: [''],
   });
 
@@ -221,6 +228,7 @@ export class DirectContractModalComponent {
       firstInstallmentDate: new Date(raw.firstInstallmentDate).toISOString(),
       treasuryId: Number(raw.treasuryId),
       representativeId: raw.representativeId ? Number(raw.representativeId) : undefined,
+      supplierId: raw.supplierId ? Number(raw.supplierId) : undefined,
       notes: raw.notes?.trim() || undefined,
     };
 
@@ -288,6 +296,7 @@ export class DirectContractModalComponent {
       clients: this.customersService.listAllClients().pipe(catchError(() => of([] as DashboardClient[]))),
       treasuries: this.treasuryService.lookup().pipe(catchError(() => of([] as LookupItem[]))),
       reps: this.repsService.lookup().pipe(catchError(() => of([] as LookupItem[]))),
+      suppliers: this.suppliersService.lookup().pipe(catchError(() => of([] as LookupItem[]))),
     })
       .pipe(finalize(() => this.loadingLookups.set(false)))
       .subscribe({
@@ -295,6 +304,7 @@ export class DirectContractModalComponent {
           this.clients.set(res.clients);
           this.treasuries.set(res.treasuries);
           this.representatives.set(res.reps);
+          this.suppliers.set(res.suppliers);
           this.lookupsLoaded.set(true);
         },
         error: () => this.toast.error('حدث خطأ أثناء تحميل البيانات'),
@@ -331,6 +341,7 @@ export class DirectContractModalComponent {
           firstInstallmentDate: d.contract.firstInstallmentDate.split('T')[0],
           treasuryId: Number(d.contract.treasuryId),
           representativeId: d.representative?.id ?? null,
+          supplierId: d.supplier?.id ?? null,
           notes: d.contract.notes || '',
         });
         this.form.get('installmentAmount')?.setValue(d.contract.installmentAmount, { emitEvent: false });
@@ -373,6 +384,7 @@ export class DirectContractModalComponent {
       firstInstallmentDate: this.nextMonthStr(),
       treasuryId: null,
       representativeId: null,
+      supplierId: null,
       notes: '',
     });
     // Reset first item

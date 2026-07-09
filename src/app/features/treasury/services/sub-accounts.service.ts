@@ -11,12 +11,15 @@ import {
 } from '../../../core/http/http-context.tokens';
 import { asPaged, toPaged } from '../../../core/utils/api-list.util';
 import {
+  CreateSubAccountTransferPayload,
   CreateSubAccountVoucherPayload,
   SubAccount,
   SubAccountPayload,
   SubAccountStatement,
   SubAccountStatementQuery,
   SubAccountsQuery,
+  SubAccountTransfer,
+  SubAccountTransfersQuery,
   SubAccountVoucher,
   SubAccountVouchersQuery,
   UpdateSubAccountVoucherPayload,
@@ -129,6 +132,18 @@ export class SubAccountsService {
     );
   }
 
+  /** Deletes a sub-account voucher and rolls back its effect on the balance. */
+  deleteVoucher(voucherId: number): Observable<{ message: string }> {
+    return this.api.delete<{ message: string }>(
+      API_ENDPOINTS.subAccounts.voucherById(voucherId),
+      {
+        context: withInlineHandling(
+          withCacheInvalidate([SUB_ACCOUNTS_CACHE_KEY]),
+        ),
+      },
+    );
+  }
+
   listVouchers(
     query: SubAccountVouchersQuery = {},
   ): Observable<PagedResponse<SubAccountVoucher>> {
@@ -149,6 +164,61 @@ export class SubAccountsService {
         context: withCacheBypass(withCache({ ttlMs: SUB_ACCOUNTS_TTL_MS })),
       })
       .pipe(toPaged<SubAccountVoucher>());
+  }
+
+  // ─────────────── transfers ───────────────
+
+  listTransfers(
+    query: SubAccountTransfersQuery = {},
+  ): Observable<PagedResponse<SubAccountTransfer>> {
+    return this.api
+      .get<unknown>(API_ENDPOINTS.subAccounts.transfers, {
+        params: this.toTransferParams(query),
+        context: withCache({ ttlMs: SUB_ACCOUNTS_TTL_MS }),
+      })
+      .pipe(toPaged<SubAccountTransfer>());
+  }
+
+  refreshTransfers(
+    query: SubAccountTransfersQuery = {},
+  ): Observable<PagedResponse<SubAccountTransfer>> {
+    return this.api
+      .get<unknown>(API_ENDPOINTS.subAccounts.transfers, {
+        params: this.toTransferParams(query),
+        context: withCacheBypass(withCache({ ttlMs: SUB_ACCOUNTS_TTL_MS })),
+      })
+      .pipe(toPaged<SubAccountTransfer>());
+  }
+
+  /**
+   * Records a money movement between two sub-accounts. Invalidates the
+   * `sub-account` cache scope so both accounts' balances re-fetch everywhere.
+   */
+  createTransfer(
+    payload: CreateSubAccountTransferPayload,
+  ): Observable<SubAccountTransfer> {
+    return this.api.post<SubAccountTransfer>(
+      API_ENDPOINTS.subAccounts.transfers,
+      payload,
+      {
+        context: withInlineHandling(
+          withCacheInvalidate([SUB_ACCOUNTS_CACHE_KEY]),
+        ),
+      },
+    );
+  }
+
+  private toTransferParams(
+    query: SubAccountTransfersQuery,
+  ): Record<string, unknown> {
+    return {
+      PageIndex: query.pageIndex ?? 1,
+      PageSize: query.pageSize ?? 10,
+      fromSubAccountId: query.fromSubAccountId || undefined,
+      toSubAccountId: query.toSubAccountId || undefined,
+      from: query.from || undefined,
+      to: query.to || undefined,
+    };
   }
 
   // ─────────────── statement ───────────────

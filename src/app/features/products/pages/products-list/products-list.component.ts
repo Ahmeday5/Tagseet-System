@@ -21,8 +21,8 @@ import { ApiError } from '../../../../core/models/api-response.model';
 import { buildImageUrl } from '../../utils/product-image.util';
 import { Category } from '../../../categories/models/category.model';
 import { CategoriesService } from '../../../categories/services/categories.service';
-import { HasPermissionDirective } from '../../../../shared/directives/has-permission.directive';
 import { PERMISSIONS } from '../../../../core/constants/permissions.const';
+import { AuthService } from '../../../../core/services/auth.service';
 
 const DEFAULT_PAGE_SIZE = 12;
 
@@ -45,7 +45,6 @@ const DEFAULT_PAGE_SIZE = 12;
     ProductFormModalComponent,
     PaginationComponent,
     CurrencyArPipe,
-    HasPermissionDirective,
   ],
   templateUrl: './products-list.component.html',
   styleUrl: './products-list.component.scss',
@@ -56,9 +55,16 @@ export class ProductsListComponent implements OnInit {
   private readonly dialog            = inject(DialogService);
   private readonly toast             = inject(ToastService);
   private readonly cache             = inject(HttpCacheService);
+  private readonly auth              = inject(AuthService);
 
   /** Exposed so the template can gate write actions with `*appHasPermission`. */
   protected readonly PERMS = PERMISSIONS;
+
+  protected readonly canWrite = computed(
+    () =>
+      this.auth.hasPermission(PERMISSIONS.productsFullAccess) ||
+      this.auth.hasAnyRole(['Representative']),
+  );
 
   // ── data ──
   protected readonly products   = signal<Product[]>([]);

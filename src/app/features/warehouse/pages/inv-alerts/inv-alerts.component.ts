@@ -21,8 +21,8 @@ import {
   InventoryLevelMeta,
 } from '../../constants/inventory-alert-levels';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { HasPermissionDirective } from '../../../../shared/directives/has-permission.directive';
 import { PERMISSIONS } from '../../../../core/constants/permissions.const';
+import { AuthService } from '../../../../core/services/auth.service';
 
 const EMPTY_SUMMARY: InventoryAlertSummary = {
   outOfStockCount: 0,
@@ -34,16 +34,23 @@ const EMPTY_SUMMARY: InventoryAlertSummary = {
   selector: 'app-inv-alerts',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, DecimalPipe, HasPermissionDirective],
+  imports: [RouterLink, DecimalPipe],
   templateUrl: './inv-alerts.component.html',
   styleUrl: './inv-alerts.component.scss',
 })
 export class InvAlertsComponent implements OnInit {
   private readonly svc = inject(InventoryService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly auth = inject(AuthService);
 
   /** Exposed so the template can gate write actions with `*appHasPermission`. */
   protected readonly PERMS = PERMISSIONS;
+
+  protected readonly canWrite = computed(
+    () =>
+      this.auth.hasPermission(PERMISSIONS.warehousesFullAccess) ||
+      this.auth.hasAnyRole(['Representative']),
+  );
 
   // ── data ──
   protected readonly alerts = signal<InventoryAlertItem[]>([]);

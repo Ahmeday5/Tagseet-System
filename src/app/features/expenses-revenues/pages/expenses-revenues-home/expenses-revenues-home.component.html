@@ -1,0 +1,248 @@
+<div class="pgh">
+  <div>
+    <div class="pgt">مصروفات وإيرادات</div>
+    <div class="pgs">تسجيل وتتبع مصروفات وإيرادات الخزائن</div>
+  </div>
+</div>
+
+<!-- ── تبويبات ── -->
+<div class="erx-tabs">
+  <button
+    type="button"
+    class="erx-tab"
+    [class.erx-tab--active]="activeTab() === 'expenses'"
+    (click)="setTab('expenses')"
+  >
+    المصروفات
+  </button>
+  <button
+    type="button"
+    class="erx-tab"
+    [class.erx-tab--active]="activeTab() === 'revenues'"
+    (click)="setTab('revenues')"
+  >
+    الإيرادات
+  </button>
+</div>
+
+<!-- ══════════════════════════ تبويب المصروفات ══════════════════════════ -->
+@if (activeTab() === 'expenses') {
+<section class="erx-panel">
+  <div class="erx-hero">
+    <div class="erx-hero-card erx-hero-card--red">
+      <div class="erx-hero-label">إجمالي المصروفات</div>
+      <div class="erx-hero-value">{{ expensesTotal() | currencyAr: true }}</div>
+    </div>
+  </div>
+
+  <div class="erx-toolbar">
+    <div class="erx-filters">
+      <div class="erx-filter-field">
+        <app-searchable-select
+          [ngModel]="expensesTreasuryFilter()"
+          [ngModelOptions]="{ standalone: true }"
+          [options]="treasuryOptions()"
+          placeholder="كل الخزائن"
+          searchPlaceholder="ابحث باسم الخزينة…"
+          (ngModelChange)="onExpensesTreasuryChange($event)"
+        />
+      </div>
+      <input
+        type="date"
+        class="form-control form-control-sm"
+        dir="ltr"
+        [ngModel]="expensesFrom()"
+        (ngModelChange)="onExpensesFromChange($event)"
+      />
+      <input
+        type="date"
+        class="form-control form-control-sm"
+        dir="ltr"
+        [ngModel]="expensesTo()"
+        (ngModelChange)="onExpensesToChange($event)"
+      />
+      @if (expensesHasFilters()) {
+        <button type="button" class="btn btn-sm" (click)="clearExpensesFilters()">
+          مسح الفلاتر
+        </button>
+      }
+    </div>
+
+    <div class="erx-actions">
+      <button type="button" class="btn btn-sm" [disabled]="expensesLoading()" (click)="refreshExpenses()">
+        @if (expensesLoading()) {
+          <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+        }
+        تحديث
+      </button>
+      <button
+        type="button"
+        class="btn btn-sm btn-bl"
+        *appHasPermission="PERMS.vouchersFullAccess"
+        (click)="openExpenseForm()"
+      >
+        + مصروف جديد
+      </button>
+    </div>
+  </div>
+
+  <div class="tw">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>رقم المصروف</th>
+          <th>المبلغ</th>
+          <th>الخزينة</th>
+          <th>التاريخ</th>
+          <th>ملاحظات</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of expenses(); track row.id) {
+        <tr>
+          <td style="font-weight:600">{{ row.expenseNumber }}</td>
+          <td style="color:var(--re)">{{ row.amount | currencyAr: true }}</td>
+          <td>{{ row.treasuryName }}</td>
+          <td>{{ row.date | dateAr: 'short' }}</td>
+          <td>{{ row.notes || '—' }}</td>
+        </tr>
+        } @empty {
+        <tr>
+          <td colspan="5" class="text-center" style="padding:30px; color:var(--txt3)">
+            @if (expensesLoading()) { جارٍ التحميل... } @else { لا توجد مصروفات مسجلة. }
+          </td>
+        </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <app-pagination
+    [pageIndex]="expensesPageIndex()"
+    [pageSize]="expensesPageSize()"
+    [count]="expensesCount()"
+    [totalPages]="expensesTotalPages()"
+    [disabled]="expensesLoading()"
+    (pageChange)="onExpensesPageChange($event)"
+    (pageSizeChange)="onExpensesPageSizeChange($event)"
+  />
+</section>
+}
+
+<!-- ══════════════════════════ تبويب الإيرادات ══════════════════════════ -->
+@if (activeTab() === 'revenues') {
+<section class="erx-panel">
+  <div class="erx-hero">
+    <div class="erx-hero-card erx-hero-card--green">
+      <div class="erx-hero-label">إجمالي الإيرادات</div>
+      <div class="erx-hero-value">{{ revenuesTotal() | currencyAr: true }}</div>
+    </div>
+  </div>
+
+  <div class="erx-toolbar">
+    <div class="erx-filters">
+      <div class="erx-filter-field">
+        <app-searchable-select
+          [ngModel]="revenuesTreasuryFilter()"
+          [ngModelOptions]="{ standalone: true }"
+          [options]="treasuryOptions()"
+          placeholder="كل الخزائن"
+          searchPlaceholder="ابحث باسم الخزينة…"
+          (ngModelChange)="onRevenuesTreasuryChange($event)"
+        />
+      </div>
+      <input
+        type="date"
+        class="form-control form-control-sm"
+        dir="ltr"
+        [ngModel]="revenuesFrom()"
+        (ngModelChange)="onRevenuesFromChange($event)"
+      />
+      <input
+        type="date"
+        class="form-control form-control-sm"
+        dir="ltr"
+        [ngModel]="revenuesTo()"
+        (ngModelChange)="onRevenuesToChange($event)"
+      />
+      @if (revenuesHasFilters()) {
+        <button type="button" class="btn btn-sm" (click)="clearRevenuesFilters()">
+          مسح الفلاتر
+        </button>
+      }
+    </div>
+
+    <div class="erx-actions">
+      <button type="button" class="btn btn-sm" [disabled]="revenuesLoading()" (click)="refreshRevenues()">
+        @if (revenuesLoading()) {
+          <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+        }
+        تحديث
+      </button>
+      <button
+        type="button"
+        class="btn btn-sm btn-bl"
+        *appHasPermission="PERMS.vouchersFullAccess"
+        (click)="openRevenueForm()"
+      >
+        + إيراد جديد
+      </button>
+    </div>
+  </div>
+
+  <div class="tw">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>رقم الإيراد</th>
+          <th>المبلغ</th>
+          <th>الخزينة</th>
+          <th>التاريخ</th>
+          <th>ملاحظات</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of revenues(); track row.id) {
+        <tr>
+          <td style="font-weight:600">{{ row.revenueNumber }}</td>
+          <td style="color:var(--gr)">{{ row.amount | currencyAr: true }}</td>
+          <td>{{ row.treasuryName }}</td>
+          <td>{{ row.date | dateAr: 'short' }}</td>
+          <td>{{ row.notes || '—' }}</td>
+        </tr>
+        } @empty {
+        <tr>
+          <td colspan="5" class="text-center" style="padding:30px; color:var(--txt3)">
+            @if (revenuesLoading()) { جارٍ التحميل... } @else { لا توجد إيرادات مسجلة. }
+          </td>
+        </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <app-pagination
+    [pageIndex]="revenuesPageIndex()"
+    [pageSize]="revenuesPageSize()"
+    [count]="revenuesCount()"
+    [totalPages]="revenuesTotalPages()"
+    [disabled]="revenuesLoading()"
+    (pageChange)="onRevenuesPageChange($event)"
+    (pageSizeChange)="onRevenuesPageSizeChange($event)"
+  />
+</section>
+}
+
+<app-expense-form-modal
+  [open]="expenseFormOpen()"
+  [treasuries]="treasuryOptions()"
+  (closed)="closeExpenseForm()"
+  (saved)="onExpenseSaved()"
+/>
+
+<app-revenue-form-modal
+  [open]="revenueFormOpen()"
+  [treasuries]="treasuryOptions()"
+  (closed)="closeRevenueForm()"
+  (saved)="onRevenueSaved()"
+/>

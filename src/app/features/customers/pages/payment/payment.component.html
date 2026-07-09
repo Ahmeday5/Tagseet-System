@@ -70,6 +70,11 @@
             <option value="ApplePay">Apple Pay</option>
           </select>
         </div>
+        <div class="col-12">
+          <label class="form-label">ملاحظات (اختياري)</label>
+          <textarea class="form-control" rows="2" placeholder="أي ملاحظات إضافية على الدفعة..."
+            [ngModel]="payNotes()" (ngModelChange)="payNotes.set($event)"></textarea>
+        </div>
       </div>
 
       @if (paymentInfo(); as info) {

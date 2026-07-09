@@ -1,0 +1,109 @@
+/* ── TABS ── */
+.erx-tabs {
+  display: inline-flex;
+  padding: 3px;
+  background: var(--bg2);
+  border: 1px solid var(--brd2);
+  border-radius: 999px;
+  gap: 2px;
+  margin-bottom: 14px;
+}
+
+.erx-tab {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--txt2);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 8px 20px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+
+  &:hover {
+    color: var(--txt);
+    background: var(--bg3, rgba(0, 0, 0, 0.04));
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--bl);
+    outline-offset: 2px;
+  }
+}
+
+.erx-tab--active {
+  background: var(--bl);
+  color: #fff;
+  box-shadow: 0 1px 3px rgba(27, 95, 168, 0.25);
+
+  &:hover {
+    color: #fff;
+    background: var(--bl);
+  }
+}
+
+/* ── HERO ── */
+.erx-hero {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.erx-hero-card {
+  flex: 0 0 auto;
+  min-width: 220px;
+  border-radius: var(--rl);
+  padding: 14px 18px;
+  color: #fff;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+
+  &--red {
+    background: linear-gradient(135deg, var(--re), #7a1f1f);
+  }
+
+  &--green {
+    background: linear-gradient(135deg, var(--gr), #234a0a);
+  }
+}
+
+.erx-hero-label {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.78);
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.erx-hero-value {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.2px;
+}
+
+/* ── TOOLBAR ── */
+.erx-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 11px;
+  flex-wrap: wrap;
+}
+
+.erx-filters {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.erx-filter-field {
+  min-width: 200px;
+}
+
+.erx-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}

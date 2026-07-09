@@ -16,6 +16,22 @@
       <button
         type="button"
         class="btn btn-sm d-inline-flex align-items-center gap-1"
+        (click)="openTransfersLog()"
+        title="عرض سجل التحويلات بين الحسابات الفرعية"
+      >
+        🔁 سجل التحويلات
+      </button>
+      <button
+        type="button"
+        class="btn btn-sm d-inline-flex align-items-center gap-1"
+        (click)="openTransfer()"
+        title="تحويل من حساب فرعي إلى آخر"
+      >
+        ⇄ تحويل بين حسابات
+      </button>
+      <button
+        type="button"
+        class="btn btn-sm d-inline-flex align-items-center gap-1"
         [disabled]="loading()"
         (click)="refresh()"
         title="تحديث القائمة من الخادم"
@@ -158,4 +174,17 @@
 <app-sub-account-vouchers-modal
   [open]="vouchersOpen()"
   (closed)="closeVouchers()"
+/>
+
+<app-sub-account-transfer-modal
+  [open]="transferOpen()"
+  [accounts]="accountOptions()"
+  (closed)="closeTransfer()"
+  (saved)="onTransferSaved($event)"
+/>
+
+<app-sub-account-transfers-modal
+  [open]="transfersLogOpen()"
+  [accounts]="accountOptions()"
+  (closed)="closeTransfersLog()"
 />

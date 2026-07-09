@@ -17,8 +17,8 @@ import { ToastService } from '../../../../core/services/toast.service';
 import { HttpCacheService } from '../../../../core/services/http-cache.service';
 import { onInvalidate } from '../../../../core/utils/auto-refresh.util';
 import { ApiError } from '../../../../core/models/api-response.model';
-import { HasPermissionDirective } from '../../../../shared/directives/has-permission.directive';
 import { PERMISSIONS } from '../../../../core/constants/permissions.const';
+import { AuthService } from '../../../../core/services/auth.service';
 
 const DEFAULT_PAGE_SIZE = 10;
 
@@ -26,7 +26,7 @@ const DEFAULT_PAGE_SIZE = 10;
   selector: 'app-categories-list',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CategoryFormModalComponent, PaginationComponent, HasPermissionDirective],
+  imports: [CategoryFormModalComponent, PaginationComponent],
   templateUrl: './categories-list.component.html',
   styleUrl: './categories-list.component.scss',
 })
@@ -35,9 +35,16 @@ export class CategoriesListComponent implements OnInit {
   private readonly dialog  = inject(DialogService);
   private readonly toast   = inject(ToastService);
   private readonly cache   = inject(HttpCacheService);
+  private readonly auth    = inject(AuthService);
 
   /** Exposed so the template can gate write actions with `*appHasPermission`. */
   protected readonly PERMS = PERMISSIONS;
+
+  protected readonly canWrite = computed(
+    () =>
+      this.auth.hasPermission(PERMISSIONS.productsFullAccess) ||
+      this.auth.hasAnyRole(['Representative']),
+  );
 
   // ── data ──
   protected readonly categories = signal<Category[]>([]);

@@ -85,8 +85,17 @@ export const routes: Routes = [
           ),
       },
       {
+        // Products.View/Warehouses.View holders, plus the Representative
+        // role as a safety net until every backend deployment actually
+        // issues the new permission keys (some sessions still carry the
+        // old Suppliers.* set with neither pair present).
         path: 'warehouse',
-        canActivate: [permissionGuard(PERMISSIONS.suppliersView)],
+        canActivate: [
+          accessGuard({
+            anyPermission: [PERMISSIONS.warehousesView],
+            anyRole: ['Representative'],
+          }),
+        ],
         loadChildren: () =>
           import('./features/warehouse/warehouse.routes').then(
             (m) => m.warehouseRoutes,
@@ -96,7 +105,7 @@ export const routes: Routes = [
         path: 'products',
         canActivate: [
           accessGuard({
-            anyPermission: [PERMISSIONS.suppliersView],
+            anyPermission: [PERMISSIONS.productsView],
             anyRole: ['Representative'],
           }),
         ],
@@ -109,7 +118,7 @@ export const routes: Routes = [
         path: 'categories',
         canActivate: [
           accessGuard({
-            anyPermission: [PERMISSIONS.suppliersView],
+            anyPermission: [PERMISSIONS.productsView],
             anyRole: ['Representative'],
           }),
         ],
@@ -132,6 +141,14 @@ export const routes: Routes = [
         loadChildren: () =>
           import('./features/vouchers/vouchers.routes').then(
             (m) => m.vouchersRoutes,
+          ),
+      },
+      {
+        path: 'expenses-revenues',
+        canActivate: [permissionGuard(PERMISSIONS.treasuryView)],
+        loadChildren: () =>
+          import('./features/expenses-revenues/expenses-revenues.routes').then(
+            (m) => m.expensesRevenuesRoutes,
           ),
       },
       {

@@ -227,7 +227,7 @@ export class CreateContractComponent implements OnInit {
   }
 
   private watchItemProduct(group: FormGroup, index: number): void {
-    if (!this.auth.hasPermission(PERMISSIONS.suppliersView)) return;
+    if (!this.auth.hasPermission(PERMISSIONS.productsView)) return;
 
     group.get('productId')?.valueChanges.subscribe((id) => {
       const productId = Number(id);

@@ -69,6 +69,19 @@ export interface HomeSummaryDto {
     amount: number;
   };
 
+  /** Representatives' commission, kept separate from `distributedProfit`. */
+  representativeCommission: {
+    amount: number;
+  };
+
+  totalExpenses: {
+    amount: number;
+  };
+
+  totalRevenues: {
+    amount: number;
+  };
+
   collectionRate: {
     percent: number;
     targetPercent: number;

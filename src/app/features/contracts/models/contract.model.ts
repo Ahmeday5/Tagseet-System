@@ -166,6 +166,8 @@ export interface CreateDirectContractPayload {
   treasuryId: number;
   /** Omit when no representative — do NOT send 0 or null. */
   representativeId?: number;
+  /** Omit when no supplier is attached — do NOT send 0 or null. */
+  supplierId?: number;
   notes?: string;
 }
 
@@ -184,12 +186,14 @@ export interface CreatedDirectContract {
   status: ContractStatus;
   representativeId: number | null;
   representativeCommission: number;
+  supplierId: number | null;
   notes: string | null;
 }
 
 /**
  * Build a `POST /dashboard/contracts/direct` body from raw form values.
- * Wraps item fields into `items[]`, strips `representativeId` when null/zero.
+ * Wraps item fields into `items[]`, strips `representativeId`/`supplierId`
+ * when null/zero.
  */
 export function buildDirectContractPayload(
   form: CreateDirectContractPayload,
@@ -214,6 +218,10 @@ export function buildDirectContractPayload(
 
   if (form.representativeId && form.representativeId > 0) {
     payload.representativeId = form.representativeId;
+  }
+
+  if (form.supplierId && form.supplierId > 0) {
+    payload.supplierId = form.supplierId;
   }
 
   const trimmedNotes = form.notes?.trim();

@@ -12,11 +12,12 @@
       }
       <span>تحديث</span>
     </button>
+    @if (canWrite()) {
     <a
-      *appHasPermission="PERMS.suppliersFullAccess"
       class="btn btn-sm btn-bl"
       routerLink="/invoices/new"
     >+ فاتورة مشتريات</a>
+    }
   </div>
 </div>
 

@@ -38,6 +38,8 @@ export const API_ENDPOINTS = {
     voucherById: (voucherId: number) => `dashboard/sub-accounts/vouchers/${voucherId}`,
     /** GET (paged): a single sub-account's full ledger (account header + vouchers page). */
     statement: (id: number) => `dashboard/sub-accounts/${id}/statement`,
+    /** GET (paged) / POST: money movements between two sub-accounts. */
+    transfers: 'dashboard/sub-accounts/transfers',
   },
   shareholders: {
     base: 'dashboard/shareholders',
@@ -105,6 +107,14 @@ export const API_ENDPOINTS = {
     homeSummary: 'dashboard/home-summary',
     vouchers: 'dashboard/vouchers',
     voucherById: (id: number) => `dashboard/vouchers/${id}`,
+  },
+  expenses: {
+    /** GET (paged, wrapped in `{summary, items}`) / POST. */
+    base: 'dashboard/expenses',
+  },
+  revenues: {
+    /** GET (paged, wrapped in `{summary, items}`) / POST. */
+    base: 'dashboard/revenues',
   },
   charts: {
     profitsLast6Months: 'dashboard/charts/profits-last-6-months',

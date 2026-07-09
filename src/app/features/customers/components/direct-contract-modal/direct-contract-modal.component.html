@@ -224,6 +224,17 @@
           />
         </div>
 
+        <!-- المورد -->
+        <div class="col-12 col-md-6">
+          <label class="form-label">المورد <span class="dcm-optional">(اختياري)</span></label>
+          <app-searchable-select
+            formControlName="supplierId"
+            [options]="supplierOptions()"
+            placeholder="اختر المورد (اختياري)"
+            searchPlaceholder="ابحث باسم المورد…"
+          />
+        </div>
+
         <!-- ملاحظات -->
         <div class="col-12">
           <label class="form-label">ملاحظات <span class="dcm-optional">(اختياري)</span></label>

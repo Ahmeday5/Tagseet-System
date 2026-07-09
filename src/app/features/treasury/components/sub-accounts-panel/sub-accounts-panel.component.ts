@@ -14,17 +14,25 @@ import { DialogService } from '../../../../core/services/dialog.service';
 import { ToastService } from '../../../../core/services/toast.service';
 import { HttpCacheService } from '../../../../core/services/http-cache.service';
 import { onInvalidate } from '../../../../core/utils/auto-refresh.util';
+import { fetchAllPages } from '../../../../core/utils/api-list.util';
 import { ApiError } from '../../../../core/models/api-response.model';
 
 import { SubAccountsService } from '../../services/sub-accounts.service';
 import { TreasuryService } from '../../services/treasury.service';
 import { RepsService } from '../../../reps/services/reps.service';
-import { SubAccount, SubAccountVoucher } from '../../models/sub-account.model';
+import {
+  SubAccount,
+  SubAccountTransfer,
+  SubAccountVoucher,
+} from '../../models/sub-account.model';
 import { LookupItem } from '../../../../core/models/lookup.model';
+import { SearchableSelectOption } from '../../../../shared/components/searchable-select/searchable-select.component';
 import { SubAccountFormModalComponent } from '../sub-account-form-modal/sub-account-form-modal.component';
 import { SubAccountVoucherModalComponent } from '../sub-account-voucher-modal/sub-account-voucher-modal.component';
 import { SubAccountStatementModalComponent } from '../sub-account-statement-modal/sub-account-statement-modal.component';
 import { SubAccountVouchersModalComponent } from '../sub-account-vouchers-modal/sub-account-vouchers-modal.component';
+import { SubAccountTransferModalComponent } from '../sub-account-transfer-modal/sub-account-transfer-modal.component';
+import { SubAccountTransfersModalComponent } from '../sub-account-transfers-modal/sub-account-transfers-modal.component';
 
 const DEFAULT_PAGE_SIZE = 10;
 const REFETCH_DEBOUNCE_MS = 250;
@@ -49,6 +57,8 @@ const REFETCH_DEBOUNCE_MS = 250;
     SubAccountVoucherModalComponent,
     SubAccountStatementModalComponent,
     SubAccountVouchersModalComponent,
+    SubAccountTransferModalComponent,
+    SubAccountTransfersModalComponent,
   ],
   templateUrl: './sub-accounts-panel.component.html',
   styleUrl: './sub-accounts-panel.component.scss',
@@ -94,6 +104,13 @@ export class SubAccountsPanelComponent {
 
   // ── all-vouchers modal ──
   protected readonly vouchersOpen = signal(false);
+
+  // ── transfer modal ──
+  protected readonly transferOpen = signal(false);
+  protected readonly accountOptions = signal<SearchableSelectOption[]>([]);
+
+  // ── all-transfers modal ──
+  protected readonly transfersLogOpen = signal(false);
 
   // ── derived ──
   protected readonly hasFilters = computed(() => this.searchTerm().trim().length > 0);
@@ -294,5 +311,50 @@ export class SubAccountsPanelComponent {
 
   protected closeVouchers(): void {
     this.vouchersOpen.set(false);
+  }
+
+  // ─────────── transfer modal ───────────
+
+  protected openTransfer(): void {
+    if (this.accountOptions().length === 0) this.loadAccountOptions();
+    this.transferOpen.set(true);
+  }
+
+  protected closeTransfer(): void {
+    this.transferOpen.set(false);
+  }
+
+  protected onTransferSaved(_transfer: SubAccountTransfer): void {
+    // Both accounts' balances moved server-side; a plain refresh keeps this
+    // panel canonical instead of guessing at the delta for whichever of the
+    // two accounts is (or isn't) on the current page.
+    this.transferOpen.set(false);
+    this.refresh();
+  }
+
+  private loadAccountOptions(): void {
+    fetchAllPages((pageIndex, pageSize) =>
+      this.service.list({ pageIndex, pageSize }),
+    ).subscribe({
+      next: (rows) =>
+        this.accountOptions.set(
+          rows.map((a) => ({
+            value: a.id,
+            label: a.name,
+            hint: a.phoneNumber,
+          })),
+        ),
+      error: () => this.accountOptions.set([]),
+    });
+  }
+
+  // ─────────── all-transfers modal ───────────
+
+  protected openTransfersLog(): void {
+    this.transfersLogOpen.set(true);
+  }
+
+  protected closeTransfersLog(): void {
+    this.transfersLogOpen.set(false);
   }
 }

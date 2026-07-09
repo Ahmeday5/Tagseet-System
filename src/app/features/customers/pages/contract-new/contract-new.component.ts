@@ -302,7 +302,7 @@ export class ContractNewComponent implements OnInit {
     });
 
     // Watch product → fetch unit price, set on item, refresh total
-    if (!this.auth.hasPermission(PERMISSIONS.suppliersView)) return;
+    if (!this.auth.hasPermission(PERMISSIONS.productsView)) return;
 
     group.get('productId')?.valueChanges.subscribe((id) => {
       if (this.prefilling) return;

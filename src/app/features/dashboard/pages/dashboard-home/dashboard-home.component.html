@@ -40,60 +40,78 @@
       </div>
 
       <div class="hs-tile hs-tile--teal">
-        <div class="hs-tile-label">الخزينة الرئيسية</div>
-        <div class="hs-tile-value">{{ s.mainTreasury.balance | currencyAr: true }}</div>
-        <div class="hs-tile-meta">الرصيد الحالي</div>
-      </div>
-
-      <div class="hs-tile hs-tile--purple">
-        <div class="hs-tile-label">ربح الشهر</div>
-        <div class="hs-tile-value">{{ s.monthlyProfit.amount | currencyAr: true }}</div>
-        <div class="hs-tile-meta">هامش {{ s.monthlyProfit.marginPercent | number: '1.0-0' }}%</div>
-      </div>
-
-      <div class="hs-tile hs-tile--purple">
-        <div class="hs-tile-label">إجمالي الأرباح</div>
-        <div class="hs-tile-value">{{ s.totalProfit.amount | currencyAr: true }}</div>
-        <div class="hs-tile-meta">منذ البداية</div>
-      </div>
-
-      <div class="hs-tile hs-tile--teal">
-        <div class="hs-tile-label">الأرباح الموزعة</div>
-        <div class="hs-tile-value">{{ s.distributedProfit.amount | currencyAr: true }}</div>
-        <div class="hs-tile-meta">منذ البداية</div>
-      </div>
-
-      <div class="hs-tile hs-tile--green">
-        <div class="hs-tile-label">معدل التحصيل</div>
-        <div class="hs-tile-value">{{ s.collectionRate.percent | number: '1.0-0' }}%</div>
-        <div class="hs-tile-meta">المستهدف {{ s.collectionRate.targetPercent | number: '1.0-0' }}%</div>
-      </div>
-
-      <div class="hs-tile hs-tile--red">
-        <div class="hs-tile-label">المتأخرون</div>
-        <div class="hs-tile-value">{{ s.delinquent.clientsCount | number }}</div>
-        <div class="hs-tile-meta">بقيمة {{ s.delinquent.amount | currencyAr: true }}</div>
-      </div>
-
-      <div class="hs-tile hs-tile--green">
-        <div class="hs-tile-label">تقييم ممتاز</div>
-        <div class="hs-tile-value">{{ s.excellentRating.clientsCount | number }}</div>
-        <div class="hs-tile-meta">{{ s.excellentRating.percent | number: '1.0-0' }}% من العملاء</div>
-      </div>
-
-      <div class="hs-tile hs-tile--orange">
-        <div class="hs-tile-label">مخزون منخفض</div>
-        <div class="hs-tile-value">{{ s.lowStock.productsCount | number }}</div>
-        <div class="hs-tile-meta">منتج بحاجة لإعادة الطلب</div>
-      </div>
-
-      <div class="hs-tile hs-tile--purple">
-        <div class="hs-tile-label">ضريبة الربع</div>
-        <div class="hs-tile-value">{{ s.quarterTax.amount | currencyAr: true }}</div>
-        <div class="hs-tile-meta">المستحق الحالي</div>
-      </div>
+      <div class="hs-tile-label">الخزينة الرئيسية</div>
+      <div class="hs-tile-value">{{ s.mainTreasury.balance | currencyAr: true }}</div>
+      <div class="hs-tile-meta">الرصيد الحالي</div>
     </div>
-    } @else if (!summaryLoading()) {
+
+    <div class="hs-tile hs-tile--purple">
+      <div class="hs-tile-label">ربح الشهر</div>
+      <div class="hs-tile-value">{{ s.monthlyProfit.amount | currencyAr: true }}</div>
+      <div class="hs-tile-meta">هامش {{ s.monthlyProfit.marginPercent | number: '1.0-0' }}%</div>
+    </div>
+
+    <div class="hs-tile hs-tile--purple">
+      <div class="hs-tile-label">إجمالي الأرباح</div>
+      <div class="hs-tile-value">{{ s.totalProfit.amount | currencyAr: true }}</div>
+      <div class="hs-tile-meta">منذ البداية</div>
+    </div>
+
+    <div class="hs-tile hs-tile--teal">
+      <div class="hs-tile-label">الأرباح الموزعة</div>
+      <div class="hs-tile-value">{{ s.distributedProfit.amount | currencyAr: true }}</div>
+      <div class="hs-tile-meta">منذ البداية</div>
+    </div>
+
+    <div class="hs-tile hs-tile--purple">
+      <div class="hs-tile-label">عمولة المناديب</div>
+      <div class="hs-tile-value">{{ s.representativeCommission.amount | currencyAr: true }}</div>
+      <div class="hs-tile-meta">منفصلة عن الأرباح الموزعة</div>
+    </div>
+
+    <div class="hs-tile hs-tile--green">
+      <div class="hs-tile-label">إجمالي الإيرادات</div>
+      <div class="hs-tile-value">{{ s.totalRevenues.amount | currencyAr: true }}</div>
+      <div class="hs-tile-meta">منذ البداية</div>
+    </div>
+
+    <div class="hs-tile hs-tile--red">
+      <div class="hs-tile-label">إجمالي المصروفات</div>
+      <div class="hs-tile-value">{{ s.totalExpenses.amount | currencyAr: true }}</div>
+      <div class="hs-tile-meta">منذ البداية</div>
+    </div>
+
+    <div class="hs-tile hs-tile--green">
+      <div class="hs-tile-label">معدل التحصيل</div>
+      <div class="hs-tile-value">{{ s.collectionRate.percent | number: '1.0-0' }}%</div>
+      <div class="hs-tile-meta">المستهدف {{ s.collectionRate.targetPercent | number: '1.0-0' }}%</div>
+    </div>
+
+    <div class="hs-tile hs-tile--red">
+      <div class="hs-tile-label">المتأخرون</div>
+      <div class="hs-tile-value">{{ s.delinquent.clientsCount | number }}</div>
+      <div class="hs-tile-meta">بقيمة {{ s.delinquent.amount | currencyAr: true }}</div>
+    </div>
+
+    <div class="hs-tile hs-tile--green">
+      <div class="hs-tile-label">تقييم ممتاز</div>
+      <div class="hs-tile-value">{{ s.excellentRating.clientsCount | number }}</div>
+      <div class="hs-tile-meta">{{ s.excellentRating.percent | number: '1.0-0' }}% من العملاء</div>
+    </div>
+
+    <div class="hs-tile hs-tile--orange">
+      <div class="hs-tile-label">مخزون منخفض</div>
+      <div class="hs-tile-value">{{ s.lowStock.productsCount | number }}</div>
+      <div class="hs-tile-meta">منتج بحاجة لإعادة الطلب</div>
+    </div>
+
+    <div class="hs-tile hs-tile--purple">
+      <div class="hs-tile-label">ضريبة الربع</div>
+      <div class="hs-tile-value">{{ s.quarterTax.amount | currencyAr: true }}</div>
+      <div class="hs-tile-meta">المستحق الحالي</div>
+    </div>
+  </div>
+  } @else if (!summaryLoading()) {
     <div class="hs-empty">تعذّر تحميل ملخّص اللوحة.</div>
     }
 </section>

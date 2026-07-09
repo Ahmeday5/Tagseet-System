@@ -92,7 +92,20 @@
             <td style="color:var(--bl);font-weight:700">{{ v.balanceAfter | currencyAr: true }}</td>
             <td class="trf-notes" [title]="v.notes ?? ''">{{ v.notes || '—' }}</td>
             <td>
-              <button type="button" class="btn btn-sm" (click)="openEditVoucher(v)">تعديل</button>
+              <div class="d-flex gap-1">
+                <button type="button" class="btn btn-sm" (click)="openEditVoucher(v)">تعديل</button>
+                <button
+                  type="button"
+                  class="btn btn-sm btn-re"
+                  [disabled]="deletingId() === v.id"
+                  (click)="confirmDeleteVoucher(v)"
+                >
+                  @if (deletingId() === v.id) {
+                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                  }
+                  <span>حذف</span>
+                </button>
+              </div>
             </td>
           </tr>
         } @empty {

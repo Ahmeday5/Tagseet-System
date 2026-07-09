@@ -211,6 +211,13 @@
       </div>
       <div class="st-d-block-s">#{{ d.contract.id }}</div>
     </div>
+    @if (d.supplier; as sup) {
+    <div class="st-d-block">
+      <div class="st-d-block-l">المورد</div>
+      <div class="st-d-block-v">{{ sup.fullName }}</div>
+      <div class="st-d-block-s">📱 {{ sup.phoneNumber }} — مستحق: {{ sup.amountOwed | currencyAr: true }}</div>
+    </div>
+    }
   </div>
 
   <!-- Summary cards -->
@@ -417,6 +424,11 @@
         <option value="STCPay">STC Pay</option>
         <option value="ApplePay">Apple Pay</option>
       </select>
+    </div>
+    <div class="col-12">
+      <label class="form-label">ملاحظات (اختياري)</label>
+      <textarea class="form-control" rows="2" placeholder="أي ملاحظات إضافية على الدفعة..."
+        [ngModel]="payForm().notes" (ngModelChange)="updatePayForm('notes', $event)"></textarea>
     </div>
   </div>
 

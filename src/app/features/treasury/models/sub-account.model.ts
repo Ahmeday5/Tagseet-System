@@ -100,3 +100,43 @@ export interface SubAccountStatement {
   account: SubAccount;
   vouchers: PagedResponse<SubAccountVoucher>;
 }
+
+/* ════════════════════════════════════════════════════════════════
+   Sub-account transfers (money movements between two sub-accounts)
+   ════════════════════════════════════════════════════════════════ */
+
+/** Row shape returned by `GET /dashboard/sub-accounts/transfers`. */
+export interface SubAccountTransfer {
+  id: number;
+  fromSubAccountId: number;
+  fromSubAccountName: string;
+  toSubAccountId: number;
+  toSubAccountName: string;
+  amount: number;
+  /** `yyyy-MM-dd` calendar date. */
+  transferDate: string;
+  notes: string | null;
+  createdAt: string;
+}
+
+/** POST /dashboard/sub-accounts/transfers body. */
+export interface CreateSubAccountTransferPayload {
+  fromSubAccountId: number;
+  toSubAccountId: number;
+  amount: number;
+  /** `yyyy-MM-dd` — the backend expects a calendar date, not a timestamp. */
+  transferDate: string;
+  notes: string;
+}
+
+/** Query parameters for the paginated sub-account transfers list. */
+export interface SubAccountTransfersQuery {
+  pageIndex?: number;
+  pageSize?: number;
+  fromSubAccountId?: number | '';
+  toSubAccountId?: number | '';
+  /** `yyyy-MM-dd` — inclusive lower bound. */
+  from?: string;
+  /** `yyyy-MM-dd` — inclusive upper bound. */
+  to?: string;
+}

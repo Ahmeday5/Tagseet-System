@@ -75,12 +75,12 @@ export class InvoiceNewComponent implements OnInit {
 
   /**
    * The product *detail* endpoint (`/dashboard/products/{id}`) is gated by
-   * `Suppliers.View`. A Representative can still pick products from the lookup
+   * `Products.View`. A Representative can still pick products from the lookup
    * (`/products/lookup`, id + name only), so calling getById to prefill the
    * price would 403 for them — we gate the prefill on this flag instead.
    */
   private readonly canReadProductDetails = computed(() =>
-    this.auth.hasPermission(PERMISSIONS.suppliersView),
+    this.auth.hasPermission(PERMISSIONS.productsView),
   );
 
   /** Set when the route carries an `:id` — switches the form to edit mode. */

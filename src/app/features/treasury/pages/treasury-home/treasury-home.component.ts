@@ -242,9 +242,9 @@ export class TreasuryHomeComponent implements OnInit {
     onInvalidate(this.cache, 'treasur', () => {
       this.refresh();
       this.loadSubTreasuries(true);
+      this.fetchOperations(this.operationsTrigger(), true);
       if (this.isRep()) return;
       this.fetchTransfers(this.transfersTrigger(), true);
-      this.fetchOperations(this.operationsTrigger(), true);
       this.fetchMonthlyProfits(this.selectedYear(), true);
     });
 
@@ -260,9 +260,9 @@ export class TreasuryHomeComponent implements OnInit {
       );
     });
 
-    // Refetch operations on any filter / page change.
+    // Refetch operations on any filter / page change — reps can see their
+    // own recorded operations too.
     effect(() => {
-      if (this.isRep()) return;
       const trigger = this.operationsTrigger();
       if (this.operationsDebounceTimer) {
         clearTimeout(this.operationsDebounceTimer);
@@ -290,9 +290,9 @@ export class TreasuryHomeComponent implements OnInit {
   ngOnInit(): void {
     this.loadTreasuries();
     this.loadSubTreasuries(false);
+    this.loadOperations();
     if (this.isRep()) return;
     this.loadRepresentatives();
-    this.loadOperations();
     this.loadMonthlyProfits();
   }
 
