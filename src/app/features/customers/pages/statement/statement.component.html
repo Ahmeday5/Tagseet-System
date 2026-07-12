@@ -103,8 +103,8 @@
             <app-badge [text]="row.isDirectContract ? 'مباشر' : 'عادي'" [type]="row.isDirectContract ? 'warn' : 'info'">
             </app-badge>
           </td>
-          <td class="st-prod">{{ row.productName || '—' }}</td>
-          <td>{{ row.quantity }}</td>
+          <td class="st-prod">{{ rowProductLabel(row) }}</td>
+          <td>{{ rowQuantityTotal(row) }}</td>
           <td>{{ formatDate(row.dateOfSale) }}</td>
           <td>{{ row.purchasePrice | currencyAr }}</td>
           <td>{{ row.cashPrice | currencyAr }}</td>
@@ -197,7 +197,7 @@
     </div>
     <div class="st-d-block">
       <div class="st-d-block-l">المنتج</div>
-      <div class="st-d-block-v">{{ d.items.length > 0 ? d.items[0].productName : '—' }}</div>
+      <div class="st-d-block-v">{{ d.items.length > 0 ? (d.items[0].productName || '—') : '—' }}</div>
       <div class="st-d-block-s">
         @if (d.items.length > 1) { {{ d.items.length }} منتجات }
         @else if (d.items.length === 1) { الكمية: {{ d.items[0].quantity }} }
@@ -206,9 +206,6 @@
     <div class="st-d-block">
       <div class="st-d-block-l">المخزن</div>
       <div class="st-d-block-v">{{ d.items.length > 0 ? (d.items[0].warehouseName || '—') : '—' }}</div>
-      <div class="st-d-block-s">
-        المندوب: {{ d.representative?.name ?? '—' }}
-      </div>
     </div>
     <div class="st-d-block">
       <div class="st-d-block-l">حالة العقد</div>
@@ -217,6 +214,15 @@
       </div>
       <div class="st-d-block-s">#{{ d.contract.id }}</div>
     </div>
+    @if (d.representative; as rep) {
+    <div class="st-d-block">
+      <div class="st-d-block-l">المندوب</div>
+      <div class="st-d-block-v">{{ rep.fullName }}</div>
+      <div class="st-d-block-s">
+        📱 {{ rep.phoneNumber }} — عمولة: {{ d.contract.representativeCommission | currencyAr: true }}
+      </div>
+    </div>
+    }
     @if (d.supplier; as sup) {
     <div class="st-d-block">
       <div class="st-d-block-l">المورد</div>
@@ -225,6 +231,35 @@
     </div>
     }
   </div>
+
+  <!-- Products (multi-item contracts) -->
+  @if (d.items.length > 1) {
+  <div class="st-d-section">المنتجات ({{ d.items.length }})</div>
+  <div class="tw">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>المنتج</th>
+          <th>المخزن</th>
+          <th>الكمية</th>
+          <th>سعر الشراء</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (item of d.items; track item.id ?? $index; let i = $index) {
+        <tr>
+          <td>{{ i + 1 }}</td>
+          <td>{{ item.productName || '—' }}</td>
+          <td>{{ item.warehouseName || '—' }}</td>
+          <td>{{ item.quantity }}</td>
+          <td>{{ item.purchasePrice | currencyAr : true }}</td>
+        </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  }
 
   <!-- Summary cards -->
   <div class="st-d-summary">
@@ -366,8 +401,8 @@
           <td>{{ formatDate(p.date) }}</td>
           <td style="font-weight:700;color:var(--gr)">{{ p.amount | currencyAr : true }}</td>
           <td>{{ paymentKindLabel(p.kind) }}</td>
-          <td class="st-notes" [class.st-notes-empty]="!p.notes?.trim()" [title]="p.notes ?? ''">
-            {{ p.notes || '—' }}
+          <td class="st-notes" [class.st-notes-empty]="!p.notes?.trim()" [title]="paymentNoteText(p.notes)">
+            {{ paymentNoteText(p.notes) }}
           </td>
           <td>
             <button type="button" class="btn btn-sm" (click)="openEditVoucher(p)">تعديل</button>
@@ -391,7 +426,7 @@
 
   @if (details(); as d) {
   <div class="st-pay-intro">
-    <span>العقد #{{ d.contract.id }} — {{ d.items[0].productName }}</span>
+    <span>العقد #{{ d.contract.id }} — {{ d.items.length > 0 ? (d.items[0].productName || '—') : '—' }}</span>
     <span class="st-pay-intro-sep">|</span>
     <span>المتبقي: <strong style="color:var(--re)">
         {{ d.summary.totalRemaining | currencyAr : true }}

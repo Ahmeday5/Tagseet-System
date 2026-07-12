@@ -48,6 +48,7 @@ import { onInvalidate } from '../../../../core/utils/auto-refresh.util';
 import { todayIsoDate } from '../../../../shared/utils/date-iso.util';
 import { PrintService } from '../../../../core/services/print.service';
 import { fetchAllPages } from '../../../../core/utils/api-list.util';
+import { translatePaymentNote } from '../../../../core/utils/payment-note.util';
 import { DirectContractModalComponent } from '../../components/direct-contract-modal/direct-contract-modal.component';
 
 const DEFAULT_PAGE_SIZE = 10;
@@ -341,13 +342,13 @@ export class StatementComponent {
               format: (v) => `#${v}`,
             },
             {
-              key: 'productName',
+              key: (row) => this.rowProductLabel(row),
               header: 'المنتج',
               align: 'start',
               bold: true,
             },
             {
-              key: 'quantity',
+              key: (row) => this.rowQuantityTotal(row),
               header: 'الكمية',
               align: 'center',
               format: 'number',
@@ -749,6 +750,21 @@ export class StatementComponent {
     return trimmed ? trimmed : 'لا يوجد ملاحظات';
   }
 
+  /** First item's product name, with a "+N" suffix when the contract has more than one line. */
+  protected rowProductLabel(row: ClientContractRow): string {
+    const items = row.items ?? [];
+    if (items.length === 0) return '—';
+    const first = items[0].productName || '—';
+    return items.length > 1 ? `${first} (+${items.length - 1})` : first;
+  }
+
+  /** Total quantity across every item line on the contract. */
+  protected rowQuantityTotal(row: ClientContractRow): number {
+    const items = row.items ?? [];
+    if (items.length === 0) return row.quantity ?? 0;
+    return items.reduce((sum, item) => sum + (item.quantity ?? 0), 0);
+  }
+
   protected freqLabel(freq: string | null): string {
     if (!freq) return '—';
     const map: Record<string, string> = {
@@ -823,6 +839,15 @@ export class StatementComponent {
       Overpayment: 'دفعة زائدة',
     };
     return map[kind] ?? kind;
+  }
+
+  /**
+   * The backend stamps `"Payment Method: cash."` (English) onto every
+   * voucher note — translate that fragment to Arabic while keeping any
+   * other free-text notes as-is.
+   */
+  protected paymentNoteText(notes: string | null): string {
+    return translatePaymentNote(notes) || '—';
   }
 
   protected formatDate(value: string | null | undefined): string {

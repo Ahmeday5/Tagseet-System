@@ -1,15 +1,28 @@
 import { PagedResponse } from '../../../core/models/api-response.model';
 
+/** Single product/service line nested inside a `ClientContractRow`. */
+export interface ClientContractRowItem {
+  /** `null` for direct-contract items that are not linked to an inventory product. */
+  productId: number | null;
+  productName: string | null;
+  quantity: number;
+  purchasePrice: number;
+}
+
 /**
  * Wire shape of a single contract row returned by
  * `GET /dashboard/clients/{id}/contracts?PageIndex=&PageSize=`.
+ *
+ * A contract may carry MULTIPLE product/service lines — see `items`. The
+ * top-level `quantity`/`purchasePrice` mirror the first item only (kept for
+ * contracts that always have exactly one line); prefer `items` for anything
+ * that must account for every line.
  */
 export interface ClientContractRow {
   id: number;
   isDirectContract: boolean;
-  /** `null` for direct contracts that are not linked to an inventory product. */
-  productId: number | null;
-  productName: string | null;
+  /** Every product/service line on this contract — one or more. */
+  items: ClientContractRowItem[];
   quantity: number;
   dateOfSale: string;
   purchasePrice: number;
@@ -56,6 +69,8 @@ export interface ClientContractsQuery {
 
 /** Single item line returned inside `ContractDetails`. */
 export interface ContractDetailsItem {
+  /** Item-line DB id — present when the API exposes it; `undefined` otherwise. */
+  id?: number;
   productId: number | null;
   productName: string;
   warehouseId: number | null;
@@ -143,7 +158,8 @@ export interface ContractDetailsWarehouse {
 
 export interface ContractDetailsRepresentative {
   id: number;
-  name: string;
+  fullName: string;
+  phoneNumber: string;
 }
 
 export interface ContractDetailsSummary {
