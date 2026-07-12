@@ -335,7 +335,7 @@ body {
   border-radius: var(--rl);
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
-  touch-action: pan-x;
+  overscroll-behavior-x: contain;
   margin-bottom: 11px;
   background: var(--bg2);
 
@@ -547,6 +547,8 @@ body {
   max-width: 560px;
   max-height: 90vh;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
   animation: app-modal-pop 0.18s ease-out;
 

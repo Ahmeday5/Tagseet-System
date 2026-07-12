@@ -360,6 +360,8 @@
   border: 1px solid var(--brd2);
   border-radius: var(--r);
   overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
   background: var(--bg2);
 }
 
