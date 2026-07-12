@@ -8,6 +8,7 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
+import { map } from 'rxjs/operators';
 
 import { CustomersService } from '../../services/customers.service';
 import { InstallmentsService } from '../../services/installments.service';
@@ -17,6 +18,7 @@ import { VouchersService } from '../../../vouchers/services/vouchers.service';
 import { DialogService } from '../../../../core/services/dialog.service';
 import {
   ClientContractRow,
+  ClientContractsSummary,
   ContractDetails,
   ContractInstallmentRow,
   ContractInstallmentStatus,
@@ -116,6 +118,13 @@ export class StatementComponent {
   protected readonly pageSize = signal(DEFAULT_PAGE_SIZE);
   protected readonly count = signal(0);
   protected readonly totalPages = signal(0);
+
+  // ── server-computed totals across ALL of the client's contracts ────
+  protected readonly contractsSummary = signal<ClientContractsSummary>({
+    totalContractsValue: 0,
+    totalRemaining: 0,
+    totalOverdue: 0,
+  });
 
   // ── details modal ──────────────────────────────────────────────────
   protected readonly detailsOpen = signal(false);
@@ -232,16 +241,28 @@ export class StatementComponent {
         });
 
     stream$.subscribe({
-      next: (page) => {
-        this.contracts.set(page?.data ?? []);
-        this.count.set(page?.count ?? 0);
-        this.totalPages.set(page?.totalPages ?? 0);
+      next: (res) => {
+        this.contracts.set(res?.items?.data ?? []);
+        this.count.set(res?.items?.count ?? 0);
+        this.totalPages.set(res?.items?.totalPages ?? 0);
+        this.contractsSummary.set(
+          res?.summary ?? {
+            totalContractsValue: 0,
+            totalRemaining: 0,
+            totalOverdue: 0,
+          },
+        );
         this.contractsLoading.set(false);
       },
       error: (err: ApiError) => {
         this.contracts.set([]);
         this.count.set(0);
         this.totalPages.set(0);
+        this.contractsSummary.set({
+          totalContractsValue: 0,
+          totalRemaining: 0,
+          totalOverdue: 0,
+        });
         this.contractsLoading.set(false);
         this.toast.error(apiErrorToMessage(err, 'تعذّر تحميل عقود العميل'));
       },
@@ -284,10 +305,9 @@ export class StatementComponent {
     this.isPrinting.set(true);
 
     fetchAllPages<ClientContractRow>((pageIndex, pageSize) =>
-      this.customersService.refreshClientContracts(client.id, {
-        pageIndex,
-        pageSize,
-      }),
+      this.customersService
+        .refreshClientContracts(client.id, { pageIndex, pageSize })
+        .pipe(map((res) => res.items)),
     ).subscribe({
       next: (rows) => {
         this.isPrinting.set(false);
@@ -620,7 +640,17 @@ export class StatementComponent {
     this.activeContractId.set(row.id);
     this.details.set(null);
     this.detailsOpen.set(true);
-    this.reloadDetails(row.id);
+    this.detailsLoading.set(true);
+    this.contractsService.getDetails(row.id).subscribe({
+      next: (d) => {
+        this.details.set(d);
+        this.detailsLoading.set(false);
+      },
+      error: (err: ApiError) => {
+        this.detailsLoading.set(false);
+        this.toast.error(apiErrorToMessage(err, 'تعذّر تحميل تفاصيل العقد'));
+      },
+    });
   }
 
   protected closeDetails(): void {
@@ -764,6 +794,7 @@ export class StatementComponent {
       Partial: 'جزئي',
       Upcoming: 'قادم',
       Overdue: 'متأخر',
+      Late: 'متأخر',
       Unpaid: 'غير مسدد',
     };
     return map[s] ?? s;
@@ -777,6 +808,7 @@ export class StatementComponent {
       case 'Partial':
         return 'warn';
       case 'Overdue':
+      case 'Late':
         return 'bad';
       case 'Upcoming':
       default:

@@ -12,8 +12,9 @@ import {
   UpdateClientPayload,
 } from '../models/dashboard-client.model';
 import {
-  ClientContractsPage,
+  ClientContractRow,
   ClientContractsQuery,
+  ClientContractsResponse,
 } from '../models/client-statement.model';
 import { ApiService } from '../../../core/services/api.service';
 import { API_ENDPOINTS } from '../../../core/constants/api-endpoints.const';
@@ -177,33 +178,44 @@ export class CustomersService {
   getClientContracts(
     clientId: number,
     query: ClientContractsQuery = {},
-  ): Observable<ClientContractsPage> {
-    return this.api.get<ClientContractsPage>(
-      API_ENDPOINTS.clients.contracts(clientId),
-      {
+  ): Observable<ClientContractsResponse> {
+    return this.api
+      .get<ClientContractsResponse>(API_ENDPOINTS.clients.contracts(clientId), {
         params: {
           PageIndex: query.pageIndex ?? 1,
           PageSize: query.pageSize ?? 10,
         },
         context: withCache({ ttlMs: CLIENTS_TTL_MS }),
-      },
-    );
+      })
+      .pipe(map((res) => this.normalizeClientContracts(res)));
   }
 
   refreshClientContracts(
     clientId: number,
     query: ClientContractsQuery = {},
-  ): Observable<ClientContractsPage> {
-    return this.api.get<ClientContractsPage>(
-      API_ENDPOINTS.clients.contracts(clientId),
-      {
+  ): Observable<ClientContractsResponse> {
+    return this.api
+      .get<ClientContractsResponse>(API_ENDPOINTS.clients.contracts(clientId), {
         params: {
           PageIndex: query.pageIndex ?? 1,
           PageSize: query.pageSize ?? 10,
         },
         context: withCacheBypass(withCache({ ttlMs: CLIENTS_TTL_MS })),
+      })
+      .pipe(map((res) => this.normalizeClientContracts(res)));
+  }
+
+  private normalizeClientContracts(
+    res: ClientContractsResponse | null | undefined,
+  ): ClientContractsResponse {
+    return {
+      summary: {
+        totalContractsValue: res?.summary?.totalContractsValue ?? 0,
+        totalRemaining: res?.summary?.totalRemaining ?? 0,
+        totalOverdue: res?.summary?.totalOverdue ?? 0,
       },
-    );
+      items: asPaged<ClientContractRow>(res?.items),
+    };
   }
 
   recordPayment(_data: {

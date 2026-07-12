@@ -335,6 +335,7 @@ body {
   border-radius: var(--rl);
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+  touch-action: pan-x;
   margin-bottom: 11px;
   background: var(--bg2);
 
@@ -343,6 +344,10 @@ body {
     margin-bottom: 0;
     white-space: nowrap;
     width: 100%;
+
+    button {
+      touch-action: manipulation;
+    }
 
     thead th {
       padding: 8px 10px;

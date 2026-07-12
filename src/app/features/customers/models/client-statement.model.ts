@@ -9,7 +9,7 @@ export interface ClientContractRow {
   isDirectContract: boolean;
   /** `null` for direct contracts that are not linked to an inventory product. */
   productId: number | null;
-  productName: string;
+  productName: string | null;
   quantity: number;
   dateOfSale: string;
   purchasePrice: number;
@@ -29,7 +29,25 @@ export interface ClientContractRow {
   treasuryId: number | null;
 }
 
-export type ClientContractsPage = PagedResponse<ClientContractRow>;
+/**
+ * Server-computed totals across ALL of the client's contracts (not just the
+ * current page) — replaces the frontend-side summation that used to run
+ * over the paginated rows.
+ */
+export interface ClientContractsSummary {
+  totalContractsValue: number;
+  totalRemaining: number;
+  totalOverdue: number;
+}
+
+/**
+ * Wire shape of `GET /dashboard/clients/{id}/contracts?PageIndex=&PageSize=`.
+ * `data` nests both the client-wide `summary` and the paged `items`.
+ */
+export interface ClientContractsResponse {
+  summary: ClientContractsSummary;
+  items: PagedResponse<ClientContractRow>;
+}
 
 export interface ClientContractsQuery {
   pageIndex?: number;

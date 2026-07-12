@@ -38,13 +38,19 @@
     <div class="st-stat">
       <span class="st-stat-l">إجمالي الذمم</span>
       <span class="st-stat-v">
-        {{ cli.totalContractAmount | currencyAr }}
+        {{ contractsSummary().totalContractsValue | currencyAr }}
       </span>
     </div>
     <div class="st-stat">
       <span class="st-stat-l">المتبقي</span>
       <span class="st-stat-v">
-        {{ cli.remainingAmount | currencyAr }}
+        {{ contractsSummary().totalRemaining | currencyAr }}
+      </span>
+    </div>
+    <div class="st-stat">
+      <span class="st-stat-l">متأخر</span>
+      <span class="st-stat-v" [class.st-stat-v-overdue]="contractsSummary().totalOverdue > 0">
+        {{ contractsSummary().totalOverdue | currencyAr }}
       </span>
     </div>
   </div>
@@ -97,7 +103,7 @@
             <app-badge [text]="row.isDirectContract ? 'مباشر' : 'عادي'" [type]="row.isDirectContract ? 'warn' : 'info'">
             </app-badge>
           </td>
-          <td class="st-prod">{{ row.productName }}</td>
+          <td class="st-prod">{{ row.productName || '—' }}</td>
           <td>{{ row.quantity }}</td>
           <td>{{ formatDate(row.dateOfSale) }}</td>
           <td>{{ row.purchasePrice | currencyAr }}</td>
@@ -364,7 +370,7 @@
             {{ p.notes || '—' }}
           </td>
           <td>
-            <button class="btn btn-sm" (click)="openEditVoucher(p)">تعديل</button>
+            <button type="button" class="btn btn-sm" (click)="openEditVoucher(p)">تعديل</button>
           </td>
         </tr>
         }

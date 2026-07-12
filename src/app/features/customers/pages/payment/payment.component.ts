@@ -178,7 +178,7 @@ export class PaymentComponent {
     this.customersService
       .getClientContracts(clientId, { pageIndex: 1, pageSize: CONTRACT_PAGE_SIZE })
       .subscribe({
-        next: (page) => this.contracts.set(page?.data ?? []),
+        next: (res) => this.contracts.set(res?.items?.data ?? []),
         error: () => this.contracts.set([]),
       });
   }
@@ -277,7 +277,7 @@ export class PaymentComponent {
   }
 
   protected contractOptionLabel(c: ClientContractRow): string {
-    return `عقد #${c.id} — ${c.productName} (${c.installmentsCount} قسط)`;
+    return `عقد #${c.id} — ${c.productName || '—'} (${c.installmentsCount} قسط)`;
   }
 
   // ─────────── internals ───────────

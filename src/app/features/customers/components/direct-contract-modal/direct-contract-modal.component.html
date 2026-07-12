@@ -298,7 +298,7 @@
     <button
       type="button"
       class="btn btn-bl d-inline-flex align-items-center gap-2"
-      [disabled]="submitting() || loadingLookups() || loadingDetails()"
+      [disabled]="submitting() || loadingLookups() || loadingDetails() || form.invalid"
       (click)="onSubmit()"
     >
       @if (submitting()) {
