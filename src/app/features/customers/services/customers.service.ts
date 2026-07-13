@@ -3,6 +3,7 @@ import { Observable, of } from 'rxjs';
 import { delay, map } from 'rxjs/operators';
 import { asPaged, fetchAllPages } from '../../../core/utils/api-list.util';
 import {
+  ChangeClientPasswordPayload,
   ClientProfileResponse,
   CreateClientPayload,
   CreatedClient,
@@ -50,7 +51,7 @@ export interface PaginatedResponse<T> {
 @Injectable({ providedIn: 'root' })
 export class CustomersService {
   private readonly api = inject(ApiService);
-  
+
   listDashboard(
     query: DashboardClientsQuery = {},
   ): Observable<DashboardClientsResponse> {
@@ -160,6 +161,22 @@ export class CustomersService {
       phoneNumber: payload.phoneNumber.trim(),
       whatsappNumber: payload.whatsappNumber.trim(),
     };
+  }
+
+  /**
+   * Sets a new password for the client's linked AppUser account
+   * (POST /dashboard/clients/{id}/password). Does not touch the clients
+   * list cache — the password isn't rendered anywhere in it.
+   */
+  changeClientPassword(
+    id: number,
+    payload: ChangeClientPasswordPayload,
+  ): Observable<void> {
+    return this.api.put<void>(
+      API_ENDPOINTS.clients.password(id),
+      payload,
+      { context: withInlineHandling() },
+    );
   }
 
   private toClientsParams(

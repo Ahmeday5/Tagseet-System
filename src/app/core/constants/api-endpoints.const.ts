@@ -140,6 +140,8 @@ export const API_ENDPOINTS = {
     byId: (id: number) => `dashboard/clients/${id}`,
     topThisMonth: 'dashboard/clients/top-this-month',
     contracts: (id: number) => `dashboard/clients/${id}/contracts`,
+    /** POST: sets a new password for the client's linked AppUser account. */
+    password: (id: number) => `dashboard/clients/${id}/password`,
   },
   inventory: {
     alerts: 'dashboard/inventory/alerts',

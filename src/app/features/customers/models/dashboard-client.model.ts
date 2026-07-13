@@ -137,3 +137,8 @@ export interface ClientProfileResponse {
   totalContractsCount: number;
   overdueContractsCount: number;
 }
+
+/** POST /dashboard/clients/{id}/password body. */
+export interface ChangeClientPasswordPayload {
+  newPassword: string;
+}

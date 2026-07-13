@@ -207,6 +207,20 @@
                 (click)="openWhatsApp(c.phoneNumber)">
                 <i class="fa-brands fa-whatsapp"></i>
               </button>
+              <button
+                *appHasPermission="PERMS.clientsFullAccess"
+                type="button"
+                class="btn btn-sm btn-outline-secondary"
+                title="تغيير كلمة المرور"
+                aria-label="تغيير كلمة مرور العميل"
+                (click)="openPasswordModal(c)"
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                </svg>
+              </button>
             </div>
           </td>
         </tr>
@@ -279,4 +293,11 @@
   [open]="showProfile()"
   [clientId]="profileClientId()"
   (closed)="closeProfile()"
+/>
+
+<app-client-password-modal
+  [open]="showPassword()"
+  [client]="passwordTarget()"
+  (closed)="closePasswordModal()"
+  (saved)="closePasswordModal()"
 />

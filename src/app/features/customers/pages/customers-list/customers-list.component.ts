@@ -27,6 +27,7 @@ import { HasPermissionDirective } from '../../../../shared/directives/has-permis
 import { ClientFormModalComponent } from '../../components/client-form-modal/client-form-modal.component';
 import { DirectContractModalComponent } from '../../components/direct-contract-modal/direct-contract-modal.component';
 import { ClientProfileModalComponent } from '../../components/client-profile-modal/client-profile-modal.component';
+import { ClientPasswordModalComponent } from '../../components/client-password-modal/client-password-modal.component';
 import { PERMISSIONS } from '../../../../core/constants/permissions.const';
 import { PrintService } from '../../../../core/services/print.service';
 import { map } from 'rxjs/operators';
@@ -47,6 +48,7 @@ const SEARCH_DEBOUNCE_MS = 300;
     ClientFormModalComponent,
     DirectContractModalComponent,
     ClientProfileModalComponent,
+    ClientPasswordModalComponent,
   ],
   templateUrl: './customers-list.component.html',
   styleUrl: './customers-list.component.scss',
@@ -88,6 +90,10 @@ export class CustomersListComponent {
   // ── client profile modal ──
   protected readonly showProfile = signal(false);
   protected readonly profileClientId = signal<number | null>(null);
+
+  // ── change password modal ──
+  protected readonly showPassword = signal(false);
+  protected readonly passwordTarget = signal<DashboardClient | null>(null);
 
   // ── derived ──
   protected readonly hasFilters = computed(
@@ -286,6 +292,16 @@ export class CustomersListComponent {
   protected closeProfile(): void {
     this.showProfile.set(false);
     this.profileClientId.set(null);
+  }
+
+  protected openPasswordModal(client: DashboardClient): void {
+    this.passwordTarget.set(client);
+    this.showPassword.set(true);
+  }
+
+  protected closePasswordModal(): void {
+    this.showPassword.set(false);
+    this.passwordTarget.set(null);
   }
 
   protected onDirectContractCreated(): void {
