@@ -106,6 +106,8 @@ export interface RepresentativeSubTreasury {
   accumulatedCommission: number;
   paidCommission: number;
   outstandingCommission: number;
+  revenueCommission: number;
+  expenseCommission: number;
 }
 
 // ── Account statement (admin by id / representative "me") ───────────────
@@ -130,6 +132,8 @@ export interface RepStatementSummary {
   totalCommission: number;
   paidCommission: number;
   outstandingCommission: number;
+  revenueCommission: number;
+  expenseCommission: number;
   firstContractDate: string | null;
   lastContractDate: string | null;
 }
@@ -139,8 +143,8 @@ export interface RepStatementContractRow {
   contractId: number;
   clientId: number;
   clientName: string;
-  productId: number;
-  productName: string;
+  productId: number | null;
+  productName: string | null;
   quantity: number;
   cashPrice: number;
   saleAmount: number;

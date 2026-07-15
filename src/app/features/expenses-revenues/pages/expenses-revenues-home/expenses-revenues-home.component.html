@@ -47,6 +47,16 @@
           (ngModelChange)="onExpensesTreasuryChange($event)"
         />
       </div>
+      <div class="erx-filter-field">
+        <app-searchable-select
+          [ngModel]="expensesRepresentativeFilter()"
+          [ngModelOptions]="{ standalone: true }"
+          [options]="representativeOptions()"
+          placeholder="كل المناديب"
+          searchPlaceholder="ابحث باسم المندوب…"
+          (ngModelChange)="onExpensesRepresentativeChange($event)"
+        />
+      </div>
       <div class="erx-date-field">
         <label class="erx-date-label">من تاريخ</label>
         <input
@@ -174,6 +184,16 @@
           placeholder="كل الخزائن"
           searchPlaceholder="ابحث باسم الخزينة…"
           (ngModelChange)="onRevenuesTreasuryChange($event)"
+        />
+      </div>
+      <div class="erx-filter-field">
+        <app-searchable-select
+          [ngModel]="revenuesRepresentativeFilter()"
+          [ngModelOptions]="{ standalone: true }"
+          [options]="representativeOptions()"
+          placeholder="كل المناديب"
+          searchPlaceholder="ابحث باسم المندوب…"
+          (ngModelChange)="onRevenuesRepresentativeChange($event)"
         />
       </div>
       <div class="erx-date-field">

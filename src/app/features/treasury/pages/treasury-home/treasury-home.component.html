@@ -306,6 +306,8 @@
                 <th>العمولة المتراكمة</th>
                 <th>المدفوع</th>
                 <th>المتبقي</th>
+                <th>عمولة الإيرادات</th>
+                <th>عمولة المصروفات</th>
                 <th>آخر نشاط</th>
               </tr>
             </thead>
@@ -325,13 +327,15 @@
                 <td style="color:var(--re,#c0392b);font-weight:600">
                   {{ s.outstandingCommission | currencyAr: true }}
                 </td>
+                <td>{{ s.revenueCommission | currencyAr: true }}</td>
+                <td>{{ s.expenseCommission | currencyAr: true }}</td>
                 <td class="trf-date">
                   {{ s.lastActivityDate ? (s.lastActivityDate | dateAr: 'short') : '—' }}
                 </td>
               </tr>
               } @empty {
               <tr>
-                <td colspan="10" class="text-center py-4" style="color:var(--txt3);font-size:12px">
+                <td colspan="12" class="text-center py-4" style="color:var(--txt3);font-size:12px">
                   @if (subTreasuriesLoading()) {
                   جاري التحميل...
                   } @else {
@@ -366,6 +370,13 @@
                 <td style="color:var(--re,#c0392b);font-weight:700">
                   {{ subTreasuriesTotalOutstanding() | currencyAr: true }}
                 </td>
+                <td style="font-weight:700">
+                  {{ subTreasuriesTotalRevenueCommission() | currencyAr: true }}
+                </td>
+                <td style="font-weight:700">
+                  {{ subTreasuriesTotalExpenseCommission() | currencyAr: true }}
+                </td>
+                <td></td>
               </tr>
             </tfoot>
             }

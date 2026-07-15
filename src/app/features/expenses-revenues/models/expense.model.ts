@@ -38,6 +38,7 @@ export interface ExpensesQuery {
   pageIndex?: number;
   pageSize?: number;
   treasuryId?: number | '';
+  representativeId?: number | '';
   /** `yyyy-MM-dd` — inclusive lower bound. */
   from?: string;
   /** `yyyy-MM-dd` — inclusive upper bound. */

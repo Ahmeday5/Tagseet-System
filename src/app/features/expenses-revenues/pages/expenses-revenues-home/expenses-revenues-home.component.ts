@@ -79,6 +79,7 @@ export class ExpensesRevenuesHomeComponent {
   protected readonly expensesLoading = signal(false);
   protected readonly expensesTotal = signal(0);
   protected readonly expensesTreasuryFilter = signal<number | ''>('');
+  protected readonly expensesRepresentativeFilter = signal<number | ''>('');
   protected readonly expensesFrom = signal('');
   protected readonly expensesTo = signal('');
   protected readonly expensesPageIndex = signal(1);
@@ -95,6 +96,7 @@ export class ExpensesRevenuesHomeComponent {
   protected readonly revenuesLoading = signal(false);
   protected readonly revenuesTotal = signal(0);
   protected readonly revenuesTreasuryFilter = signal<number | ''>('');
+  protected readonly revenuesRepresentativeFilter = signal<number | ''>('');
   protected readonly revenuesFrom = signal('');
   protected readonly revenuesTo = signal('');
   protected readonly revenuesPageIndex = signal(1);
@@ -107,14 +109,15 @@ export class ExpensesRevenuesHomeComponent {
   protected readonly deletingRevenueId = signal<number | null>(null);
 
   protected readonly expensesHasFilters = computed(
-    () => !!this.expensesTreasuryFilter() || !!this.expensesFrom() || !!this.expensesTo(),
+    () => !!this.expensesTreasuryFilter() || !!this.expensesRepresentativeFilter() || !!this.expensesFrom() || !!this.expensesTo(),
   );
   protected readonly revenuesHasFilters = computed(
-    () => !!this.revenuesTreasuryFilter() || !!this.revenuesFrom() || !!this.revenuesTo(),
+    () => !!this.revenuesTreasuryFilter() || !!this.revenuesRepresentativeFilter() || !!this.revenuesFrom() || !!this.revenuesTo(),
   );
 
   private readonly expensesTrigger = computed(() => ({
     treasuryId: this.expensesTreasuryFilter(),
+    representativeId: this.expensesRepresentativeFilter(),
     from: this.expensesFrom(),
     to: this.expensesTo(),
     pageIndex: this.expensesPageIndex(),
@@ -123,6 +126,7 @@ export class ExpensesRevenuesHomeComponent {
 
   private readonly revenuesTrigger = computed(() => ({
     treasuryId: this.revenuesTreasuryFilter(),
+    representativeId: this.revenuesRepresentativeFilter(),
     from: this.revenuesFrom(),
     to: this.revenuesTo(),
     pageIndex: this.revenuesPageIndex(),
@@ -213,6 +217,11 @@ export class ExpensesRevenuesHomeComponent {
     this.resetExpensesPage();
   }
 
+  protected onExpensesRepresentativeChange(value: number | string | null): void {
+    this.expensesRepresentativeFilter.set(value === null || value === '' ? '' : Number(value));
+    this.resetExpensesPage();
+  }
+
   protected onExpensesFromChange(value: string): void {
     this.expensesFrom.set(value);
     this.resetExpensesPage();
@@ -225,6 +234,7 @@ export class ExpensesRevenuesHomeComponent {
 
   protected clearExpensesFilters(): void {
     this.expensesTreasuryFilter.set('');
+    this.expensesRepresentativeFilter.set('');
     this.expensesFrom.set('');
     this.expensesTo.set('');
     this.resetExpensesPage();
@@ -332,6 +342,11 @@ export class ExpensesRevenuesHomeComponent {
     this.resetRevenuesPage();
   }
 
+  protected onRevenuesRepresentativeChange(value: number | string | null): void {
+    this.revenuesRepresentativeFilter.set(value === null || value === '' ? '' : Number(value));
+    this.resetRevenuesPage();
+  }
+
   protected onRevenuesFromChange(value: string): void {
     this.revenuesFrom.set(value);
     this.resetRevenuesPage();
@@ -344,6 +359,7 @@ export class ExpensesRevenuesHomeComponent {
 
   protected clearRevenuesFilters(): void {
     this.revenuesTreasuryFilter.set('');
+    this.revenuesRepresentativeFilter.set('');
     this.revenuesFrom.set('');
     this.revenuesTo.set('');
     this.resetRevenuesPage();

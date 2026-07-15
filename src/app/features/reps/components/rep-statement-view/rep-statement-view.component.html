@@ -51,6 +51,14 @@
           <span class="rs-cell-v rs-due">{{ s.outstandingCommission | currencyAr: true }}</span>
         </div>
         <div class="rs-cell">
+          <span class="rs-cell-l">عمولة الإيرادات</span>
+          <span class="rs-cell-v">{{ s.revenueCommission | currencyAr: true }}</span>
+        </div>
+        <div class="rs-cell">
+          <span class="rs-cell-l">عمولة المصروفات</span>
+          <span class="rs-cell-v">{{ s.expenseCommission | currencyAr: true }}</span>
+        </div>
+        <div class="rs-cell">
           <span class="rs-cell-l">أول / آخر عقد</span>
           <span class="rs-cell-v">
             {{ s.firstContractDate ? (s.firstContractDate | dateAr: 'short') : '—' }}

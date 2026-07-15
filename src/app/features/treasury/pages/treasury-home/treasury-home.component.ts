@@ -173,6 +173,18 @@ export class TreasuryHomeComponent implements OnInit {
       0,
     ),
   );
+  protected readonly subTreasuriesTotalRevenueCommission = computed(() =>
+    this.subTreasuries().reduce(
+      (sum, s) => sum + (s.revenueCommission ?? 0),
+      0,
+    ),
+  );
+  protected readonly subTreasuriesTotalExpenseCommission = computed(() =>
+    this.subTreasuries().reduce(
+      (sum, s) => sum + (s.expenseCommission ?? 0),
+      0,
+    ),
+  );
 
   // ── representative statement / commission-payout modals ──
 
@@ -812,6 +824,18 @@ export class TreasuryHomeComponent implements OnInit {
           bold: true,
         },
         {
+          key: 'revenueCommission',
+          header: 'عمولة الإيرادات',
+          align: 'end',
+          format: 'currency',
+        },
+        {
+          key: 'expenseCommission',
+          header: 'عمولة المصروفات',
+          align: 'end',
+          format: 'currency',
+        },
+        {
           key: 'lastActivityDate',
           header: 'آخر نشاط',
           align: 'center',
@@ -829,6 +853,8 @@ export class TreasuryHomeComponent implements OnInit {
           this.formatCurrencyTotal(this.subTreasuriesTotalCommission()),
           this.formatCurrencyTotal(this.subTreasuriesTotalPaid()),
           this.formatCurrencyTotal(this.subTreasuriesTotalOutstanding()),
+          this.formatCurrencyTotal(this.subTreasuriesTotalRevenueCommission()),
+          this.formatCurrencyTotal(this.subTreasuriesTotalExpenseCommission()),
           '',
         ],
       },

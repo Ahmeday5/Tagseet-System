@@ -75,6 +75,7 @@ export class ExpensesService {
       PageIndex: query.pageIndex ?? 1,
       PageSize: query.pageSize ?? 10,
       treasuryId: query.treasuryId || undefined,
+      representativeId: query.representativeId || undefined,
       from: query.from || undefined,
       to: query.to || undefined,
     };
