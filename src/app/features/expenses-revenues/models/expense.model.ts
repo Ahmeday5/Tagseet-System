@@ -9,6 +9,8 @@ export interface ExpenseDto {
   date: string;
   treasuryId: number;
   treasuryName: string;
+  representativeId: number | null;
+  representativeName: string | null;
   notes: string | null;
   createdAt: string;
 }
@@ -19,6 +21,16 @@ export interface CreateExpensePayload {
   date?: string;
   treasuryId: number;
   notes?: string;
+  representativeId?: number | null;
+}
+
+/** PUT /dashboard/expenses/{id} body. */
+export interface UpdateExpensePayload {
+  amount: number;
+  date: string;
+  treasuryId: number;
+  notes?: string;
+  representativeId?: number | null;
 }
 
 /** Query parameters supported by `GET /dashboard/expenses`. */

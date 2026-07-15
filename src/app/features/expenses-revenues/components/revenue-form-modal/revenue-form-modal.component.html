@@ -1,6 +1,6 @@
 <app-modal
   [open]="open()"
-  title="إيراد جديد"
+  [title]="title()"
   size="md"
   [closeOnBackdrop]="!submitting()"
   [closeOnEsc]="!submitting()"
@@ -40,6 +40,16 @@
       </div>
 
       <div class="col-12">
+        <label class="form-label">المندوب</label>
+        <app-searchable-select
+          formControlName="representativeId"
+          [options]="representatives()"
+          placeholder="بدون مندوب"
+          searchPlaceholder="ابحث باسم المندوب…"
+        />
+      </div>
+
+      <div class="col-12">
         <label class="form-label">ملاحظات</label>
         <input
           type="text"
@@ -62,16 +72,18 @@
     <button type="button" class="btn" [disabled]="submitting()" (click)="close()">
       إلغاء
     </button>
-    <button
-      type="button"
-      class="btn btn-bl d-inline-flex align-items-center gap-2"
-      [disabled]="submitting()"
-      (click)="onSubmit()"
-    >
-      @if (submitting()) {
-        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-      }
-      <span>{{ submitting() ? 'جاري الحفظ...' : 'حفظ الإيراد' }}</span>
-    </button>
+    @if (submitLabel(); as label) {
+      <button
+        type="button"
+        class="btn btn-bl d-inline-flex align-items-center gap-2"
+        [disabled]="submitting()"
+        (click)="onSubmit()"
+      >
+        @if (submitting()) {
+          <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+        }
+        <span>{{ submitting() ? 'جاري الحفظ...' : label }}</span>
+      </button>
+    }
   </ng-container>
 </app-modal>

@@ -13,6 +13,7 @@ import {
   RevenueDto,
   RevenuesQuery,
   RevenuesResponse,
+  UpdateRevenuePayload,
 } from '../models/revenue.model';
 
 /**
@@ -48,6 +49,25 @@ export class RevenuesService {
         withCacheInvalidate([...REVENUES_CACHE_KEYS]),
       ),
     });
+  }
+
+  update(id: number, payload: UpdateRevenuePayload): Observable<RevenueDto> {
+    return this.api.put<RevenueDto>(API_ENDPOINTS.revenues.byId(id), payload, {
+      context: withInlineHandling(
+        withCacheInvalidate([...REVENUES_CACHE_KEYS]),
+      ),
+    });
+  }
+
+  delete(id: number): Observable<{ message: string }> {
+    return this.api.delete<{ message: string }>(
+      API_ENDPOINTS.revenues.byId(id),
+      {
+        context: withInlineHandling(
+          withCacheInvalidate([...REVENUES_CACHE_KEYS]),
+        ),
+      },
+    );
   }
 
   private toParams(query: RevenuesQuery): Record<string, unknown> {

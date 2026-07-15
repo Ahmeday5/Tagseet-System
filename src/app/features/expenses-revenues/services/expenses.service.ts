@@ -13,6 +13,7 @@ import {
   ExpenseDto,
   ExpensesQuery,
   ExpensesResponse,
+  UpdateExpensePayload,
 } from '../models/expense.model';
 
 /**
@@ -48,6 +49,25 @@ export class ExpensesService {
         withCacheInvalidate([...EXPENSES_CACHE_KEYS]),
       ),
     });
+  }
+
+  update(id: number, payload: UpdateExpensePayload): Observable<ExpenseDto> {
+    return this.api.put<ExpenseDto>(API_ENDPOINTS.expenses.byId(id), payload, {
+      context: withInlineHandling(
+        withCacheInvalidate([...EXPENSES_CACHE_KEYS]),
+      ),
+    });
+  }
+
+  delete(id: number): Observable<{ message: string }> {
+    return this.api.delete<{ message: string }>(
+      API_ENDPOINTS.expenses.byId(id),
+      {
+        context: withInlineHandling(
+          withCacheInvalidate([...EXPENSES_CACHE_KEYS]),
+        ),
+      },
+    );
   }
 
   private toParams(query: ExpensesQuery): Record<string, unknown> {

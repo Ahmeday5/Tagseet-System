@@ -111,10 +111,14 @@ export const API_ENDPOINTS = {
   expenses: {
     /** GET (paged, wrapped in `{summary, items}`) / POST. */
     base: 'dashboard/expenses',
+    /** PUT / DELETE a single expense. */
+    byId: (id: number) => `dashboard/expenses/${id}`,
   },
   revenues: {
     /** GET (paged, wrapped in `{summary, items}`) / POST. */
     base: 'dashboard/revenues',
+    /** PUT / DELETE a single revenue. */
+    byId: (id: number) => `dashboard/revenues/${id}`,
   },
   charts: {
     profitsLast6Months: 'dashboard/charts/profits-last-6-months',

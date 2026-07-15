@@ -47,20 +47,26 @@
           (ngModelChange)="onExpensesTreasuryChange($event)"
         />
       </div>
-      <input
-        type="date"
-        class="form-control form-control-sm"
-        dir="ltr"
-        [ngModel]="expensesFrom()"
-        (ngModelChange)="onExpensesFromChange($event)"
-      />
-      <input
-        type="date"
-        class="form-control form-control-sm"
-        dir="ltr"
-        [ngModel]="expensesTo()"
-        (ngModelChange)="onExpensesToChange($event)"
-      />
+      <div class="erx-date-field">
+        <label class="erx-date-label">من تاريخ</label>
+        <input
+          type="date"
+          class="form-control form-control-sm"
+          dir="ltr"
+          [ngModel]="expensesFrom()"
+          (ngModelChange)="onExpensesFromChange($event)"
+        />
+      </div>
+      <div class="erx-date-field">
+        <label class="erx-date-label">إلى تاريخ</label>
+        <input
+          type="date"
+          class="form-control form-control-sm"
+          dir="ltr"
+          [ngModel]="expensesTo()"
+          (ngModelChange)="onExpensesToChange($event)"
+        />
+      </div>
       @if (expensesHasFilters()) {
         <button type="button" class="btn btn-sm" (click)="clearExpensesFilters()">
           مسح الفلاتر
@@ -90,25 +96,44 @@
     <table class="table">
       <thead>
         <tr>
-          <th>رقم المصروف</th>
+          <th>#</th>
           <th>المبلغ</th>
           <th>الخزينة</th>
+          <th>المندوب</th>
           <th>التاريخ</th>
           <th>ملاحظات</th>
+          <th>الإجراءات</th>
         </tr>
       </thead>
       <tbody>
-        @for (row of expenses(); track row.id) {
+        @for (row of expenses(); track row.id; let i = $index) {
         <tr>
-          <td style="font-weight:600">{{ row.expenseNumber }}</td>
+          <td style="font-weight:600">{{ (expensesPageIndex() - 1) * expensesPageSize() + i + 1 }}</td>
           <td style="color:var(--re)">{{ row.amount | currencyAr: true }}</td>
           <td>{{ row.treasuryName }}</td>
+          <td>{{ row.representativeName || '—' }}</td>
           <td>{{ row.date | dateAr: 'short' }}</td>
           <td>{{ row.notes || '—' }}</td>
+          <td>
+            <div class="d-flex gap-1 justify-content-center align-items-center" *appHasPermission="PERMS.vouchersFullAccess">
+              <button type="button" class="btn btn-sm btn-bl" (click)="openEditExpense(row)">تعديل</button>
+              <button
+                type="button"
+                class="btn btn-sm btn-re d-inline-flex align-items-center gap-1"
+                [disabled]="deletingExpenseId() === row.id"
+                (click)="confirmDeleteExpense(row)"
+              >
+                @if (deletingExpenseId() === row.id) {
+                  <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                }
+                <span>حذف</span>
+              </button>
+            </div>
+          </td>
         </tr>
         } @empty {
         <tr>
-          <td colspan="5" class="text-center" style="padding:30px; color:var(--txt3)">
+          <td colspan="7" class="text-center" style="padding:30px; color:var(--txt3)">
             @if (expensesLoading()) { جارٍ التحميل... } @else { لا توجد مصروفات مسجلة. }
           </td>
         </tr>
@@ -151,20 +176,26 @@
           (ngModelChange)="onRevenuesTreasuryChange($event)"
         />
       </div>
-      <input
-        type="date"
-        class="form-control form-control-sm"
-        dir="ltr"
-        [ngModel]="revenuesFrom()"
-        (ngModelChange)="onRevenuesFromChange($event)"
-      />
-      <input
-        type="date"
-        class="form-control form-control-sm"
-        dir="ltr"
-        [ngModel]="revenuesTo()"
-        (ngModelChange)="onRevenuesToChange($event)"
-      />
+      <div class="erx-date-field">
+        <label class="erx-date-label">من تاريخ</label>
+        <input
+          type="date"
+          class="form-control form-control-sm"
+          dir="ltr"
+          [ngModel]="revenuesFrom()"
+          (ngModelChange)="onRevenuesFromChange($event)"
+        />
+      </div>
+      <div class="erx-date-field">
+        <label class="erx-date-label">إلى تاريخ</label>
+        <input
+          type="date"
+          class="form-control form-control-sm"
+          dir="ltr"
+          [ngModel]="revenuesTo()"
+          (ngModelChange)="onRevenuesToChange($event)"
+        />
+      </div>
       @if (revenuesHasFilters()) {
         <button type="button" class="btn btn-sm" (click)="clearRevenuesFilters()">
           مسح الفلاتر
@@ -194,25 +225,44 @@
     <table class="table">
       <thead>
         <tr>
-          <th>رقم الإيراد</th>
+          <th>#</th>
           <th>المبلغ</th>
           <th>الخزينة</th>
+          <th>المندوب</th>
           <th>التاريخ</th>
           <th>ملاحظات</th>
+          <th>الإجراءات</th>
         </tr>
       </thead>
       <tbody>
-        @for (row of revenues(); track row.id) {
+        @for (row of revenues(); track row.id; let i = $index) {
         <tr>
-          <td style="font-weight:600">{{ row.revenueNumber }}</td>
+          <td style="font-weight:600">{{ (revenuesPageIndex() - 1) * revenuesPageSize() + i + 1 }}</td>
           <td style="color:var(--gr)">{{ row.amount | currencyAr: true }}</td>
           <td>{{ row.treasuryName }}</td>
+          <td>{{ row.representativeName || '—' }}</td>
           <td>{{ row.date | dateAr: 'short' }}</td>
           <td>{{ row.notes || '—' }}</td>
+          <td>
+            <div class="d-flex gap-1 justify-content-center align-items-center" *appHasPermission="PERMS.vouchersFullAccess">
+              <button type="button" class="btn btn-sm btn-bl" (click)="openEditRevenue(row)">تعديل</button>
+              <button
+                type="button"
+                class="btn btn-sm btn-re d-inline-flex align-items-center gap-1"
+                [disabled]="deletingRevenueId() === row.id"
+                (click)="confirmDeleteRevenue(row)"
+              >
+                @if (deletingRevenueId() === row.id) {
+                  <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                }
+                <span>حذف</span>
+              </button>
+            </div>
+          </td>
         </tr>
         } @empty {
         <tr>
-          <td colspan="5" class="text-center" style="padding:30px; color:var(--txt3)">
+          <td colspan="7" class="text-center" style="padding:30px; color:var(--txt3)">
             @if (revenuesLoading()) { جارٍ التحميل... } @else { لا توجد إيرادات مسجلة. }
           </td>
         </tr>
@@ -235,14 +285,20 @@
 
 <app-expense-form-modal
   [open]="expenseFormOpen()"
+  [mode]="expenseModalMode()"
+  [expense]="expenseBeingEdited()"
   [treasuries]="treasuryOptions()"
+  [representatives]="representativeOptions()"
   (closed)="closeExpenseForm()"
   (saved)="onExpenseSaved()"
 />
 
 <app-revenue-form-modal
   [open]="revenueFormOpen()"
+  [mode]="revenueModalMode()"
+  [revenue]="revenueBeingEdited()"
   [treasuries]="treasuryOptions()"
+  [representatives]="representativeOptions()"
   (closed)="closeRevenueForm()"
   (saved)="onRevenueSaved()"
 />
