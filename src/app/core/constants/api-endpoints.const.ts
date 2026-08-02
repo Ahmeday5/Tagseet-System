@@ -169,6 +169,9 @@ export const API_ENDPOINTS = {
       `dashboard/representatives/${id}/commission-payout`,
     /** Admin: paginated history of commission payouts. */
     commissionPayouts: 'dashboard/representatives/commission-payouts',
+    /** Admin: edit/delete a single commission payout voucher. */
+    commissionPayoutById: (id: number) =>
+      `dashboard/representatives/commission-payouts/${id}`,
   },
   contracts: {
     base: 'dashboard/contracts',

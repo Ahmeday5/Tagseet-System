@@ -164,11 +164,20 @@ export interface WarehouseInventoryItem {
   marginPercent: number;
   /** Comma-separated string or `null` when not tracked. */
   totalProfit: number;
+  /**
+   * Per-line notes from every purchase invoice that brought this product
+   * into this warehouse, concatenated with `; ` when there are several.
+   * `null`/empty when no line carried a note.
+   */
+  notes: string | null;
 }
 
 export interface WarehouseInventoryQuery {
-  warehouseId: number;
+  /** Omit (or 0) to fetch inventory across all warehouses. */
+  warehouseId?: number;
   pageIndex?: number;
   pageSize?: number;
   search?: string;
+  /** Omit to fetch all; `true`/`false` filters to available/unavailable only. */
+  onlyAvailable?: boolean;
 }

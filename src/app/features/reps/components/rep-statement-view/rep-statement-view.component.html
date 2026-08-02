@@ -71,6 +71,15 @@
 
     <!-- ── Contracts ── -->
     <div class="ct mt-3 mb-2">عقود المندوب</div>
+    <div class="mb-2">
+      <input
+        type="text"
+        class="form-control form-control-sm"
+        placeholder="بحث باسم العميل..."
+        [value]="search()"
+        (input)="searchChange.emit($any($event.target).value)"
+      />
+    </div>
     <div class="tw" style="margin-bottom:0">
       <table class="table">
         <thead>
@@ -98,7 +107,7 @@
               <td>{{ c.cost | currencyAr: true }}</td>
               <td class="rs-pos">{{ c.profit | currencyAr: true }}</td>
               <td>{{ c.commission | currencyAr: true }}</td>
-              <td><app-badge [text]="c.status" [type]="contractBadge(c.status)" /></td>
+              <td><app-badge [text]="contractStatusLabel(c.status)" [type]="contractBadge(c.status)" /></td>
               <td class="trf-date">{{ c.dateOfSale | dateAr: 'short' }}</td>
             </tr>
           } @empty {

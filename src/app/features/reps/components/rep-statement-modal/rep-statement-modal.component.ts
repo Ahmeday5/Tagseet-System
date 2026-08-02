@@ -18,6 +18,7 @@ import { CommonModule } from '@angular/common';
 import { map } from 'rxjs/operators';
 import { PrintService } from '../../../../core/services/print.service';
 import { fetchAllPages } from '../../../../core/utils/api-list.util';
+import { REP_STATUS_LABELS } from '../../constants/rep-meta';
 
 /**
  * Admin-facing wrapper that loads a specific representative's account
@@ -42,8 +43,10 @@ import { fetchAllPages } from '../../../../core/utils/api-list.util';
         [loading]="loading()"
         [pageIndex]="pageIndex()"
         [pageSize]="pageSize()"
+        [search]="search()"
         (pageChange)="pageIndex.set($event)"
         (pageSizeChange)="onPageSize($event)"
+        (searchChange)="onSearch($event)"
       />
 
       <ng-container modal-footer>
@@ -78,38 +81,46 @@ export class RepStatementModalComponent {
   protected readonly loading = signal(false);
   protected readonly pageIndex = signal(1);
   protected readonly pageSize = signal(10);
+  protected readonly search = signal('');
   protected readonly isPrinting = signal(false);
 
+  private debounce: ReturnType<typeof setTimeout> | null = null;
+
   constructor() {
-    // Reset paging whenever a different representative is opened.
+    // Reset paging + search whenever a different representative is opened.
     effect(
       () => {
         this.representativeId();
         this.pageIndex.set(1);
+        this.search.set('');
         this.statement.set(null);
       },
       { allowSignalWrites: true },
     );
 
-    // Fetch on open + whenever the page/size/representative changes.
+    // Fetch on open + whenever the page/size/search/representative changes.
     effect(
       () => {
         const id = this.representativeId();
         const pageIndex = this.pageIndex();
         const pageSize = this.pageSize();
+        const search = this.search().trim();
         if (!this.open() || id == null) return;
 
         this.loading.set(true);
-        this.service.statement(id, { pageIndex, pageSize }).subscribe({
-          next: (res) => {
-            this.statement.set(res);
-            this.loading.set(false);
-          },
-          error: () => {
-            this.statement.set(null);
-            this.loading.set(false);
-          },
-        });
+        if (this.debounce) clearTimeout(this.debounce);
+        this.debounce = setTimeout(() => {
+          this.service.statement(id, { pageIndex, pageSize, search }).subscribe({
+            next: (res) => {
+              this.statement.set(res);
+              this.loading.set(false);
+            },
+            error: () => {
+              this.statement.set(null);
+              this.loading.set(false);
+            },
+          });
+        }, 300);
       },
       { allowSignalWrites: true },
     );
@@ -118,6 +129,11 @@ export class RepStatementModalComponent {
   protected onPageSize(size: number): void {
     this.pageSize.set(size);
     this.pageIndex.set(1);
+  }
+
+  protected onSearch(value: string): void {
+    this.search.set(value);
+    if (this.pageIndex() !== 1) this.pageIndex.set(1);
   }
 
   /**
@@ -175,7 +191,13 @@ export class RepStatementModalComponent {
         { key: 'cost',         header: 'التكلفة',  align: 'end',    format: 'currency' },
         { key: 'profit',       header: 'الربح',    align: 'end',    format: 'currency', bold: true },
         { key: 'commission',   header: 'العمولة',  align: 'end',    format: 'currency' },
-        { key: 'status',       header: 'الحالة',   align: 'center' },
+        {
+          key: 'status',
+          header: 'الحالة',
+          align: 'center',
+          format: (v) =>
+            REP_STATUS_LABELS[v as keyof typeof REP_STATUS_LABELS] ?? String(v),
+        },
         { key: 'dateOfSale', header: 'تاريخ البيع', align: 'center', format: 'shortDate' },
       ],
       totals: sum

@@ -151,6 +151,20 @@
                   (click)="openPayment(inv)"
                 >دفع</button>
               }
+              @if (canEdit()) {
+                <button
+                  type="button"
+                  class="btn btn-sm btn-re d-inline-flex align-items-center gap-1"
+                  [disabled]="deletingId() === inv.id"
+                  title="حذف الفاتورة"
+                  (click)="confirmDelete(inv)"
+                >
+                  @if (deletingId() === inv.id) {
+                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                  }
+                  <span>حذف</span>
+                </button>
+              }
             </div>
           </td>
         </tr>
@@ -168,6 +182,19 @@
     </tbody>
   </table>
 </div>
+
+@if (count() > 0) {
+  <app-pagination
+    [pageIndex]="pageIndex()"
+    [pageSize]="pageSize()"
+    [count]="count()"
+    [totalPages]="totalPages()"
+    [pageSizeOptions]="[10, 20, 50, 100]"
+    [disabled]="loading()"
+    (pageChange)="onPageChange($event)"
+    (pageSizeChange)="onPageSizeChange($event)"
+  />
+}
 
 <app-confirm-invoice-modal
   [open]="confirmOpen()"

@@ -88,8 +88,7 @@ export class WarehouseHomeComponent implements OnInit {
     // that touches the per-warehouse aggregates.
     onInvalidate(this.cache, 'warehous', () => {
       this.refreshSummary();
-      // Refresh the inventory pane too if a warehouse is selected.
-      if (this.selectedWarehouseId()) this.refreshInventory();
+      this.refreshInventory();
     });
   }
 
@@ -100,9 +99,11 @@ export class WarehouseHomeComponent implements OnInit {
   // ── live inventory (table) ──
   protected readonly inventory   = signal<WarehouseInventoryItem[]>([]);
   protected readonly invLoading  = signal(false);
-  /** Selected warehouse for the inventory table; 0 = no selection. */
+  /** Selected warehouse for the inventory table; 0 = all warehouses. */
   protected readonly selectedWarehouseId = signal<number>(0);
   protected readonly invSearch   = signal('');
+  /** `undefined` = all, `true` = available only, `false` = unavailable only. */
+  protected readonly invOnlyAvailable = signal<boolean | undefined>(undefined);
   protected readonly invPageIndex = signal(1);
   protected readonly invPageSize  = signal(INVENTORY_PAGE_SIZE);
   protected readonly invCount      = signal(0);
@@ -127,6 +128,7 @@ export class WarehouseHomeComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadSummary();
+    this.fetchInventoryNow();
   }
 
   // ─────────── data loaders ───────────
@@ -147,15 +149,6 @@ export class WarehouseHomeComponent implements OnInit {
       next: (list) => {
         this.warehouses.set(list ?? []);
         this.loading.set(false);
-        // Auto-select the first active warehouse on first load so the
-        // inventory pane shows something immediately.
-        if (this.selectedWarehouseId() === 0) {
-          const first = (list ?? []).find((w) => w.isActive);
-          if (first) {
-            this.selectedWarehouseId.set(first.id);
-            this.fetchInventoryNow();
-          }
-        }
       },
       error: () => {
         this.warehouses.set([]);
@@ -192,16 +185,11 @@ export class WarehouseHomeComponent implements OnInit {
 
   private fetchInventory(force: boolean): void {
     const warehouseId = this.selectedWarehouseId();
-    if (!warehouseId) {
-      this.inventory.set([]);
-      this.invCount.set(0);
-      this.invTotalPages.set(0);
-      return;
-    }
 
     const query = {
       warehouseId,
       search: this.invSearch().trim(),
+      onlyAvailable: this.invOnlyAvailable(),
       pageIndex: this.invPageIndex(),
       pageSize: this.invPageSize(),
     };
@@ -239,6 +227,12 @@ export class WarehouseHomeComponent implements OnInit {
     this.invSearch.set(value);
     if (this.invPageIndex() !== 1) this.invPageIndex.set(1);
     this.fetchInventoryDebounced();
+  }
+
+  protected onInvOnlyAvailableChange(value: string): void {
+    this.invOnlyAvailable.set(value === '' ? undefined : value === 'true');
+    this.invPageIndex.set(1);
+    this.fetchInventoryNow();
   }
 
   protected onInvPageChange(page: number): void {
@@ -295,9 +289,10 @@ export class WarehouseHomeComponent implements OnInit {
         this.deletingId.set(null);
         this.toast.success('تم حذف المخزن بنجاح');
         this.refreshSummary();
-        // If the deleted warehouse was selected for inventory, reset.
+        // If the deleted warehouse was selected for inventory, reset to "all".
         if (this.selectedWarehouseId() === warehouse.id) {
           this.selectedWarehouseId.set(0);
+          this.fetchInventoryNow();
         }
       },
       error: (_err: ApiError) => this.deletingId.set(null),

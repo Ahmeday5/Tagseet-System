@@ -37,12 +37,15 @@ import { TreasuryService } from '../../../treasury/services/treasury.service';
 import { LookupItem } from '../../../../core/models/lookup.model';
 import { AuthService } from '../../../../core/services/auth.service';
 import { PERMISSIONS } from '../../../../core/constants/permissions.const';
+import { ProductFormModalComponent } from '../../../products/components/product-form-modal/product-form-modal.component';
+import { Product } from '../../../products/models/product.model';
 
 interface LineFormShape {
   productId: FormControl<number>;
   unitPrice: FormControl<number>;
   quantity: FormControl<number>;
-  discountPercent: FormControl<number>;
+  discountAmount: FormControl<number>;
+  notes: FormControl<string>;
 }
 
 /**
@@ -56,7 +59,12 @@ const FIXED_TAX_RATE = 0;
   selector: 'app-invoice-new',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, CurrencyArPipe, SearchableSelectComponent],
+  imports: [
+    ReactiveFormsModule,
+    CurrencyArPipe,
+    SearchableSelectComponent,
+    ProductFormModalComponent,
+  ],
   templateUrl: './invoice-new.component.html',
   styleUrl: './invoice-new.component.scss',
 })
@@ -120,6 +128,13 @@ export class InvoiceNewComponent implements OnInit {
   protected readonly savingFinal = signal(false);
   protected readonly serverError = signal<string | null>(null);
 
+  // ── inline "add new product" modal ──
+  // Reuses the exact same modal the products page opens for "+ منتج جديد".
+  // Tracks which line's picker asked for it so the created product can be
+  // selected into that specific row once the modal reports success.
+  protected readonly productModalOpen = signal(false);
+  private pendingProductLineIndex: number | null = null;
+
   /** Bumps every time a line input changes — triggers summary recompute. */
   private readonly linesTick = signal(0);
 
@@ -176,9 +191,8 @@ export class InvoiceNewComponent implements OnInit {
   protected readonly discountAmount = computed(() => {
     this.linesTick();
     return this.items.controls.reduce((sum, ctrl) => {
-      const { quantity, unitPrice, discountPercent } = ctrl.getRawValue();
-      const lineGross = (Number(quantity) || 0) * (Number(unitPrice) || 0);
-      return sum + lineGross * ((Number(discountPercent) || 0) / 100);
+      const { discountAmount } = ctrl.getRawValue();
+      return sum + (Number(discountAmount) || 0);
     }, 0);
   });
 
@@ -303,13 +317,17 @@ export class InvoiceNewComponent implements OnInit {
     productId: number;
     unitPrice: number;
     quantity: number;
-    discountPercent: number;
+    discountAmount: number;
+    notes?: string | null;
   }): FormGroup<LineFormShape> {
     return this.fb.group<LineFormShape>({
-      productId:       this.fb.nonNullable.control(line?.productId ?? 0, [Validators.required, Validators.min(1)]),
-      unitPrice:       this.fb.nonNullable.control(line?.unitPrice ?? 0, [Validators.required, Validators.min(0)]),
-      quantity:        this.fb.nonNullable.control(line?.quantity ?? 1, [Validators.required, Validators.min(1)]),
-      discountPercent: this.fb.nonNullable.control(line?.discountPercent ?? 0, [Validators.required, Validators.min(0), Validators.max(100)]),
+      productId:      this.fb.nonNullable.control(line?.productId ?? 0, [Validators.required, Validators.min(1)]),
+      unitPrice:      this.fb.nonNullable.control(line?.unitPrice ?? 0, [Validators.required, Validators.min(0)]),
+      quantity:       this.fb.nonNullable.control(line?.quantity ?? 1, [Validators.required, Validators.min(1)]),
+      // Upper bound (quantity*unitPrice) is enforced per-line in `onLineFieldChange`
+      // rather than as a static validator, since it depends on the line's own values.
+      discountAmount: this.fb.nonNullable.control(line?.discountAmount ?? 0, [Validators.required, Validators.min(0)]),
+      notes:          this.fb.nonNullable.control(line?.notes ?? '', [Validators.maxLength(1000)]),
     });
   }
 
@@ -369,18 +387,74 @@ export class InvoiceNewComponent implements OnInit {
     });
   }
 
-  protected onLineFieldChange(idx: number, field: keyof LineFormShape, raw: string): void {
+  protected onLineFieldChange(
+    idx: number,
+    field: 'unitPrice' | 'quantity' | 'discountAmount',
+    raw: string,
+  ): void {
     const num = Number(raw);
     if (Number.isNaN(num)) return;
-    this.items.at(idx).controls[field].setValue(num);
+
+    const ctrl = this.items.at(idx);
+    ctrl.controls[field].setValue(num);
+
+    // A line's discount can never exceed its own gross (quantity*unitPrice).
+    // Re-clamp on every keystroke — including quantity/unitPrice edits — so
+    // an existing discount never silently ends up larger than the new gross.
+    const { quantity, unitPrice, discountAmount } = ctrl.getRawValue();
+    const maxDiscount = (Number(quantity) || 0) * (Number(unitPrice) || 0);
+    const clamped = Math.min(Math.max(Number(discountAmount) || 0, 0), maxDiscount);
+    if (clamped !== discountAmount) {
+      ctrl.controls.discountAmount.setValue(clamped);
+    }
+
     this.linesTick.update((v) => v + 1);
+  }
+
+  protected onLineNotesChange(idx: number, value: string): void {
+    this.items.at(idx).controls.notes.setValue(value);
   }
 
   protected lineTotal(idx: number): number {
     const ctrl = this.items.at(idx);
-    const { quantity, unitPrice, discountPercent } = ctrl.getRawValue();
+    const { quantity, unitPrice, discountAmount } = ctrl.getRawValue();
     const gross = (Number(quantity) || 0) * (Number(unitPrice) || 0);
-    return gross * (1 - (Number(discountPercent) || 0) / 100);
+    return Math.max(0, gross - (Number(discountAmount) || 0));
+  }
+
+  // ─────────── inline "add new product" ───────────
+
+  /** Opens the shared product-creation modal from a line's product picker. */
+  protected openProductModal(idx: number): void {
+    this.pendingProductLineIndex = idx;
+    this.productModalOpen.set(true);
+  }
+
+  protected closeProductModal(): void {
+    this.productModalOpen.set(false);
+    this.pendingProductLineIndex = null;
+  }
+
+  /**
+   * The modal reports the newly created product — push it into the lookup
+   * list so the picker's options include it, then select it on the line
+   * that requested the create.
+   */
+  protected onProductCreated(product: Product): void {
+    this.productModalOpen.set(false);
+    this.products.update((list) => [...list, { id: product.id, name: product.name }]);
+
+    const idx = this.pendingProductLineIndex;
+    this.pendingProductLineIndex = null;
+    if (idx === null) return;
+
+    const line = this.items.at(idx);
+    if (!line) return;
+    line.controls.productId.setValue(product.id);
+    if (this.canReadProductDetails()) {
+      line.controls.unitPrice.setValue(product.purchasePrice ?? 0);
+    }
+    this.linesTick.update((v) => v + 1);
   }
 
   // ─────────── submit ───────────
@@ -416,10 +490,11 @@ export class InvoiceNewComponent implements OnInit {
       autoPostInventory: !!raw.autoPostInventory,
       notes:             (raw.notes ?? '').trim(),
       items: raw.items.map((line) => ({
-        productId:       Number(line.productId),
-        quantity:        Number(line.quantity) || 0,
-        unitPrice:       Number(line.unitPrice) || 0,
-        discountPercent: Number(line.discountPercent) || 0,
+        productId:      Number(line.productId),
+        quantity:       Number(line.quantity) || 0,
+        unitPrice:      Number(line.unitPrice) || 0,
+        discountAmount: Number(line.discountAmount) || 0,
+        notes:          (line.notes ?? '').trim() || undefined,
       })),
     };
 

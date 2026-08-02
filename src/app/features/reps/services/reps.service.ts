@@ -22,6 +22,7 @@ import {
   RepresentativeSubTreasury,
   RepresentativesListResponse,
   RepresentativesQuery,
+  UpdateCommissionPayoutPayload,
   UpdateRepresentativePayload,
 } from '../models/rep.model';
 
@@ -165,6 +166,34 @@ export class RepsService {
     return this.api.post<CommissionPayoutResult>(
       API_ENDPOINTS.representatives.commissionPayout(id),
       payload,
+      {
+        context: withInlineHandling(
+          withCacheInvalidate([REPS_CACHE_KEY, 'treasur']),
+        ),
+      },
+    );
+  }
+
+  /** Admin: edits a previously recorded commission payout voucher. */
+  updateCommissionPayout(
+    id: number,
+    payload: UpdateCommissionPayoutPayload,
+  ): Observable<CommissionPayoutRow> {
+    return this.api.put<CommissionPayoutRow>(
+      API_ENDPOINTS.representatives.commissionPayoutById(id),
+      payload,
+      {
+        context: withInlineHandling(
+          withCacheInvalidate([REPS_CACHE_KEY, 'treasur']),
+        ),
+      },
+    );
+  }
+
+  /** Admin: deletes a previously recorded commission payout voucher. */
+  deleteCommissionPayout(id: number): Observable<{ message: string }> {
+    return this.api.delete<{ message: string }>(
+      API_ENDPOINTS.representatives.commissionPayoutById(id),
       {
         context: withInlineHandling(
           withCacheInvalidate([REPS_CACHE_KEY, 'treasur']),

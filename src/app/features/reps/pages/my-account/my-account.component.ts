@@ -47,8 +47,10 @@ import { RepresentativeStatement } from '../../models/rep.model';
         [loading]="loading()"
         [pageIndex]="pageIndex()"
         [pageSize]="pageSize()"
+        [search]="search()"
         (pageChange)="pageIndex.set($event)"
         (pageSizeChange)="onPageSize($event)"
+        (searchChange)="onSearch($event)"
       />
     </div>
   `,
@@ -60,27 +62,34 @@ export class MyAccountComponent {
   protected readonly loading = signal(false);
   protected readonly pageIndex = signal(1);
   protected readonly pageSize = signal(10);
+  protected readonly search = signal('');
 
   /** Bumped by the refresh button to re-run the fetch (cache-bypassed). */
   private readonly refreshTick = signal(0);
+
+  private debounce: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
     effect(() => {
       const pageIndex = this.pageIndex();
       const pageSize = this.pageSize();
+      const search = this.search().trim();
       const bypass = this.refreshTick() > 0;
 
       this.loading.set(true);
-      this.service.myStatement({ pageIndex, pageSize }, bypass).subscribe({
-        next: (res) => {
-          this.statement.set(res);
-          this.loading.set(false);
-        },
-        error: () => {
-          this.statement.set(null);
-          this.loading.set(false);
-        },
-      });
+      if (this.debounce) clearTimeout(this.debounce);
+      this.debounce = setTimeout(() => {
+        this.service.myStatement({ pageIndex, pageSize, search }, bypass).subscribe({
+          next: (res) => {
+            this.statement.set(res);
+            this.loading.set(false);
+          },
+          error: () => {
+            this.statement.set(null);
+            this.loading.set(false);
+          },
+        });
+      }, 300);
     }, { allowSignalWrites: true });
   }
 
@@ -91,5 +100,10 @@ export class MyAccountComponent {
   protected onPageSize(size: number): void {
     this.pageSize.set(size);
     this.pageIndex.set(1);
+  }
+
+  protected onSearch(value: string): void {
+    this.search.set(value);
+    if (this.pageIndex() !== 1) this.pageIndex.set(1);
   }
 }

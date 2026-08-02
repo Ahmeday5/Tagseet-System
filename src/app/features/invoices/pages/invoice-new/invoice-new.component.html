@@ -87,7 +87,8 @@
           <span>الصنف</span>
           <span>الكمية</span>
           <span>سعر الوحدة</span>
-          <span>خصم%</span>
+          <span>خصم (مبلغ)</span>
+          <span>ملاحظات</span>
           <span>الإجمالي</span>
           <span></span>
         </div>
@@ -101,6 +102,9 @@
               [isDisabled]="loadingRefs()"
               placeholder="— اختر الصنف —"
               searchPlaceholder="ابحث باسم الصنف…"
+              [allowCreate]="true"
+              createLabel="+ إضافة منتج جديد"
+              (createRequested)="openProductModal(idx)"
             />
 
             <input type="number" min="1" formControlName="quantity"
@@ -109,8 +113,11 @@
             <input type="number" min="0" formControlName="unitPrice"
               (input)="onLineFieldChange(idx, 'unitPrice', $any($event.target).value)" />
 
-            <input type="number" min="0" max="100" formControlName="discountPercent"
-              (input)="onLineFieldChange(idx, 'discountPercent', $any($event.target).value)" />
+            <input type="number" min="0" formControlName="discountAmount"
+              (input)="onLineFieldChange(idx, 'discountAmount', $any($event.target).value)" />
+
+            <input type="text" maxlength="1000" formControlName="notes" placeholder="(اختياري)"
+              (input)="onLineNotesChange(idx, $any($event.target).value)" />
 
             <input readonly class="fl-ro iv-line-total" [value]="lineTotal(idx) | currencyAr: true" />
 
@@ -203,4 +210,11 @@
   </div>
 </form>
 
+<app-product-form-modal
+  [open]="productModalOpen()"
+  mode="create"
+  [product]="null"
+  (closed)="closeProductModal()"
+  (saved)="onProductCreated($event)"
+/>
 

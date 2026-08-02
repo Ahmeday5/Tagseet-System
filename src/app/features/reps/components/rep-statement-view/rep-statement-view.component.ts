@@ -39,9 +39,11 @@ export class RepStatementViewComponent {
   readonly loading = input<boolean>(false);
   readonly pageIndex = input<number>(1);
   readonly pageSize = input<number>(10);
+  readonly search = input<string>('');
 
   readonly pageChange = output<number>();
   readonly pageSizeChange = output<number>();
+  readonly searchChange = output<string>();
 
   protected readonly rep = computed<RepStatementRepresentative | null>(
     () => this.statement()?.representative ?? null,
@@ -69,5 +71,10 @@ export class RepStatementViewComponent {
   /** Maps a contract status to a badge tone (Active = ok, else neutral). */
   protected contractBadge(s: string): BadgeType {
     return s === 'Active' ? 'ok' : 'info';
+  }
+
+  /** Arabic label for a contract's status (shares the representative's map). */
+  protected contractStatusLabel(s: string): string {
+    return REP_STATUS_LABELS[s as keyof typeof REP_STATUS_LABELS] ?? s;
   }
 }

@@ -256,7 +256,7 @@
                               <td>{{ item.productName }}</td>
                               <td class="ss-col-num">{{ item.quantity | number }}</td>
                               <td class="ss-col-num">{{ item.unitPrice | currencyAr: true }}</td>
-                              <td class="ss-col-num">{{ item.discountPercent }}%</td>
+                              <td class="ss-col-num">{{ item.discountAmount | currencyAr: true }}</td>
                               <td class="ss-col-num ss-text-bl">
                                 {{ item.lineTotal | currencyAr: true }}
                               </td>

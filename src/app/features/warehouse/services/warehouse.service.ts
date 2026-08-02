@@ -141,10 +141,11 @@ export class WarehouseService {
 
   private toInventoryParams(query: WarehouseInventoryQuery): Record<string, unknown> {
     return {
-      warehouseId: query.warehouseId,
+      warehouseId: query.warehouseId || undefined,
       PageIndex: query.pageIndex ?? 1,
       PageSize: query.pageSize ?? 10,
       search: query.search ?? '',
+      onlyAvailable: query.onlyAvailable,
     };
   }
 }

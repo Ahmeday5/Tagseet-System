@@ -6,11 +6,13 @@ import {
   OnInit,
   signal,
 } from '@angular/core';
-import { DecimalPipe } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { CurrencyArPipe } from '../../../../shared/pipes/currency-ar.pipe';
 import { ApiError } from '../../../../core/models/api-response.model';
 import { ToastService } from '../../../../core/services/toast.service';
+import { DialogService } from '../../../../core/services/dialog.service';
+import { AuthService } from '../../../../core/services/auth.service';
+import { PERMISSIONS } from '../../../../core/constants/permissions.const';
 import { InvoicesService } from '../../services/invoices.service';
 import {
   PURCHASE_INVOICE_STATUS_VIEW,
@@ -36,7 +38,6 @@ import { PayInvoiceModalComponent } from '../../components/pay-invoice-modal/pay
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     RouterLink,
-    DecimalPipe,
     CurrencyArPipe,
     ConfirmInvoiceModalComponent,
     PayInvoiceModalComponent,
@@ -49,6 +50,8 @@ export class InvoiceDetailsComponent implements OnInit {
   private readonly router  = inject(Router);
   private readonly svc     = inject(InvoicesService);
   private readonly toast   = inject(ToastService);
+  private readonly dialog  = inject(DialogService);
+  private readonly auth    = inject(AuthService);
 
   // ── data ──
   protected readonly invoice    = signal<PurchaseInvoice | null>(null);
@@ -60,6 +63,19 @@ export class InvoiceDetailsComponent implements OnInit {
 
   // ── payment modal ──
   protected readonly paymentOpen = signal(false);
+
+  // ── delete ──
+  protected readonly deleting = signal(false);
+
+  /**
+   * Same owners-only gate used across the invoices feature: Representatives
+   * may create/view invoices but must not delete them.
+   */
+  protected readonly canDelete = computed(
+    () =>
+      this.auth.hasPermission(PERMISSIONS.suppliersFullAccess) &&
+      !this.auth.hasAnyRole(['Representative']),
+  );
 
   // ── derived ──
   protected readonly status = computed<PurchaseInvoiceStatusView | null>(() => {
@@ -149,6 +165,35 @@ export class InvoiceDetailsComponent implements OnInit {
     this.invoice.set(updated);
   }
 
+  // ─────────── delete ───────────
+
+  protected async deleteInvoice(): Promise<void> {
+    const inv = this.invoice();
+    if (!inv || this.deleting()) return;
+
+    const ok = await this.dialog.confirm({
+      title: 'حذف فاتورة',
+      message: `هل أنت متأكد من حذف الفاتورة "${inv.invoiceNumber}"؟ سيتم عكس كميات المخزون واسترجاع أي مبلغ مدفوع إلى الخزينة، ولا يمكن التراجع عن هذا الإجراء.`,
+      confirmText: 'حذف',
+      cancelText: 'إلغاء',
+      type: 'danger',
+    });
+    if (!ok) return;
+
+    this.deleting.set(true);
+    this.svc.delete(inv.id).subscribe({
+      next: () => {
+        this.deleting.set(false);
+        this.toast.success('تم حذف الفاتورة بنجاح');
+        this.goToList();
+      },
+      error: (err: ApiError) => {
+        this.deleting.set(false);
+        this.toast.error(err.message || 'تعذّر حذف الفاتورة');
+      },
+    });
+  }
+
   // ─────────── print ───────────
 
   protected print(): void {
@@ -175,12 +220,4 @@ export class InvoiceDetailsComponent implements OnInit {
     });
   }
 
-  protected lineDiscountAmount(line: {
-    quantity: number;
-    unitPrice: number;
-    discountPercent: number;
-  }): number {
-    const gross = (Number(line.quantity) || 0) * (Number(line.unitPrice) || 0);
-    return gross * ((Number(line.discountPercent) || 0) / 100);
-  }
 }

@@ -89,9 +89,16 @@
 
 
 /* ── Inventory table column widths + cell colors ── */
-.wh-w-name   { width: 17%; }
+.wh-w-name   { width: 15%; }
 .wh-w-num    { width: 8%;  text-align: center; }
-.wh-w-price  { width: 11%; }
+.wh-w-price  { width: 10%; }
+.wh-w-notes  {
+  width: 14%;
+  max-width: 0; // forces the ellipsis truncation below to respect the column %
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .wh-w-serial { width: 14%; }
 
 .wh-pos        { color: var(--gr); font-weight: 600; }

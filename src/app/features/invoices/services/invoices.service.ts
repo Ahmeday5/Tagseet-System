@@ -8,7 +8,8 @@ import {
   withCacheInvalidate,
   withInlineHandling,
 } from '../../../core/http/http-context.tokens';
-import { toList } from '../../../core/utils/api-list.util';
+import { toPaged } from '../../../core/utils/api-list.util';
+import { PagedResponse } from '../../../core/models/api-response.model';
 import {
   ConfirmPurchaseInvoicePayload,
   CreatePurchaseInvoicePayload,
@@ -34,30 +35,26 @@ export class InvoicesService {
 
   // ─────────── reads ───────────
 
-  list(filters: PurchaseInvoiceFilters = {}): Observable<PurchaseInvoiceListItem[]> {
+  list(
+    filters: PurchaseInvoiceFilters = {},
+  ): Observable<PagedResponse<PurchaseInvoiceListItem>> {
     return this.api
       .get<unknown>(API_ENDPOINTS.purchaseInvoices.base, {
-        params: {
-          search: filters.search ?? '',
-          status: filters.status ?? '',
-          supplierId: filters.supplierId ?? '',
-        },
+        params: this.toParams(filters),
         context: withCache({ ttlMs: INVOICES_TTL_MS }),
       })
-      .pipe(toList<PurchaseInvoiceListItem>());
+      .pipe(toPaged<PurchaseInvoiceListItem>());
   }
 
-  refreshList(filters: PurchaseInvoiceFilters = {}): Observable<PurchaseInvoiceListItem[]> {
+  refreshList(
+    filters: PurchaseInvoiceFilters = {},
+  ): Observable<PagedResponse<PurchaseInvoiceListItem>> {
     return this.api
       .get<unknown>(API_ENDPOINTS.purchaseInvoices.base, {
-        params: {
-          search: filters.search ?? '',
-          status: filters.status ?? '',
-          supplierId: filters.supplierId ?? '',
-        },
+        params: this.toParams(filters),
         context: withCacheBypass(withCache({ ttlMs: INVOICES_TTL_MS })),
       })
-      .pipe(toList<PurchaseInvoiceListItem>());
+      .pipe(toPaged<PurchaseInvoiceListItem>());
   }
 
   getSummary(): Observable<PurchaseInvoiceSummary> {
@@ -134,5 +131,33 @@ export class InvoicesService {
         ),
       },
     );
+  }
+
+  /**
+   * Permanently deletes the invoice. The backend reverses any inventory
+   * quantities it posted and refunds paid amounts back to the treasuries
+   * used, so both caches must invalidate — same as `confirm`/`pay`.
+   */
+  delete(id: number): Observable<{ message: string }> {
+    return this.api.delete<{ message: string }>(
+      API_ENDPOINTS.purchaseInvoices.byId(id),
+      {
+        context: withInlineHandling(
+          withCacheInvalidate([INVOICES_CACHE_KEY, TREASURY_CACHE_KEY]),
+        ),
+      },
+    );
+  }
+
+  // ─────────── internals ───────────
+
+  private toParams(filters: PurchaseInvoiceFilters): Record<string, unknown> {
+    return {
+      PageIndex: filters.pageIndex ?? 1,
+      PageSize: filters.pageSize ?? 10,
+      search: filters.search ?? '',
+      status: filters.status ?? '',
+      supplierId: filters.supplierId ?? '',
+    };
   }
 }

@@ -18,27 +18,51 @@
     <table class="table">
       <thead>
         <tr>
+          <th>رقم السند</th>
           <th>التاريخ</th>
           <th>المندوب</th>
           <th>المبلغ</th>
           <th>الخزينة</th>
-          <th>رقم السند</th>
           <th>ملاحظات</th>
+          <th></th>
         </tr>
       </thead>
       <tbody>
-        @for (p of rows(); track p.id) {
+        @for (p of rows(); track p.id; let i = $index) {
           <tr>
+            <td style="font-weight:600">{{ rowNumber(i) }}</td>
             <td class="trf-date">{{ p.date | dateAr: 'short' }}</td>
             <td style="font-weight:600">{{ p.representativeName }}</td>
             <td class="trf-amount">{{ p.amount | currencyAr: true }}</td>
             <td>{{ p.treasuryName }}</td>
-            <td dir="ltr" style="font-size:11px">{{ p.voucherNumber }}</td>
             <td>{{ p.notes || '—' }}</td>
+            <td>
+              <div class="d-inline-flex gap-1">
+                <button
+                  type="button"
+                  class="btn btn-sm btn-bl"
+                  [disabled]="loading() || deletingId() === p.id"
+                  (click)="openEdit(p)"
+                  title="تعديل"
+                >تعديل</button>
+                <button
+                  type="button"
+                  class="btn btn-sm btn-re d-inline-flex align-items-center gap-1"
+                  [disabled]="loading() || deletingId() === p.id"
+                  (click)="confirmDelete(p)"
+                  title="حذف"
+                >
+                  @if (deletingId() === p.id) {
+                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                  }
+                  <span>حذف</span>
+                </button>
+              </div>
+            </td>
           </tr>
         } @empty {
           <tr>
-            <td colspan="6" class="text-center py-4" style="color:var(--txt3);font-size:12px">
+            <td colspan="7" class="text-center py-4" style="color:var(--txt3);font-size:12px">
               @if (loading()) { جاري التحميل... } @else { لا توجد عمليات صرف بعد. }
             </td>
           </tr>
@@ -75,3 +99,10 @@
     </button>
   </ng-container>
 </app-modal>
+
+<app-commission-payout-edit-modal
+  [open]="editOpen()"
+  [payout]="editingPayout()"
+  (closed)="onEditClosed()"
+  (saved)="onEditSaved()"
+/>

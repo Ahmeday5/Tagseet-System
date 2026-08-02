@@ -115,7 +115,8 @@ export interface SupplierStatementItem {
   productName: string;
   quantity: number;
   unitPrice: number;
-  discountPercent: number;
+  /** Flat currency amount for the whole line — NOT a percentage. */
+  discountAmount: number;
   lineTotal: number;
 }
 

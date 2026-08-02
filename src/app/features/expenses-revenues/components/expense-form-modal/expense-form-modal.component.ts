@@ -8,6 +8,7 @@ import {
   output,
   signal,
 } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';
@@ -93,6 +94,22 @@ export class ExpenseFormModalComponent {
     date: [todayIso(), [Validators.required]],
     notes: [''],
   });
+
+  /**
+   * Reactive view of `representativeId` — `toSignal` must be created once,
+   * not inside a `computed()`, since it wraps a fresh subscription each call.
+   * Drives the accrued-commission disclaimer below the representative
+   * picker: the full expense amount now moves through the treasury; the
+   * rep's commission is only tracked as owed and paid out later via the
+   * dedicated commission-payout flow — it is no longer deducted here.
+   */
+  private readonly representativeIdSig = toSignal(
+    this.form.controls.representativeId.valueChanges,
+    { initialValue: this.form.controls.representativeId.value },
+  );
+  protected readonly hasRepresentative = computed(
+    () => this.representativeIdSig() != null,
+  );
 
   constructor() {
     effect(

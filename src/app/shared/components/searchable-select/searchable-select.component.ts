@@ -8,6 +8,7 @@ import {
   computed,
   inject,
   input,
+  output,
   signal,
   viewChild,
 } from '@angular/core';
@@ -60,6 +61,22 @@ export class SearchableSelectComponent implements ControlValueAccessor {
    * control locks if *either* source asks for it.
    */
   readonly isDisabled = input<boolean>(false);
+  /**
+   * When true, an "add new" row appears under the no-results message so the
+   * caller can offer inline creation (e.g. adding a product from the
+   * invoice line's product picker) instead of forcing a dead-end search.
+   */
+  readonly allowCreate = input<boolean>(false);
+  /** Label for the create row. Defaults to a generic Arabic prompt. */
+  readonly createLabel = input<string>('+ إضافة عنصر جديد');
+
+  /**
+   * Emits the current search term when the user clicks the create row.
+   * The caller is responsible for opening its own creation UI (e.g. a
+   * modal) and, on success, pushing the new option into `options` and
+   * setting the control's value.
+   */
+  readonly createRequested = output<string>();
 
   private readonly host = inject(ElementRef<HTMLElement>);
   private readonly searchInput =
@@ -163,6 +180,12 @@ export class SearchableSelectComponent implements ControlValueAccessor {
   protected onSearch(event: Event): void {
     this.term.set((event.target as HTMLInputElement).value);
     this.activeIndex.set(0);
+  }
+
+  protected requestCreate(): void {
+    if (this.disabled()) return;
+    this.close();
+    this.createRequested.emit(this.term().trim());
   }
 
   protected onKeydown(event: KeyboardEvent): void {

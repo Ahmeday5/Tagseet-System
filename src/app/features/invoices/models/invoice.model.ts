@@ -48,6 +48,8 @@ export interface PurchaseInvoiceFilters {
   search?: string;
   status?: PurchaseInvoiceStatus | '';
   supplierId?: number | '';
+  pageIndex?: number;
+  pageSize?: number;
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -59,7 +61,10 @@ export interface PurchaseInvoiceItem {
   productName?: string;
   quantity: number;
   unitPrice: number;
-  discountPercent: number;
+  /** Flat currency amount for the whole line — NOT a percentage. */
+  discountAmount: number;
+  /** Optional free-text note for this line, up to 1000 chars. */
+  notes?: string | null;
   /** Server-computed; only present in responses. */
   lineTotal?: number;
 }
@@ -109,7 +114,10 @@ export interface CreatePurchaseInvoiceItem {
   productId: number;
   quantity: number;
   unitPrice: number;
-  discountPercent: number;
+  /** Flat currency amount for the whole line — must be between 0 and quantity*unitPrice. */
+  discountAmount: number;
+  /** Optional free-text note for this line, up to 1000 chars. */
+  notes?: string | null;
 }
 
 /**

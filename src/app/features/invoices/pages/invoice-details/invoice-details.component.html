@@ -43,6 +43,19 @@
     >
       🖨 طباعة
     </button>
+    @if (canDelete() && invoice()) {
+      <button
+        type="button"
+        class="btn btn-sm btn-re d-inline-flex align-items-center gap-1"
+        [disabled]="deleting()"
+        (click)="deleteInvoice()"
+      >
+        @if (deleting()) {
+          <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+        }
+        <span>حذف الفاتورة</span>
+      </button>
+    }
   </div>
 </div>
 
@@ -144,6 +157,7 @@
               <th class="id-w-qty">الكمية</th>
               <th class="id-w-price">سعر الوحدة</th>
               <th class="id-w-disc">الخصم</th>
+              <th class="id-w-name">ملاحظات</th>
               <th class="id-w-total">الإجمالي</th>
             </tr>
           </thead>
@@ -158,22 +172,18 @@
                 <td>{{ line.quantity }}</td>
                 <td>{{ line.unitPrice | currencyAr: true }}</td>
                 <td>
-                  @if (line.discountPercent > 0) {
-                    <span class="id-line-disc">
-                      {{ line.discountPercent | number: '1.0-1' }}%
-                      <span class="id-line-disc-val">
-                        (− {{ lineDiscountAmount(line) | currencyAr: true }})
-                      </span>
-                    </span>
+                  @if (line.discountAmount > 0) {
+                    <span class="id-line-disc">− {{ line.discountAmount | currencyAr: true }}</span>
                   } @else {
                     <span class="text-muted">—</span>
                   }
                 </td>
+                <td [title]="line.notes || ''">{{ line.notes || '—' }}</td>
                 <td class="id-line-total">{{ line.lineTotal ?? 0 | currencyAr: true }}</td>
               </tr>
             } @empty {
               <tr>
-                <td colspan="6" class="id-items-empty">لا توجد أصناف على هذه الفاتورة</td>
+                <td colspan="7" class="id-items-empty">لا توجد أصناف على هذه الفاتورة</td>
               </tr>
             }
           </tbody>

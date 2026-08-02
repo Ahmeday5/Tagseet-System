@@ -61,6 +61,11 @@
           </li>
         } @empty {
           <li class="ss__empty">لا توجد نتائج مطابقة</li>
+          @if (allowCreate()) {
+            <li class="ss__create" (click)="requestCreate()">
+              {{ createLabel() }}
+            </li>
+          }
         }
       </ul>
     </div>

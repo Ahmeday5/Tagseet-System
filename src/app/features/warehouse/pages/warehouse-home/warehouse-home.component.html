@@ -122,15 +122,23 @@
         type="text"
         placeholder="بحث باسم المنتج..."
         [value]="invSearch()"
-        [disabled]="!selectedWarehouseId()"
         (input)="onInvSearch($any($event.target).value)"
       />
+      <select
+        class="wh-select"
+        [value]="invOnlyAvailable() === undefined ? '' : invOnlyAvailable()"
+        (change)="onInvOnlyAvailableChange($any($event.target).value)"
+      >
+        <option value="">الكل (متاح وغير متاح)</option>
+        <option value="true">المتاح فقط</option>
+        <option value="false">غير المتاح فقط</option>
+      </select>
       <select
         class="wh-select"
         [value]="selectedWarehouseId()"
         (change)="onWarehouseChange($any($event.target).value)"
       >
-        <option [value]="0" disabled>— اختر مخزناً —</option>
+        <option [value]="0">— كل المخازن —</option>
         @for (w of warehouses(); track w.id) {
           <option [value]="w.id">{{ w.name }}</option>
         }
@@ -138,7 +146,7 @@
       <button
         type="button"
         class="btn btn-sm d-inline-flex align-items-center gap-1"
-        [disabled]="invLoading() || !selectedWarehouseId()"
+        [disabled]="invLoading()"
         (click)="refreshInventory()"
       >
         @if (invLoading()) {
@@ -161,6 +169,7 @@
           <th class="wh-w-price">سعر البيع</th>
           <th class="wh-w-num">الهامش %</th>
           <th class="wh-w-price">إجمالي الربح</th>
+          <th class="wh-w-notes">ملاحظات</th>
         </tr>
       </thead>
       <tbody>
@@ -176,19 +185,20 @@
             <td>{{ item.sellingPrice | currencyAr: true }}</td>
             <td class="wh-pos">{{ item.marginPercent | number: '1.0-1' }}%</td>
             <td class="wh-pos">{{ item.totalProfit | currencyAr: true }}</td>
+            <td class="wh-w-notes" [title]="item.notes || ''">{{ item.notes || '—' }}</td>
           </tr>
         } @empty {
           <tr>
             <td colspan="9" class="wh-inv-empty">
-              @if (!selectedWarehouseId()) {
-                اختر مخزناً لعرض الأصناف الموجودة فيه
-              } @else if (invLoading()) {
+              @if (invLoading()) {
                 <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
                 <span>جاري تحميل الأصناف...</span>
               } @else if (invSearch()) {
                 لا أصناف مطابقة لـ "{{ invSearch() }}"
-              } @else {
+              } @else if (selectedWarehouseId()) {
                 لا توجد أصناف في هذا المخزن بعد
+              } @else {
+                لا توجد أصناف بعد
               }
             </td>
           </tr>
@@ -197,7 +207,7 @@
     </table>
   </div>
 
-  @if (selectedWarehouseId() && invCount() > 0) {
+  @if (invCount() > 0) {
     <app-pagination
       [pageIndex]="invPageIndex()"
       [pageSize]="invPageSize()"

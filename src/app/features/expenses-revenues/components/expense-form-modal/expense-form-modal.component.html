@@ -47,6 +47,12 @@
           placeholder="بدون مندوب"
           searchPlaceholder="ابحث باسم المندوب…"
         />
+        @if (hasRepresentative()) {
+          <div class="alert alert-info py-2 mt-2 mb-0" style="font-size:11px">
+            سيتم خصم كامل المبلغ من الخزينة، وتُحتسب عمولة المندوب كمبلغ مستحق
+            يُصرف لاحقاً من صفحة المندوبين — لا يُخصم فورياً.
+          </div>
+        }
       </div>
 
       <div class="col-12">

@@ -12,6 +12,7 @@ import { CurrencyArPipe } from '../../../../shared/pipes/currency-ar.pipe';
 import { HttpCacheService } from '../../../../core/services/http-cache.service';
 import { onInvalidate } from '../../../../core/utils/auto-refresh.util';
 import { ApiError } from '../../../../core/models/api-response.model';
+import { PaginationComponent } from '../../../../shared/components/pagination/pagination.component';
 import { InvoicesService } from '../../services/invoices.service';
 import {
   PURCHASE_INVOICE_STATUS_VIEW,
@@ -28,6 +29,8 @@ import { PayInvoiceModalComponent } from '../../components/pay-invoice-modal/pay
 import { AuthService } from '../../../../core/services/auth.service';
 import { PERMISSIONS } from '../../../../core/constants/permissions.const';
 import { PrintService } from '../../../../core/services/print.service';
+import { DialogService } from '../../../../core/services/dialog.service';
+import { ToastService } from '../../../../core/services/toast.service';
 
 const STATUS_OPTIONS: ReadonlyArray<{
   value: PurchaseInvoiceStatus | '';
@@ -42,11 +45,18 @@ const STATUS_OPTIONS: ReadonlyArray<{
   { value: 'Cancelled',     label: 'ملغية' },
 ];
 
+const DEFAULT_PAGE_SIZE = 10;
+
 @Component({
   selector: 'app-invoices-list',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CurrencyArPipe, ConfirmInvoiceModalComponent, PayInvoiceModalComponent],
+  imports: [
+    CurrencyArPipe,
+    ConfirmInvoiceModalComponent,
+    PayInvoiceModalComponent,
+    PaginationComponent,
+  ],
   templateUrl: './invoices-list.component.html',
   styleUrl: './invoices-list.component.scss',
 })
@@ -57,6 +67,8 @@ export class InvoicesListComponent implements OnInit {
   private readonly cache            = inject(HttpCacheService);
   private readonly printer          = inject(PrintService);
   private readonly auth             = inject(AuthService);
+  private readonly dialog           = inject(DialogService);
+  private readonly toast            = inject(ToastService);
 
   /**
    * Write access to invoices: supplier-full-access holders, plus the
@@ -95,6 +107,12 @@ export class InvoicesListComponent implements OnInit {
   protected readonly searchTerm   = signal('');
   protected readonly statusFilter = signal<PurchaseInvoiceStatus | ''>('');
   protected readonly supplierFilter = signal<number | ''>('');
+  protected readonly pageIndex    = signal(1);
+  protected readonly pageSize     = signal(DEFAULT_PAGE_SIZE);
+
+  // ── pagination meta from server ──
+  protected readonly count      = signal(0);
+  protected readonly totalPages = signal(0);
 
   // ── confirm modal ──
   protected readonly confirmOpen   = signal(false);
@@ -104,18 +122,23 @@ export class InvoicesListComponent implements OnInit {
   protected readonly paymentOpen   = signal(false);
   protected readonly paymentTarget = signal<PurchaseInvoiceListItem | null>(null);
 
+  // ── delete ──
+  protected readonly deletingId = signal<number | null>(null);
+
   // ── derived ──
   protected readonly statusOptions = STATUS_OPTIONS;
 
   /**
    * Stable, debounce-able payload used to refetch the list. Combining
-   * the three filter signals into one computed lets the effect treat
-   * the trio as a single trigger.
+   * the filter + paging signals into one computed lets the effect treat
+   * the whole group as a single trigger.
    */
   private readonly filterPayload = computed(() => ({
     search: this.searchTerm().trim(),
     status: this.statusFilter(),
     supplierId: this.supplierFilter(),
+    pageIndex: this.pageIndex(),
+    pageSize: this.pageSize(),
   }));
 
   private debounceTimer: ReturnType<typeof setTimeout> | null = null;
@@ -145,7 +168,13 @@ export class InvoicesListComponent implements OnInit {
   // ─────────── data loaders ───────────
 
   protected fetchList(
-    payload: { search: string; status: PurchaseInvoiceStatus | ''; supplierId: number | '' },
+    payload: {
+      search: string;
+      status: PurchaseInvoiceStatus | '';
+      supplierId: number | '';
+      pageIndex: number;
+      pageSize: number;
+    },
     force = false,
   ): void {
     this.loading.set(true);
@@ -153,12 +182,16 @@ export class InvoicesListComponent implements OnInit {
       ? this.svc.refreshList(payload)
       : this.svc.list(payload);
     stream$.subscribe({
-      next: (list) => {
-        this.invoices.set(list ?? []);
+      next: (res) => {
+        this.invoices.set(res?.data ?? []);
+        this.count.set(res?.count ?? 0);
+        this.totalPages.set(res?.totalPages ?? 0);
         this.loading.set(false);
       },
       error: () => {
         this.invoices.set([]);
+        this.count.set(0);
+        this.totalPages.set(0);
         this.loading.set(false);
       },
     });
@@ -248,14 +281,26 @@ export class InvoicesListComponent implements OnInit {
 
   protected onSearch(value: string): void {
     this.searchTerm.set(value);
+    this.pageIndex.set(1);
   }
 
   protected onStatusChange(value: string): void {
     this.statusFilter.set(value as PurchaseInvoiceStatus | '');
+    this.pageIndex.set(1);
   }
 
   protected onSupplierChange(value: string): void {
     this.supplierFilter.set(value === '' ? '' : Number(value));
+    this.pageIndex.set(1);
+  }
+
+  protected onPageChange(page: number): void {
+    this.pageIndex.set(page);
+  }
+
+  protected onPageSizeChange(size: number): void {
+    this.pageSize.set(size);
+    this.pageIndex.set(1);
   }
 
   // ─────────── navigation ───────────
@@ -328,6 +373,36 @@ export class InvoicesListComponent implements OnInit {
       ),
     );
     this.fetchSummary();
+  }
+
+  // ─────────── delete ───────────
+
+  protected async confirmDelete(inv: PurchaseInvoiceListItem): Promise<void> {
+    const ok = await this.dialog.confirm({
+      title: 'حذف فاتورة',
+      message: `هل أنت متأكد من حذف الفاتورة "${inv.invoiceNumber}"؟ سيتم عكس كميات المخزون واسترجاع أي مبلغ مدفوع إلى الخزينة، ولا يمكن التراجع عن هذا الإجراء.`,
+      confirmText: 'حذف',
+      cancelText: 'إلغاء',
+      type: 'danger',
+    });
+    if (!ok) return;
+
+    this.deletingId.set(inv.id);
+    this.svc.delete(inv.id).subscribe({
+      next: () => {
+        this.deletingId.set(null);
+        this.toast.success('تم حذف الفاتورة بنجاح');
+        if (this.invoices().length === 1 && this.pageIndex() > 1) {
+          this.pageIndex.update((p) => p - 1);
+        } else {
+          this.refresh();
+        }
+      },
+      error: (err: ApiError) => {
+        this.deletingId.set(null);
+        this.toast.error(err.message || 'تعذّر حذف الفاتورة');
+      },
+    });
   }
 
   // ─────────── view helpers ───────────

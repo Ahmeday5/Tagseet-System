@@ -200,6 +200,15 @@ export interface CommissionPayoutRow {
   notes: string;
 }
 
+/** PUT body for `representatives/commission-payouts/{id}`. */
+export interface UpdateCommissionPayoutPayload {
+  amount: number;
+  treasuryId: number;
+  /** `yyyy-MM-dd`. */
+  date: string;
+  notes: string;
+}
+
 /** Query string for the paginated payouts history. */
 export type CommissionPayoutsQuery = PagedQuery;
 
