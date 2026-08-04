@@ -25,11 +25,9 @@ import { ApiError } from '../../../../core/models/api-response.model';
 import { ToastService } from '../../../../core/services/toast.service';
 
 import { ShareholdersService } from '../../services/shareholders.service';
-import { TreasuryService } from '../../services/treasury.service';
-import { TreasuryType } from '../../enums/treasury-type.enum';
-import { Treasury } from '../../models/treasury.model';
 import { Shareholder } from '../../models/shareholder.model';
 import { ProfitSettlementPreview } from '../../models/profit-settlement.model';
+import { ShareholderTreasuryLookup } from '../../models/shareholder-treasury-lookup.model';
 import {
   CapitalTransaction,
   CapitalTransactionDirection,
@@ -45,13 +43,6 @@ import {
 type CapitalMode = 'transaction' | 'capitalize';
 
 const DEFAULT_PAGE_SIZE = 10;
-
-const PROFIT_TREASURY_TYPES = new Set([
-  TreasuryType.Profits,
-  TreasuryType.SubRepresentativeProfits,
-  TreasuryType.CompanyProfits,
-]);
-const VOUCHER_PREFIX_LEN = 18;
 
 /**
  * Per-shareholder capital workbench.
@@ -104,7 +95,6 @@ export class ShareholderCapitalModalComponent {
   // ── deps ──
   private readonly fb = inject(FormBuilder);
   private readonly service = inject(ShareholdersService);
-  private readonly treasuryService = inject(TreasuryService);
   private readonly toast = inject(ToastService);
 
   // ── static option tables ──
@@ -134,7 +124,7 @@ export class ShareholderCapitalModalComponent {
   protected readonly previewLoading = signal(false);
 
   // ── treasuries (for the deposit/withdraw picker) ──
-  private readonly treasuries = signal<Treasury[]>([]);
+  private readonly treasuries = signal<ShareholderTreasuryLookup[]>([]);
   protected readonly treasuriesLoading = signal(false);
 
   // ── ledger ──
@@ -171,7 +161,7 @@ export class ShareholderCapitalModalComponent {
   protected readonly availableProfit = computed(() => {
     const sh = this.shareholder();
     if (!sh) return 0;
-    const line = this.preview()?.lines.find((l) => l.shareholderId === sh.id);
+    const line = this.preview()?.lines?.data.find((l) => l.shareholderId === sh.id);
     return line?.amount ?? sh.accruedProfit ?? 0;
   });
 
@@ -182,7 +172,7 @@ export class ShareholderCapitalModalComponent {
   protected readonly companyPercentage = computed(() => {
     const sh = this.shareholder();
     if (!sh) return 0;
-    const line = this.preview()?.lines.find((l) => l.shareholderId === sh.id);
+    const line = this.preview()?.lines?.data.find((l) => l.shareholderId === sh.id);
     return line?.companyPercentage ?? 0;
   });
 
@@ -190,34 +180,22 @@ export class ShareholderCapitalModalComponent {
     () => this.availableProfit() > 0,
   );
 
-  /**
-   * Cash treasuries valid for a capital deposit/withdrawal: active, not a
-   * representative sub-treasury, and not any profits-type treasury.
-   */
+  /** Every treasury, available for a capital deposit/withdrawal. */
   protected readonly treasuryOptions = computed<SearchableSelectOption[]>(() =>
-    this.treasuries()
-      .filter(
-        (t) =>
-          t.isActive &&
-          t.type !== TreasuryType.SubRepresentative &&
-          !PROFIT_TREASURY_TYPES.has(t.type as TreasuryType),
-      )
-      .map((t) => ({
-        value: t.id,
-        label: t.name,
-        hint: t.type === TreasuryType.Bank ? 'بنك' : undefined,
-      })),
+    this.treasuries().map((t) => ({
+      value: t.id,
+      label: t.name,
+      hint: t.representativeName ?? undefined,
+    })),
   );
 
-  /** Operational treasuries valid as source for capitalising profits. */
+  /** Every treasury, available as source for capitalising profits. */
   protected readonly capOperationalTreasuryOptions = computed<SearchableSelectOption[]>(() =>
-    this.treasuries()
-      .filter((t) => t.isActive && !PROFIT_TREASURY_TYPES.has(t.type as TreasuryType))
-      .map((t) => ({
-        value: t.id,
-        label: t.name,
-        hint: t.type === TreasuryType.Bank ? 'بنك' : undefined,
-      })),
+    this.treasuries().map((t) => ({
+      value: t.id,
+      label: t.name,
+      hint: t.representativeName ?? undefined,
+    })),
   );
 
   /** Capital balance after a deposit (adds) / withdrawal (subtracts). */
@@ -440,26 +418,6 @@ export class ShareholderCapitalModalComponent {
     return isCapitalInflow(direction);
   }
 
-  protected shortVoucher(value: string | undefined): string {
-    if (!value) return '—';
-    return value.length > VOUCHER_PREFIX_LEN
-      ? `${value.slice(0, VOUCHER_PREFIX_LEN)}…`
-      : value;
-  }
-
-  protected copyVoucher(value: string | undefined): void {
-    if (!value) return;
-    const clipboard = navigator.clipboard;
-    if (clipboard?.writeText) {
-      clipboard.writeText(value).then(
-        () => this.toast.success('تم نسخ رقم السند'),
-        () => this.toast.error('تعذّر النسخ'),
-      );
-    } else {
-      this.toast.error('النسخ غير مدعوم في هذا المتصفح');
-    }
-  }
-
   // ─────────── internals ───────────
 
   /** Shared success path for both write forms. */
@@ -492,21 +450,24 @@ export class ShareholderCapitalModalComponent {
 
   private loadPreview(): void {
     this.previewLoading.set(true);
-    this.service.previewSettlement().subscribe({
-      next: (preview) => {
-        this.preview.set(preview);
-        this.previewLoading.set(false);
-      },
-      error: () => {
-        this.preview.set(null);
-        this.previewLoading.set(false);
-      },
-    });
+    const search = this.shareholder()?.name;
+    this.service
+      .previewSettlement(search ? { search, pageSize: 1 } : {})
+      .subscribe({
+        next: (preview) => {
+          this.preview.set(preview);
+          this.previewLoading.set(false);
+        },
+        error: () => {
+          this.preview.set(null);
+          this.previewLoading.set(false);
+        },
+      });
   }
 
   private loadTreasuries(): void {
     this.treasuriesLoading.set(true);
-    this.treasuryService.list().subscribe({
+    this.service.treasuriesLookup().subscribe({
       next: (list) => {
         this.treasuries.set(list ?? []);
         this.treasuriesLoading.set(false);

@@ -10,7 +10,7 @@ import {
   withInlineHandling,
   withSkipLoader,
 } from '../../../core/http/http-context.tokens';
-import { toPaged } from '../../../core/utils/api-list.util';
+import { toList, toPaged } from '../../../core/utils/api-list.util';
 import {
   CreateShareholderPayload,
   Shareholder,
@@ -21,6 +21,7 @@ import {
   CreateProfitSettlementPayload,
   ProfitSettlement,
   ProfitSettlementPreview,
+  ProfitSettlementPreviewQuery,
   ProfitSettlementRow,
   ProfitSettlementsQuery,
 } from '../models/profit-settlement.model';
@@ -39,6 +40,7 @@ import {
   CompanyProfitStatement,
   CompanyProfitStatementQuery,
 } from '../models/company-profit-statement.model';
+import { ShareholderTreasuryLookup } from '../models/shareholder-treasury-lookup.model';
 
 /**
  * A shareholder's contribution moves capital-treasury money and recomputes
@@ -131,13 +133,29 @@ export class ShareholdersService {
   /**
    * Dry-run of the next distribution. Never cached (it must reflect the live
    * profits balance) and runs without the global loader so the modal can show
-   * its own spinner.
+   * its own spinner. `lines` is paginated/searchable server-side; the totals
+   * stay whole-population regardless of `query`.
    */
-  previewSettlement(): Observable<ProfitSettlementPreview> {
+  previewSettlement(
+    query: ProfitSettlementPreviewQuery = {},
+  ): Observable<ProfitSettlementPreview> {
     return this.api.get<ProfitSettlementPreview>(
       API_ENDPOINTS.shareholders.profitSettlementPreview,
-      { context: withSkipLoader() },
+      {
+        params: this.toPreviewParams(query),
+        context: withSkipLoader(),
+      },
     );
+  }
+
+  private toPreviewParams(
+    query: ProfitSettlementPreviewQuery,
+  ): Record<string, unknown> {
+    return {
+      PageIndex: query.pageIndex ?? 1,
+      PageSize: query.pageSize ?? 10,
+      search: query.search?.trim() || undefined,
+    };
   }
 
   /**
@@ -362,5 +380,16 @@ export class ShareholdersService {
       ...(query.fromDate ? { fromDate: query.fromDate } : {}),
       ...(query.toDate ? { toDate: query.toDate } : {}),
     };
+  }
+
+  // ─────────────── treasuries lookup (unfiltered — includes profit/rep treasuries) ───────────────
+
+  /** Every treasury, for the shareholder-area treasury pickers (capitalize/distribute/capital). */
+  treasuriesLookup(): Observable<ShareholderTreasuryLookup[]> {
+    return this.api
+      .get<unknown>(API_ENDPOINTS.shareholders.treasuriesLookup, {
+        context: withCache({ ttlMs: SHAREHOLDERS_TTL_MS }),
+      })
+      .pipe(toList<ShareholderTreasuryLookup>());
   }
 }

@@ -64,6 +64,8 @@ export const API_ENDPOINTS = {
     statement: (id: number) => `dashboard/shareholders/${id}/statement`,
     /** GET (paged): company profit treasury ledger — all received/paid entries. */
     companyProfitStatement: 'dashboard/company-profit-statement',
+    /** GET: every treasury (incl. profit/representative ones) for the shareholder-area treasury pickers. */
+    treasuriesLookup: 'dashboard/shareholders/treasuries-lookup',
   },
   warehouses: {
     base: 'dashboard/warehouses',

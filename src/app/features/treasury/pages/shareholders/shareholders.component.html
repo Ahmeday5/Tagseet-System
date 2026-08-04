@@ -254,7 +254,7 @@
     <div class="sh-preview-banner-meta">
       <span>{{ previewTreasuryName() }}</span>
       <span>·</span>
-      <span>{{ previewLines().length | number }} مساهم</span>
+      <span>{{ previewCount() | number }} مساهم</span>
       @if (previewTotalCompanyShare() > 0) {
       <span>·</span>
       <span>نصيب المساهمين: {{ previewTotalShareholdersShare() | currencyAr: true }}</span>
@@ -262,6 +262,19 @@
       <span>نصيب الشركة: {{ previewTotalCompanyShare() | currencyAr: true }}</span>
       }
     </div>
+  </div>
+
+  <div class="sh-search" style="margin:0 12px 10px">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+      stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <circle cx="11" cy="11" r="7" />
+      <path d="m21 21-4.3-4.3" />
+    </svg>
+    <input type="text" placeholder="بحث باسم المساهم..." [value]="previewSearch()"
+      (input)="onPreviewSearch($any($event.target).value)" />
+    @if (previewSearch()) {
+    <button type="button" class="sh-search-clear" aria-label="مسح البحث" (click)="clearPreviewSearch()">×</button>
+    }
   </div>
 
   <div class="tw mb-0">
@@ -330,81 +343,11 @@
       }
     </table>
   </div>
-</div>
 
-<!-- ── PROFIT SETTLEMENTS (history) ── -->
-<div class="sh-section-head">
-  <div>
-    <div class="sh-section-title">سجل توزيع الأرباح</div>
-    <div class="sh-section-sub">عمليات توزيع الأرباح المنفّذة على المساهمين</div>
-  </div>
-  <button type="button" class="btn btn-sm d-inline-flex align-items-center gap-1" [disabled]="settlementsLoading()"
-    (click)="refreshSettlements()" title="تحديث السجل من الخادم">
-    @if (settlementsLoading()) {
-    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-    }
-    <span>تحديث</span>
-  </button>
-</div>
-
-<div class="card sh-card">
-  <div class="tw mb-0">
-    <table>
-      <thead>
-        <tr>
-          <th class="sh-w-id">#</th>
-          <th class="sh-w-date">التاريخ</th>
-          <th class="sh-w-treasury">خزينة الأرباح</th>
-          <th class="sh-w-amount">إجمالي الموزّع</th>
-          <th class="sh-w-pct text-center">عدد المساهمين</th>
-          <th>ملاحظات</th>
-          <th class="sh-w-actions text-center">التفاصيل</th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (st of settlements(); track st.id) {
-        <tr class="sh-clickable" (click)="openDetails(st.id)">
-          <td class="sh-id">#{{ st.id }}</td>
-          <td class="fs-10">{{ st.settlementDate | dateAr: 'short' }}</td>
-          <td class="sh-treasury">{{ st.profitsTreasuryName || '—' }}</td>
-          <td class="sh-profit">{{ st.totalAmount | currencyAr: true }}</td>
-          <td class="text-center fw-600">{{ st.shareholdersCount | number }}</td>
-          <td class="sh-addr" [title]="st.notes ?? ''">{{ st.notes || '—' }}</td>
-          <td class="text-center">
-            <button type="button" class="btn btn-sm btn-bl"
-              (click)="openDetails(st.id); $event.stopPropagation()">عرض</button>
-          </td>
-        </tr>
-        } @empty {
-        <tr>
-          <td colspan="7" class="sh-empty">
-            @if (settlementsLoading()) {
-            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-            <span>جاري تحميل السجل...</span>
-            } @else {
-            <div class="sh-empty-block">
-              <div class="sh-empty-icon" aria-hidden="true">
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3"
-                  stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M3 3v18h18" />
-                  <path d="m7 14 4-4 3 3 5-6" />
-                </svg>
-              </div>
-              <div class="sh-empty-title">لا توجد عمليات توزيع بعد</div>
-              <div class="sh-empty-sub">استخدم زر «توزيع أرباح» لتوزيع رصيد خزينة الأرباح على المساهمين.</div>
-            </div>
-            }
-          </td>
-        </tr>
-        }
-      </tbody>
-    </table>
-  </div>
-
-  @if (sCount() > 0) {
-  <app-pagination [pageIndex]="sPageIndex()" [pageSize]="sPageSize()" [count]="sCount()" [totalPages]="sTotalPages()"
-    [disabled]="settlementsLoading()" (pageChange)="onSettlementsPageChange($event)"
-    (pageSizeChange)="onSettlementsPageSizeChange($event)" />
+  @if (previewCount() > 0) {
+  <app-pagination [pageIndex]="previewPageIndex()" [pageSize]="previewPageSize()" [count]="previewCount()"
+    [totalPages]="previewTotalPages()" [disabled]="previewLoading()" (pageChange)="onPreviewPageChange($event)"
+    (pageSizeChange)="onPreviewPageSizeChange($event)" />
   }
 </div>
 

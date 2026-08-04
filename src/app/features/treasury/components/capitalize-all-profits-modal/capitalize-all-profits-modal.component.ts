@@ -21,16 +21,9 @@ import { ApiError } from '../../../../core/models/api-response.model';
 import { ToastService } from '../../../../core/services/toast.service';
 
 import { ShareholdersService } from '../../services/shareholders.service';
-import { TreasuryService } from '../../services/treasury.service';
-import { TreasuryType } from '../../enums/treasury-type.enum';
-import { Treasury } from '../../models/treasury.model';
 import { ProfitSettlementPreview } from '../../models/profit-settlement.model';
-
-const PROFIT_TREASURY_TYPES = new Set([
-  TreasuryType.Profits,
-  TreasuryType.SubRepresentativeProfits,
-  TreasuryType.CompanyProfits,
-]);
+import { ShareholderTreasuryLookup } from '../../models/shareholder-treasury-lookup.model';
+import { FETCH_ALL_PAGE_SIZE } from '../../../../core/utils/api-list.util';
 
 @Component({
   selector: 'app-capitalize-all-profits-modal',
@@ -54,7 +47,6 @@ export class CapitalizeAllProfitsModalComponent {
 
   private readonly fb = inject(FormBuilder);
   private readonly service = inject(ShareholdersService);
-  private readonly treasuryService = inject(TreasuryService);
   private readonly toast = inject(ToastService);
 
   protected readonly preview = signal<ProfitSettlementPreview | null>(null);
@@ -62,11 +54,11 @@ export class CapitalizeAllProfitsModalComponent {
   protected readonly previewError = signal<string | null>(null);
   protected readonly submitting = signal(false);
   protected readonly serverError = signal<string | null>(null);
-  protected readonly treasuries = signal<Treasury[]>([]);
+  protected readonly treasuries = signal<ShareholderTreasuryLookup[]>([]);
   protected readonly loadingTreasuries = signal(false);
 
   protected readonly lines = computed(() =>
-    (this.preview()?.lines ?? []).filter((l) => l.amount > 0),
+    (this.preview()?.lines?.data ?? []).filter((l) => l.amount > 0),
   );
   protected readonly totalAmount = computed(
     () => this.preview()?.totalAmount ?? 0,
@@ -77,17 +69,13 @@ export class CapitalizeAllProfitsModalComponent {
   protected readonly totalCompanyShare = computed(
     () => this.preview()?.totalCompanyShare ?? 0,
   );
-  protected readonly canCapitalize = computed(
-    () => this.totalAmount() > 0 && this.lines().length > 0,
-  );
+  protected readonly canCapitalize = computed(() => this.totalAmount() > 0);
   protected readonly operationalTreasuryOptions = computed<SearchableSelectOption[]>(() =>
-    this.treasuries()
-      .filter((t) => t.isActive && !PROFIT_TREASURY_TYPES.has(t.type as TreasuryType))
-      .map((t) => ({
-        value: t.id,
-        label: t.name,
-        hint: t.type === TreasuryType.Bank ? 'بنك' : undefined,
-      })),
+    this.treasuries().map((t) => ({
+      value: t.id,
+      label: t.name,
+      hint: t.representativeName ?? undefined,
+    })),
   );
 
   protected readonly form = this.fb.nonNullable.group({
@@ -157,7 +145,7 @@ export class CapitalizeAllProfitsModalComponent {
     this.preview.set(null);
     this.previewError.set(null);
     this.loadingPreview.set(true);
-    this.service.previewSettlement().subscribe({
+    this.service.previewSettlement({ pageSize: FETCH_ALL_PAGE_SIZE }).subscribe({
       next: (preview) => {
         this.preview.set(preview);
         this.loadingPreview.set(false);
@@ -171,7 +159,7 @@ export class CapitalizeAllProfitsModalComponent {
 
   private loadTreasuries(): void {
     this.loadingTreasuries.set(true);
-    this.treasuryService.list().subscribe({
+    this.service.treasuriesLookup().subscribe({
       next: (list) => {
         this.treasuries.set(list ?? []);
         this.loadingTreasuries.set(false);

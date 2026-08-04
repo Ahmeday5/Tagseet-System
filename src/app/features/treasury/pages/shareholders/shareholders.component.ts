@@ -13,7 +13,6 @@ import { Shareholder } from '../../models/shareholder.model';
 import {
   ProfitSettlement,
   ProfitSettlementPreview,
-  ProfitSettlementRow,
 } from '../../models/profit-settlement.model';
 import { ShareholderFormModalComponent } from '../../components/shareholder-form-modal/shareholder-form-modal.component';
 import { ProfitDistributionModalComponent } from '../../components/profit-distribution-modal/profit-distribution-modal.component';
@@ -96,7 +95,14 @@ export class ShareholdersComponent {
   // ── pending-distribution preview (live) ──
   protected readonly preview = signal<ProfitSettlementPreview | null>(null);
   protected readonly previewLoading = signal(false);
-  protected readonly previewLines = computed(() => this.preview()?.lines ?? []);
+  protected readonly previewSearch = signal('');
+  protected readonly previewPageIndex = signal(1);
+  protected readonly previewPageSize = signal(DEFAULT_PAGE_SIZE);
+  protected readonly previewLines = computed(() => this.preview()?.lines?.data ?? []);
+  protected readonly previewCount = computed(() => this.preview()?.lines?.count ?? 0);
+  protected readonly previewTotalPages = computed(
+    () => this.preview()?.lines?.totalPages ?? 0,
+  );
   protected readonly previewTotal = computed(
     () => this.preview()?.totalAmount ?? 0,
   );
@@ -109,17 +115,14 @@ export class ShareholdersComponent {
   protected readonly previewTreasuryName = computed(
     () => this.preview()?.profitsTreasuryName ?? '—',
   );
-  protected readonly hasPendingProfits = computed(
-    () => this.previewTotal() > 0 && this.previewLines().length > 0,
-  );
+  /** Whether there's anything to distribute — based on the whole-population total, not the current search/page. */
+  protected readonly hasPendingProfits = computed(() => this.previewTotal() > 0);
 
-  // ── profit settlements (history) ──
-  protected readonly settlements = signal<ProfitSettlementRow[]>([]);
-  protected readonly settlementsLoading = signal(false);
-  protected readonly sPageIndex = signal(1);
-  protected readonly sPageSize = signal(DEFAULT_PAGE_SIZE);
-  protected readonly sCount = signal(0);
-  protected readonly sTotalPages = signal(0);
+  private readonly previewTrigger = computed(() => ({
+    search: this.previewSearch().trim(),
+    pageIndex: this.previewPageIndex(),
+    pageSize: this.previewPageSize(),
+  }));
 
   // ── profit-settlement modals ──
   protected readonly distributeOpen = signal(false);
@@ -139,11 +142,6 @@ export class ShareholdersComponent {
 
   // ── company profit statement modal ──
   protected readonly companyStatementOpen = signal(false);
-
-  private readonly settlementsTrigger = computed(() => ({
-    pageIndex: this.sPageIndex(),
-    pageSize: this.sPageSize(),
-  }));
 
   // ── derived ──
   protected readonly hasFilters = computed(() => this.searchTerm().length > 0);
@@ -170,7 +168,7 @@ export class ShareholdersComponent {
   }));
 
   private debounceTimer: ReturnType<typeof setTimeout> | null = null;
-  private settlementsDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+  private previewDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
     effect(() => {
@@ -182,16 +180,12 @@ export class ShareholdersComponent {
       );
     });
 
-    // Settlements history paginates independently of the shareholders list.
-    // Defer the fetch so signal writes inside it run OUTSIDE the effect's
-    // reactive context (codebase idiom — avoids NG0600).
+    // The pending-distribution preview paginates/searches independently too.
     effect(() => {
-      const trigger = this.settlementsTrigger();
-      if (this.settlementsDebounceTimer) {
-        clearTimeout(this.settlementsDebounceTimer);
-      }
-      this.settlementsDebounceTimer = setTimeout(
-        () => this.fetchSettlements(trigger, false),
+      const trigger = this.previewTrigger();
+      if (this.previewDebounceTimer) clearTimeout(this.previewDebounceTimer);
+      this.previewDebounceTimer = setTimeout(
+        () => this.loadPreview(trigger),
         REFETCH_DEBOUNCE_MS,
       );
     });
@@ -201,23 +195,20 @@ export class ShareholdersComponent {
     // either scope.
     onInvalidate(this.cache, 'shareholder', () => this.refreshAll());
     onInvalidate(this.cache, 'treasur', () => this.refreshAll());
-
-    // Initial load of the live distribution preview (the lists self-load via
-    // their effects; the preview endpoint isn't cached, so we call it directly).
-    this.loadPreview();
   }
 
   private refreshAll(): void {
     this.refresh();
-    this.fetchSettlements(this.settlementsTrigger(), true);
-    this.loadPreview();
+    this.loadPreview(this.previewTrigger());
   }
 
   // ─────────── pending-distribution preview ───────────
 
-  protected loadPreview(): void {
+  protected loadPreview(
+    trigger: ReturnType<typeof this.previewTrigger> = this.previewTrigger(),
+  ): void {
     this.previewLoading.set(true);
-    this.service.previewSettlement().subscribe({
+    this.service.previewSettlement(trigger).subscribe({
       next: (preview) => {
         this.preview.set(preview);
         this.previewLoading.set(false);
@@ -227,6 +218,26 @@ export class ShareholdersComponent {
         this.previewLoading.set(false);
       },
     });
+  }
+
+  protected onPreviewSearch(value: string): void {
+    this.previewSearch.set(value);
+    if (this.previewPageIndex() !== 1) this.previewPageIndex.set(1);
+  }
+
+  protected clearPreviewSearch(): void {
+    if (!this.previewSearch()) return;
+    this.previewSearch.set('');
+    if (this.previewPageIndex() !== 1) this.previewPageIndex.set(1);
+  }
+
+  protected onPreviewPageChange(page: number): void {
+    this.previewPageIndex.set(page);
+  }
+
+  protected onPreviewPageSizeChange(size: number): void {
+    this.previewPageSize.set(size);
+    if (this.previewPageIndex() !== 1) this.previewPageIndex.set(1);
   }
 
   // ─────────── data loaders ───────────
@@ -445,46 +456,6 @@ export class ShareholdersComponent {
     });
   }
 
-  // ─────────── profit settlements ───────────
-
-  private fetchSettlements(
-    trigger: ReturnType<typeof this.settlementsTrigger>,
-    force: boolean,
-  ): void {
-    this.settlementsLoading.set(true);
-    const stream$ = force
-      ? this.service.refreshSettlements(trigger)
-      : this.service.listSettlements(trigger);
-
-    stream$.subscribe({
-      next: (page) => {
-        this.settlements.set(page?.data ?? []);
-        this.sCount.set(page?.count ?? 0);
-        this.sTotalPages.set(page?.totalPages ?? 0);
-        this.settlementsLoading.set(false);
-      },
-      error: () => {
-        this.settlements.set([]);
-        this.sCount.set(0);
-        this.sTotalPages.set(0);
-        this.settlementsLoading.set(false);
-      },
-    });
-  }
-
-  protected refreshSettlements(): void {
-    this.fetchSettlements(this.settlementsTrigger(), true);
-  }
-
-  protected onSettlementsPageChange(page: number): void {
-    this.sPageIndex.set(page);
-  }
-
-  protected onSettlementsPageSizeChange(size: number): void {
-    this.sPageSize.set(size);
-    if (this.sPageIndex() !== 1) this.sPageIndex.set(1);
-  }
-
   // ─────────── profit-settlement modals ───────────
 
   protected openDistribute(): void {
@@ -497,9 +468,8 @@ export class ShareholdersComponent {
 
   protected onSettled(settlement: ProfitSettlement): void {
     this.distributeOpen.set(false);
-    // Service invalidation triggers refreshAll(); jump settlements to page 1 so
-    // the new record is visible, then open its breakdown immediately.
-    if (this.sPageIndex() !== 1) this.sPageIndex.set(1);
+    // Service invalidation triggers refreshAll(); open the new settlement's
+    // breakdown immediately.
     this.openDetails(settlement.id);
   }
 

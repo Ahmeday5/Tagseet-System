@@ -25,10 +25,21 @@ export interface ProfitSettlementLine {
   voucherNumber?: string;
 }
 
+/** Paged `lines` block inside the preview response. */
+export interface ProfitSettlementPreviewLines {
+  pageIndex: number;
+  pageSize: number;
+  count: number;
+  totalPages: number;
+  data: ProfitSettlementLine[];
+}
+
 /**
  * `GET /profit-settlement/preview` — the profits treasury to draw from plus a
- * dry-run of how the *current* profit balance would be split. `lines` is empty
- * (and `totalAmount` is 0) when there's nothing to distribute.
+ * dry-run of how the *current* profit balance would be split. `lines.data` is
+ * empty (and `totalAmount` is 0) when there's nothing to distribute. Totals
+ * (`totalAmount`/`totalShareholdersShare`/`totalCompanyShare`) reflect every
+ * shareholder regardless of `search`/pagination.
  */
 export interface ProfitSettlementPreview {
   profitsTreasuryId: number;
@@ -39,7 +50,14 @@ export interface ProfitSettlementPreview {
   totalShareholdersShare: number;
   /** Sum of all companyShare values — what flows into the company's profits treasury. */
   totalCompanyShare: number;
-  lines: ProfitSettlementLine[];
+  lines: ProfitSettlementPreviewLines;
+}
+
+/** Query parameters for `GET /profit-settlement/preview`. */
+export interface ProfitSettlementPreviewQuery {
+  pageIndex?: number;
+  pageSize?: number;
+  search?: string;
 }
 
 /**

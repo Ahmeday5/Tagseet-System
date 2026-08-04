@@ -73,7 +73,6 @@
             searchPlaceholder="ابحث باسم الخزينة…"
           />
           <app-form-error [control]="txForm.controls.treasuryId" label="الخزينة" />
-          <div class="cap-hint">لا يمكن استخدام خزائن الأرباح أو خزائن المندوبين.</div>
         </div>
 
         <div class="col-12 col-md-6">
@@ -317,25 +316,7 @@
             </td>
             <td class="text-end">{{ t.balanceAfter | currencyAr: true }}</td>
             <td>{{ t.treasuryName || '—' }}</td>
-            <td>
-              @if (t.voucherNumber) {
-                <button
-                  type="button"
-                  class="cap-voucher"
-                  [title]="t.voucherNumber + ' — اضغط للنسخ'"
-                  (click)="copyVoucher(t.voucherNumber)"
-                >
-                  <span class="cv-ltr">{{ shortVoucher(t.voucherNumber) }}</span>
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                       stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <rect x="9" y="9" width="11" height="11" rx="2" />
-                    <path d="M5 15V5a2 2 0 0 1 2-2h10" />
-                  </svg>
-                </button>
-              } @else {
-                <span class="cap-muted">—</span>
-              }
-            </td>
+            <td>{{ (pageIndex() - 1) * pageSize() + $index + 1 }}</td>
             <td class="fs-10">{{ t.userName || '—' }}</td>
             <td class="cap-notes" [title]="t.notes ?? ''">{{ t.notes || '—' }}</td>
           </tr>
