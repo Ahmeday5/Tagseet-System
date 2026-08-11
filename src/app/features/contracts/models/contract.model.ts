@@ -89,6 +89,7 @@ export interface CreateContractPayload {
   /** Omit when no representative is attached — do NOT send 0 or null. */
   representativeId?: number;
   notes?: string;
+  isCustomInstallmentAmount?: boolean;
 }
 
 /** Response shape from `POST /dashboard/contracts`. */
@@ -129,6 +130,7 @@ export interface ContractFormState {
   treasuryId: number;
   representativeId: number | null;
   notes?: string;
+  isCustomInstallmentAmount?: boolean;
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -169,6 +171,7 @@ export interface CreateDirectContractPayload {
   /** Omit when no supplier is attached — do NOT send 0 or null. */
   supplierId?: number;
   notes?: string;
+  isCustomInstallmentAmount?: boolean;
 }
 
 /** Response shape from `POST /dashboard/contracts/direct`. */
@@ -216,6 +219,10 @@ export function buildDirectContractPayload(
     treasuryId: form.treasuryId,
   };
 
+  if (form.isCustomInstallmentAmount) {
+    payload.isCustomInstallmentAmount = true;
+  }
+
   if (form.representativeId && form.representativeId > 0) {
     payload.representativeId = form.representativeId;
   }
@@ -257,6 +264,7 @@ export interface UpdateContractPayload {
   treasuryId: number;
   representativeId?: number;
   notes?: string;
+  isCustomInstallmentAmount?: boolean;
 }
 
 /** Form-state shape for the edit page. */
@@ -274,6 +282,7 @@ export interface UpdateContractFormState {
   treasuryId: number;
   representativeId: number | null;
   notes?: string;
+  isCustomInstallmentAmount?: boolean;
 }
 
 /** Build a `PUT /dashboard/contracts/{id}` body. */
@@ -293,6 +302,10 @@ export function buildUpdateContractPayload(
     firstInstallmentDate: form.firstInstallmentDate,
     treasuryId: form.treasuryId,
   };
+
+  if (form.isCustomInstallmentAmount) {
+    payload.isCustomInstallmentAmount = true;
+  }
 
   if (form.representativeId && form.representativeId > 0) {
     payload.representativeId = form.representativeId;
@@ -321,6 +334,10 @@ export function buildCreateContractPayload(
     firstInstallmentDate: form.firstInstallmentDate,
     treasuryId: form.treasuryId,
   };
+
+  if (form.isCustomInstallmentAmount) {
+    payload.isCustomInstallmentAmount = true;
+  }
 
   if (form.representativeId && form.representativeId > 0) {
     payload.representativeId = form.representativeId;

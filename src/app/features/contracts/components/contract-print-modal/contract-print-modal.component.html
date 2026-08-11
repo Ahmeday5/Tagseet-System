@@ -81,7 +81,7 @@
               <div class="rc-row-3">
                 <div class="rc-cell">
                   <span class="rc-lbl">الاقساط</span>
-                  <span class="rc-val">{{ details()!.contract.installmentsCount }} × {{ details()!.contract.installmentAmount | number:'1.0-0' }}</span>
+                  <span class="rc-val">{{ details()!.contract.installmentsCount }} × {{ inst.dueAmount | number:'1.0-0' }}</span>
                 </div>
                 <div class="rc-cell">
                   <span class="rc-lbl">المقدم</span>
@@ -123,7 +123,7 @@
               <div class="rc-row-installment">
                 <div class="rc-cell rc-cell--highlight">
                   <span class="rc-lbl">قيمة القسط</span>
-                  <span class="rc-val rc-val--big">{{ details()!.contract.installmentAmount | number:'1.0-0' }}</span>
+                  <span class="rc-val rc-val--big">{{ inst.dueAmount | number:'1.0-0' }}</span>
                   <span class="rc-lbl rc-lbl--sub">جنيها فقط لا غير</span>
                 </div>
                 <div class="rc-cell">

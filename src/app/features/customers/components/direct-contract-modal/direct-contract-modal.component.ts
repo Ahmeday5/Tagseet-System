@@ -119,11 +119,12 @@ export class DirectContractModalComponent {
     clientId: this.fb.control<number | null>(null, [Validators.required]),
     items: this.fb.array([this.createItemGroup()]),
     dateOfSale: [this.todayStr(), [Validators.required]],
-    cashPrice: [0, [Validators.required, Validators.min(1)]],
-    downPayment: [0, [Validators.required, Validators.min(0)]],
+    cashPrice: this.fb.control<number | null>(null, [Validators.required, Validators.min(1)]),
+    downPayment: this.fb.control<number | null>(null, [Validators.required, Validators.min(0)]),
     profitRate: [20, [Validators.required, Validators.min(0), Validators.max(100)]],
     installmentsCount: [12, [Validators.required, Validators.min(1), Validators.max(120)]],
     installmentAmount: [{ value: 0, disabled: true }],
+    isCustomInstallmentAmount: [false],
     paymentFrequency: ['Monthly' as ContractPaymentFrequency, [Validators.required]],
     firstInstallmentDate: [this.nextMonthStr(), [Validators.required]],
     treasuryId: this.fb.control<number | null>(null, [Validators.required]),
@@ -147,11 +148,25 @@ export class DirectContractModalComponent {
     const profitAmount = afterDown * (profitRate / 100);
     const totalAmount = afterDown + profitAmount;
     const installmentAmt = totalAmount / count;
-    // Total cost of goods (for reference)
-    const totalCost = ((v as any).items ?? []).reduce((sum: number, item: any) => {
+    // Total cost of goods + total quantity across all product rows (for reference)
+    const items = ((v as any).items ?? []) as any[];
+    const totalCost = items.reduce((sum: number, item: any) => {
       return sum + (Number(item?.purchasePrice ?? 0) * Math.max(1, Number(item?.quantity ?? 1)));
     }, 0);
-    return { cashPrice, downPayment, afterDown, profitAmount, totalAmount, installmentAmt, count, totalCost };
+    const totalQuantity = items.reduce((sum: number, item: any) => sum + Math.max(1, Number(item?.quantity ?? 1)), 0);
+    const grossProfit = cashPrice - totalCost;
+    return {
+      cashPrice,
+      downPayment,
+      afterDown,
+      profitAmount,
+      totalAmount,
+      installmentAmt,
+      count,
+      totalCost,
+      totalQuantity,
+      grossProfit,
+    };
   });
 
   constructor() {
@@ -167,7 +182,11 @@ export class DirectContractModalComponent {
       this.loadDetails(id);
     }, { allowSignalWrites: true });
 
+    this.form.get('isCustomInstallmentAmount')?.valueChanges.subscribe((custom) => {
+      this.syncInstallmentControlState(custom);
+    });
     this.form.valueChanges.subscribe(() => this.recalculateInstallment());
+    this.syncInstallmentControlState(false);
   }
 
   // ── FormArray helpers ──
@@ -179,9 +198,17 @@ export class DirectContractModalComponent {
   private createItemGroup(): FormGroup {
     return this.fb.nonNullable.group({
       productName: ['', [Validators.required, Validators.maxLength(200)]],
-      purchasePrice: [0, [Validators.required, Validators.min(0)]],
-      quantity: [1, [Validators.required, Validators.min(1)]],
+      purchasePrice: this.fb.control<number | null>(null, [Validators.required, Validators.min(0)]),
+      quantity: this.fb.control<number | null>(null, [Validators.required, Validators.min(1)]),
     });
+  }
+
+  /** Line total for a single product row: cost × quantity. */
+  protected itemLineTotal(index: number): number {
+    const group = this.itemsArray.at(index);
+    const price = Number(group?.get('purchasePrice')?.value ?? 0);
+    const qty = Number(group?.get('quantity')?.value ?? 0);
+    return price * qty;
   }
 
   protected addItem(): void {
@@ -231,6 +258,10 @@ export class DirectContractModalComponent {
       supplierId: raw.supplierId ? Number(raw.supplierId) : undefined,
       notes: raw.notes?.trim() || undefined,
     };
+
+    if (raw.isCustomInstallmentAmount) {
+      payload.isCustomInstallmentAmount = true;
+    }
 
     this.serverError.set(null);
     this.submitting.set(true);
@@ -343,8 +374,10 @@ export class DirectContractModalComponent {
           representativeId: d.representative?.id ?? null,
           supplierId: d.supplier?.id ?? null,
           notes: d.contract.notes || '',
-        });
+          isCustomInstallmentAmount: Boolean((d.contract as { isCustomInstallmentAmount?: boolean }).isCustomInstallmentAmount),
+        }, { emitEvent: false });
         this.form.get('installmentAmount')?.setValue(d.contract.installmentAmount, { emitEvent: false });
+        this.syncInstallmentControlState(this.form.get('isCustomInstallmentAmount')?.value);
       },
       error: () => {
         this.loadingDetails.set(false);
@@ -353,7 +386,20 @@ export class DirectContractModalComponent {
     });
   }
 
+  protected getLastInstallmentPreview(): number {
+    if (!this.form.get('isCustomInstallmentAmount')?.value) return 0;
+
+    const cashPrice = Number(this.form.get('cashPrice')?.value ?? 0);
+    const downPayment = Number(this.form.get('downPayment')?.value ?? 0);
+    const count = Math.max(1, Number(this.form.get('installmentsCount')?.value ?? 1));
+    const installmentAmount = Number(this.form.get('installmentAmount')?.value ?? 0);
+    const remaining = cashPrice - downPayment;
+    return remaining - (Math.max(0, count - 1) * installmentAmount);
+  }
+
   private recalculateInstallment(): void {
+    if (this.form.get('isCustomInstallmentAmount')?.value) return;
+
     const cashPrice = Number(this.form.get('cashPrice')?.value ?? 0);
     const downPayment = Number(this.form.get('downPayment')?.value ?? 0);
     const profitRate = Number(this.form.get('profitRate')?.value ?? 0);
@@ -370,16 +416,33 @@ export class DirectContractModalComponent {
     );
   }
 
+  private syncInstallmentControlState(isCustom: boolean | null | undefined): void {
+    const amountCtrl = this.form.get('installmentAmount');
+    if (!amountCtrl) return;
+
+    if (isCustom) {
+      amountCtrl.enable({ emitEvent: false });
+      if (Number(amountCtrl.value ?? 0) <= 0) {
+        this.recalculateInstallment();
+      }
+      return;
+    }
+
+    amountCtrl.disable({ emitEvent: false });
+    this.recalculateInstallment();
+  }
+
   private resetForm(): void {
     while (this.itemsArray.length > 1) this.itemsArray.removeAt(1);
     this.form.reset({
       clientId: null,
       dateOfSale: this.todayStr(),
-      cashPrice: 0,
-      downPayment: 0,
+      cashPrice: null,
+      downPayment: null,
       profitRate: 20,
       installmentsCount: 12,
       installmentAmount: 0,
+      isCustomInstallmentAmount: false,
       paymentFrequency: 'Monthly',
       firstInstallmentDate: this.nextMonthStr(),
       treasuryId: null,
@@ -387,8 +450,9 @@ export class DirectContractModalComponent {
       supplierId: null,
       notes: '',
     });
+    this.syncInstallmentControlState(false);
     // Reset first item
-    this.itemsArray.at(0)?.reset({ productName: '', purchasePrice: 0, quantity: 1 });
+    this.itemsArray.at(0)?.reset({ productName: '', purchasePrice: null, quantity: null });
     this.serverError.set(null);
   }
 

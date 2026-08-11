@@ -39,9 +39,18 @@ export class ContractPrintModalComponent implements OnInit, OnDestroy {
   protected readonly remainingAfterInstallment = computed(() => {
     const d = this.details();
     if (!d) return (_seq: number) => 0;
-    const inst = d.contract.installmentAmount;
+
+    const installments = d.installments ?? [];
     const total = d.summary.totalContractAmount;
-    return (seq: number) => Math.max(0, total - seq * inst);
+    const installmentMap = new Map(installments.map((inst) => [inst.sequence, inst.dueAmount]));
+
+    return (seq: number) => {
+      const currentAmount = installmentMap.get(seq) ?? d.contract.installmentAmount;
+      const priorAmount = installments
+        .filter((inst) => inst.sequence < seq)
+        .reduce((sum, inst) => sum + (inst.dueAmount ?? 0), 0);
+      return Math.max(0, total - priorAmount - currentAmount);
+    };
   });
 
   ngOnInit(): void {

@@ -31,6 +31,31 @@
   font-weight: 600;
 }
 
+.dcm-line-total {
+  height: 31px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--bl, #0d6efd);
+  background: var(--bg-soft, #f1f3f5);
+  border-radius: 6px;
+  border: 1px solid var(--border, #dee2e6);
+}
+
+.dcm-items-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  padding: 8px 12px;
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--text, #212529);
+  background: var(--bg-soft, #f1f3f5);
+  border-radius: 6px;
+}
+
 .dcm-summary {
   margin-top: 20px;
   padding: 14px 16px;

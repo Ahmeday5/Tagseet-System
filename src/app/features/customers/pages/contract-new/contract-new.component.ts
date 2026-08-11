@@ -139,6 +139,7 @@ export class ContractNewComponent implements OnInit {
     profitRate: [20, [Validators.required, Validators.min(0), Validators.max(100)]],
     installmentsCount: [12, [Validators.required, Validators.min(1), Validators.max(120)]],
     installmentAmount: [{ value: 0, disabled: true }],
+    isCustomInstallmentAmount: [false],
     paymentFrequency: ['Monthly' as ContractPaymentFrequency, [Validators.required]],
     firstInstallmentDate: [this.nextMonthStr(), [Validators.required]],
     treasuryId: [null as number | null, [Validators.required]],
@@ -190,8 +191,12 @@ export class ContractNewComponent implements OnInit {
     const idParam = Number(this.route.snapshot.queryParamMap.get('editId'));
     if (idParam) this.editId.set(idParam);
     this.loadLookups();
+    this.form.get('isCustomInstallmentAmount')?.valueChanges.subscribe((custom) => {
+      this.syncInstallmentControlState(custom);
+    });
     this.form.valueChanges.subscribe(() => this.calculateInstallment());
     this.watchItemChanges(this.itemsArray.at(0) as FormGroup, 0);
+    this.syncInstallmentControlState(false);
   }
 
   // ─────────── FormArray ───────────
@@ -290,7 +295,11 @@ export class ContractNewComponent implements OnInit {
       notes: d.contract.notes ?? '',
     });
     this.prefilling = false;
+    this.form.patchValue({
+      isCustomInstallmentAmount: Boolean((d.contract as { isCustomInstallmentAmount?: boolean }).isCustomInstallmentAmount),
+    }, { emitEvent: false });
     this.form.get('installmentAmount')?.setValue(d.contract.installmentAmount, { emitEvent: false });
+    this.syncInstallmentControlState(this.form.get('isCustomInstallmentAmount')?.value);
   }
 
   // ─────────── Calculations ───────────
@@ -339,7 +348,20 @@ export class ContractNewComponent implements OnInit {
     }
   }
 
+  protected getLastInstallmentPreview(): number {
+    if (!this.form.get('isCustomInstallmentAmount')?.value) return 0;
+
+    const cashPrice = Number(this.form.get('cashPrice')?.value ?? 0);
+    const downPayment = Number(this.form.get('downPayment')?.value ?? 0);
+    const count = Math.max(1, Number(this.form.get('installmentsCount')?.value ?? 1));
+    const installmentAmount = Number(this.form.get('installmentAmount')?.value ?? 0);
+    const remaining = cashPrice - downPayment;
+    return remaining - (Math.max(0, count - 1) * installmentAmount);
+  }
+
   private calculateInstallment(): void {
+    if (this.form.get('isCustomInstallmentAmount')?.value) return;
+
     const cashPrice = Number(this.form.get('cashPrice')?.value ?? 0);
     const downPayment = Number(this.form.get('downPayment')?.value ?? 0);
     const profitRate = Number(this.form.get('profitRate')?.value ?? 0);
@@ -353,6 +375,22 @@ export class ContractNewComponent implements OnInit {
     this.form.get('installmentAmount')?.setValue(
       Number((totalWithProfit / count).toFixed(2)), { emitEvent: false },
     );
+  }
+
+  private syncInstallmentControlState(isCustom: boolean | null | undefined): void {
+    const amountCtrl = this.form.get('installmentAmount');
+    if (!amountCtrl) return;
+
+    if (isCustom) {
+      amountCtrl.enable({ emitEvent: false });
+      if (Number(amountCtrl.value ?? 0) <= 0) {
+        this.calculateInstallment();
+      }
+      return;
+    }
+
+    amountCtrl.disable({ emitEvent: false });
+    this.calculateInstallment();
   }
 
   // ─────────── Submit ───────────
@@ -388,10 +426,14 @@ export class ContractNewComponent implements OnInit {
       treasuryId: Number(raw.treasuryId),
       representativeId: raw.representativeId ? Number(raw.representativeId) : null,
       notes: raw.notes?.trim() || '',
-    };
+    } as const;
+
+    const payloadWithCustomFlag = raw.isCustomInstallmentAmount
+      ? { ...sharedFields, isCustomInstallmentAmount: true }
+      : sharedFields;
 
     if (id) {
-      const updateForm: UpdateContractFormState = sharedFields;
+      const updateForm: UpdateContractFormState = payloadWithCustomFlag as UpdateContractFormState;
       this.contractsService
         .update(id, updateForm)
         .pipe(finalize(() => this.isSaving.set(false)))
@@ -407,7 +449,7 @@ export class ContractNewComponent implements OnInit {
       return;
     }
 
-    const payload: ContractFormState = sharedFields;
+    const payload: ContractFormState = payloadWithCustomFlag as ContractFormState;
 
     this.contractsService
       .create(payload)
@@ -440,12 +482,14 @@ export class ContractNewComponent implements OnInit {
       profitRate: 20,
       installmentsCount: 12,
       installmentAmount: 0,
+      isCustomInstallmentAmount: false,
       paymentFrequency: 'Monthly',
       firstInstallmentDate: this.nextMonthStr(),
       treasuryId: null,
       representativeId: null,
       notes: '',
     });
+    this.syncInstallmentControlState(false);
     this.itemsArray.at(0)?.reset({ productId: null, warehouseId: null, quantity: 1, sellPrice: 0 });
   }
 
