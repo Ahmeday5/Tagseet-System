@@ -23,6 +23,8 @@ import { CurrencyArPipe } from '../../../../shared/pipes/currency-ar.pipe';
 import { DateArPipe } from '../../../../shared/pipes/date-ar.pipe';
 import { ApiError } from '../../../../core/models/api-response.model';
 import { ToastService } from '../../../../core/services/toast.service';
+import { DialogService } from '../../../../core/services/dialog.service';
+import { apiErrorToMessage } from '../../../../core/utils/api-error.util';
 
 import { ShareholdersService } from '../../services/shareholders.service';
 import { Shareholder } from '../../models/shareholder.model';
@@ -39,6 +41,7 @@ import {
   CAPITAL_TX_TYPE_OPTIONS,
   isCapitalInflow,
 } from '../../constants/capital-transaction-labels';
+import { CapitalTransactionEditModalComponent } from '../capital-transaction-edit-modal/capital-transaction-edit-modal.component';
 
 type CapitalMode = 'transaction' | 'capitalize';
 
@@ -78,6 +81,7 @@ const DEFAULT_PAGE_SIZE = 10;
     SearchableSelectComponent,
     CurrencyArPipe,
     DateArPipe,
+    CapitalTransactionEditModalComponent,
   ],
   templateUrl: './shareholder-capital-modal.component.html',
   styleUrl: './shareholder-capital-modal.component.scss',
@@ -96,6 +100,7 @@ export class ShareholderCapitalModalComponent {
   private readonly fb = inject(FormBuilder);
   private readonly service = inject(ShareholdersService);
   private readonly toast = inject(ToastService);
+  private readonly dialog = inject(DialogService);
 
   // ── static option tables ──
   protected readonly CapitalTransactionType = CapitalTransactionType;
@@ -134,6 +139,11 @@ export class ShareholderCapitalModalComponent {
   protected readonly pageSize = signal(DEFAULT_PAGE_SIZE);
   protected readonly count = signal(0);
   protected readonly totalPages = signal(0);
+
+  // ── ledger row edit/delete (deposit/withdrawal rows only) ──
+  protected readonly editOpen = signal(false);
+  protected readonly editingTx = signal<CapitalTransaction | null>(null);
+  protected readonly deletingId = signal<number | null>(null);
 
   // ── derived ──
   protected readonly title = computed(
@@ -416,6 +426,66 @@ export class ShareholderCapitalModalComponent {
 
   protected isInflow(direction: CapitalTransactionDirection): boolean {
     return isCapitalInflow(direction);
+  }
+
+  /** Only plain deposits/withdrawals can be edited/deleted — not profit-capitalisation rows. */
+  protected isEditableRow(t: CapitalTransaction): boolean {
+    return t.direction === 'Deposit' || t.direction === 'Payment';
+  }
+
+  // ─────────── row edit ───────────
+
+  protected openEdit(t: CapitalTransaction): void {
+    this.editingTx.set(t);
+    this.editOpen.set(true);
+  }
+
+  protected onEditClosed(): void {
+    this.editOpen.set(false);
+    this.editingTx.set(null);
+  }
+
+  protected onEditSaved(): void {
+    this.editOpen.set(false);
+    this.editingTx.set(null);
+    const sh = this.shareholder();
+    if (!sh) return;
+    this.toast.success('تم تعديل عملية رأس المال بنجاح');
+    this.fetchTransactions(sh.id, true);
+    this.changed.emit();
+  }
+
+  // ─────────── row delete ───────────
+
+  protected async confirmDeleteTx(t: CapitalTransaction): Promise<void> {
+    const sh = this.shareholder();
+    if (!sh) return;
+
+    const ok = await this.dialog.confirm({
+      title: 'حذف عملية رأس مال',
+      message: `هل أنت متأكد من حذف عملية ${this.directionLabel(t.direction)} بمبلغ ${t.amount}؟ هذا الإجراء لا يمكن التراجع عنه.`,
+      confirmText: 'حذف',
+      cancelText: 'إلغاء',
+      type: 'danger',
+    });
+    if (!ok) return;
+
+    this.deletingId.set(t.id);
+    this.service.deleteCapitalTransaction(sh.id, t.id).subscribe({
+      next: () => {
+        this.deletingId.set(null);
+        this.toast.success('تم حذف عملية رأس المال بنجاح');
+        if (this.transactions().length === 1 && this.pageIndex() > 1) {
+          this.pageIndex.update((p) => p - 1);
+        }
+        this.fetchTransactions(sh.id, true);
+        this.changed.emit();
+      },
+      error: (err: ApiError) => {
+        this.deletingId.set(null);
+        this.toast.error(apiErrorToMessage(err, 'تعذّر حذف عملية رأس المال'));
+      },
+    });
   }
 
   // ─────────── internals ───────────

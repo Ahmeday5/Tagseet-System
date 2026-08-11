@@ -1,0 +1,73 @@
+<app-modal
+  [open]="open()"
+  [title]="'تعديل عملية رأس مال' + (transaction()?.voucherNumber ? ' — ' + transaction()?.voucherNumber : '')"
+  size="md"
+  [closeOnBackdrop]="!submitting()"
+  [closeOnEsc]="!submitting()"
+  (closed)="closed.emit()"
+>
+  <form [formGroup]="form" (ngSubmit)="submit()" novalidate autocomplete="off">
+    <div class="row g-3">
+      <div class="col-12 col-md-6">
+        <label class="form-label">نوع الحركة <span class="text-danger">*</span></label>
+        <select class="form-select" formControlName="type">
+          @for (opt of typeOptions; track opt.value) {
+            <option [value]="opt.value">{{ opt.label }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="col-12 col-md-6">
+        <label class="form-label">المبلغ <span class="text-danger">*</span></label>
+        <input
+          type="number"
+          class="form-control"
+          formControlName="amount"
+          min="0"
+          step="0.01"
+          dir="ltr"
+        />
+        <app-form-error [control]="form.controls.amount" label="المبلغ" />
+      </div>
+
+      <div class="col-12 col-md-6">
+        <label class="form-label">الخزينة <span class="text-danger">*</span></label>
+        <app-searchable-select
+          formControlName="treasuryId"
+          placeholder="اختر الخزينة"
+          searchPlaceholder="ابحث باسم الخزينة…"
+          [options]="treasuries()"
+        />
+        <app-form-error [control]="form.controls.treasuryId" label="الخزينة" />
+      </div>
+
+      <div class="col-12 col-md-6">
+        <label class="form-label">التاريخ <span class="text-danger">*</span></label>
+        <input type="date" class="form-control" formControlName="date" dir="ltr" />
+        <app-form-error [control]="form.controls.date" label="التاريخ" />
+      </div>
+
+      <div class="col-12">
+        <label class="form-label">ملاحظات</label>
+        <textarea class="form-control" rows="2" formControlName="notes"></textarea>
+      </div>
+    </div>
+  </form>
+
+  <ng-container modal-footer>
+    <button type="button" class="btn" [disabled]="submitting()" (click)="closed.emit()">
+      إلغاء
+    </button>
+    <button
+      type="button"
+      class="btn btn-bl d-inline-flex align-items-center gap-2"
+      [disabled]="submitting() || form.invalid"
+      (click)="submit()"
+    >
+      @if (submitting()) {
+        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+      }
+      <span>{{ submitting() ? 'جاري الحفظ...' : 'حفظ التعديل' }}</span>
+    </button>
+  </ng-container>
+</app-modal>

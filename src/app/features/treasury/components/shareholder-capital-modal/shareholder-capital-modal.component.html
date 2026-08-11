@@ -302,6 +302,7 @@
           <th>رقم السند</th>
           <th>بواسطة</th>
           <th>ملاحظات</th>
+          <th></th>
         </tr>
       </thead>
       <tbody>
@@ -319,10 +320,35 @@
             <td>{{ (pageIndex() - 1) * pageSize() + $index + 1 }}</td>
             <td class="fs-10">{{ t.userName || '—' }}</td>
             <td class="cap-notes" [title]="t.notes ?? ''">{{ t.notes || '—' }}</td>
+            <td>
+              @if (isEditableRow(t)) {
+                <div class="d-inline-flex gap-1">
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-bl"
+                    [disabled]="txLoading() || deletingId() === t.id"
+                    (click)="openEdit(t)"
+                    title="تعديل"
+                  >تعديل</button>
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-re d-inline-flex align-items-center gap-1"
+                    [disabled]="txLoading() || deletingId() === t.id"
+                    (click)="confirmDeleteTx(t)"
+                    title="حذف"
+                  >
+                    @if (deletingId() === t.id) {
+                      <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                    }
+                    <span>حذف</span>
+                  </button>
+                </div>
+              }
+            </td>
           </tr>
         } @empty {
           <tr>
-            <td colspan="8" class="cap-empty">
+            <td colspan="9" class="cap-empty">
               @if (txLoading()) {
                 <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
                 <span>جاري تحميل الحركات...</span>
@@ -355,3 +381,12 @@
     <button type="button" class="btn" [disabled]="submitting()" (click)="close()">إغلاق</button>
   </ng-container>
 </app-modal>
+
+<app-capital-transaction-edit-modal
+  [open]="editOpen()"
+  [shareholderId]="shareholder()?.id ?? null"
+  [transaction]="editingTx()"
+  [treasuries]="treasuryOptions()"
+  (closed)="onEditClosed()"
+  (saved)="onEditSaved()"
+/>

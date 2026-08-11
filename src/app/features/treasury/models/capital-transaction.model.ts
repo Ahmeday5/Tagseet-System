@@ -34,6 +34,16 @@ export interface CreateCapitalTransactionPayload {
   notes: string;
 }
 
+/** PUT /shareholders/{id}/capital-transactions/{txId} — edits a deposit/withdrawal in place. */
+export interface UpdateCapitalTransactionPayload {
+  type: CapitalTransactionType;
+  amount: number;
+  treasuryId: number;
+  /** `yyyy-MM-dd` — calendar date, not a timestamp. */
+  date: string;
+  notes: string;
+}
+
 export interface CapitalizeProfitPayload {
   profitsTreasuryId: number;
   amount: number;

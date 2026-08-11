@@ -31,6 +31,7 @@ import {
   CapitalTransaction,
   CapitalTransactionsQuery,
   CreateCapitalTransactionPayload,
+  UpdateCapitalTransactionPayload,
 } from '../models/capital-transaction.model';
 import {
   ShareholderStatement,
@@ -267,6 +268,44 @@ export class ShareholdersService {
     return this.api.post<CapitalTransaction>(
       API_ENDPOINTS.shareholders.capitalTransactions(shareholderId),
       payload,
+      {
+        context: withInlineHandling(
+          withCacheInvalidate([SHAREHOLDERS_CACHE_KEY, TREASURY_CACHE_KEY]),
+        ),
+      },
+    );
+  }
+
+  /**
+   * Edits a previously recorded deposit/withdrawal in place (not available for
+   * profit-capitalisation rows). Recomputes ownership %, so both scopes are invalidated.
+   */
+  updateCapitalTransaction(
+    shareholderId: number,
+    transactionId: number,
+    payload: UpdateCapitalTransactionPayload,
+  ): Observable<CapitalTransaction> {
+    return this.api.put<CapitalTransaction>(
+      API_ENDPOINTS.shareholders.capitalTransactionById(shareholderId, transactionId),
+      payload,
+      {
+        context: withInlineHandling(
+          withCacheInvalidate([SHAREHOLDERS_CACHE_KEY, TREASURY_CACHE_KEY]),
+        ),
+      },
+    );
+  }
+
+  /**
+   * Deletes a previously recorded deposit/withdrawal (not available for
+   * profit-capitalisation rows). Recomputes ownership %, so both scopes are invalidated.
+   */
+  deleteCapitalTransaction(
+    shareholderId: number,
+    transactionId: number,
+  ): Observable<{ message: string }> {
+    return this.api.delete<{ message: string }>(
+      API_ENDPOINTS.shareholders.capitalTransactionById(shareholderId, transactionId),
       {
         context: withInlineHandling(
           withCacheInvalidate([SHAREHOLDERS_CACHE_KEY, TREASURY_CACHE_KEY]),
