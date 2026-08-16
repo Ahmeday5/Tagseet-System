@@ -24,6 +24,7 @@ export const CAPITAL_TX_DIRECTION_LABELS: Readonly<
   Record<CapitalTransactionDirection, string>
 > = {
   Deposit: 'إيداع',
+  Withdrawal: 'سحب',
   Payment: 'سحب',
   ProfitCapitalization: 'ترحيل أرباح',
 };
@@ -32,6 +33,7 @@ export const CAPITAL_TX_DIRECTION_BADGE: Readonly<
   Record<CapitalTransactionDirection, BadgeType>
 > = {
   Deposit: 'ok',
+  Withdrawal: 'bad',
   Payment: 'bad',
   ProfitCapitalization: 'purple',
 };

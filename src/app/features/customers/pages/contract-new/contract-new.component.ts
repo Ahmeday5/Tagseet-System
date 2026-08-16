@@ -351,12 +351,9 @@ export class ContractNewComponent implements OnInit {
   protected getLastInstallmentPreview(): number {
     if (!this.form.get('isCustomInstallmentAmount')?.value) return 0;
 
-    const cashPrice = Number(this.form.get('cashPrice')?.value ?? 0);
-    const downPayment = Number(this.form.get('downPayment')?.value ?? 0);
-    const count = Math.max(1, Number(this.form.get('installmentsCount')?.value ?? 1));
+    const { totalAmount, count } = this.summary();
     const installmentAmount = Number(this.form.get('installmentAmount')?.value ?? 0);
-    const remaining = cashPrice - downPayment;
-    return remaining - (Math.max(0, count - 1) * installmentAmount);
+    return totalAmount - (Math.max(0, count - 1) * installmentAmount);
   }
 
   private calculateInstallment(): void {
@@ -399,6 +396,11 @@ export class ContractNewComponent implements OnInit {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       this.toast.error(this.firstInvalidFieldMessage() || 'يرجى تعبئة الحقول المطلوبة');
+      return;
+    }
+
+    if (this.form.get('isCustomInstallmentAmount')?.value && this.getLastInstallmentPreview() < 0) {
+      this.toast.error('قيمة القسط المدخلة أكبر من إجمالي العقد المتوقع لعدد الأقساط المحدد.');
       return;
     }
 

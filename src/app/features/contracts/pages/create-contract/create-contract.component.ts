@@ -175,6 +175,7 @@ export class CreateContractComponent implements OnInit {
       profitRate: [18, [Validators.required, Validators.min(0)]],
       installmentsCount: [12, [Validators.required, Validators.min(1)]],
       installmentAmount: [{ value: 0, disabled: true }],
+      isCustomInstallmentAmount: [false],
       paymentFrequency: ['Monthly' as ContractPaymentFrequency, [Validators.required]],
       firstInstallmentDate: [firstInstallmentDate, [Validators.required]],
       treasuryId: [null as number | null, [Validators.required]],
@@ -221,7 +222,11 @@ export class CreateContractComponent implements OnInit {
   // ─────────────── Calculations ───────────────
 
   private setupCalculations(): void {
+    this.form.get('isCustomInstallmentAmount')?.valueChanges.subscribe((custom) => {
+      this.syncInstallmentControlState(custom);
+    });
     this.form.valueChanges.subscribe(() => this.calculateInstallment());
+    this.syncInstallmentControlState(false);
     // Watch first item's product on init
     this.watchItemProduct(this.itemsArray.at(0) as FormGroup, 0);
   }
@@ -256,10 +261,28 @@ export class CreateContractComponent implements OnInit {
     }
   }
 
-  private calculateInstallment(): void {
+  protected getLastInstallmentPreview(): number {
+    if (!this.form.get('isCustomInstallmentAmount')?.value) return 0;
+
+    const count = Math.max(1, Number(this.form.get('installmentsCount')?.value ?? 1));
+    const installmentAmount = Number(this.form.get('installmentAmount')?.value ?? 0);
+    const totalAmount = this.getTotalContractValue();
+    return totalAmount - (Math.max(0, count - 1) * installmentAmount);
+  }
+
+  private getTotalContractValue(): number {
     const cashPrice = Number(this.form.get('cashPrice')?.value ?? 0);
     const downPayment = Number(this.form.get('downPayment')?.value ?? 0);
     const profitRate = Number(this.form.get('profitRate')?.value ?? 0);
+    const remaining = Math.max(0, cashPrice - downPayment);
+    return remaining * (1 + profitRate / 100);
+  }
+
+  private calculateInstallment(): void {
+    if (this.form.get('isCustomInstallmentAmount')?.value) return;
+
+    const cashPrice = Number(this.form.get('cashPrice')?.value ?? 0);
+    const downPayment = Number(this.form.get('downPayment')?.value ?? 0);
     const count = Math.max(1, Number(this.form.get('installmentsCount')?.value ?? 1));
 
     const remaining = cashPrice - downPayment;
@@ -268,10 +291,26 @@ export class CreateContractComponent implements OnInit {
       return;
     }
 
-    const totalWithProfit = remaining * (1 + profitRate / 100);
+    const totalWithProfit = this.getTotalContractValue();
     this.form
       .get('installmentAmount')
       ?.setValue(Number((totalWithProfit / count).toFixed(2)), { emitEvent: false });
+  }
+
+  private syncInstallmentControlState(isCustom: boolean | null | undefined): void {
+    const amountCtrl = this.form.get('installmentAmount');
+    if (!amountCtrl) return;
+
+    if (isCustom) {
+      amountCtrl.enable({ emitEvent: false });
+      if (Number(amountCtrl.value ?? 0) <= 0) {
+        this.calculateInstallment();
+      }
+      return;
+    }
+
+    amountCtrl.disable({ emitEvent: false });
+    this.calculateInstallment();
   }
 
   // ─────────────── Submit ───────────────
@@ -284,6 +323,11 @@ export class CreateContractComponent implements OnInit {
   onSubmit(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
+      return;
+    }
+
+    if (this.form.get('isCustomInstallmentAmount')?.value && this.getLastInstallmentPreview() < 0) {
+      this.toast.error('قيمة القسط المدخلة أكبر من إجمالي العقد المتوقع لعدد الأقساط المحدد.');
       return;
     }
 
@@ -311,6 +355,10 @@ export class CreateContractComponent implements OnInit {
       representativeId: raw.representativeId ? Number(raw.representativeId) : null,
       notes: raw.notes?.trim() || undefined,
     };
+
+    if (raw.isCustomInstallmentAmount) {
+      payload.isCustomInstallmentAmount = true;
+    }
 
     this.contractsService
       .create(payload)

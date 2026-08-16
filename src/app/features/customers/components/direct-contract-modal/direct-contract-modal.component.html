@@ -41,11 +41,16 @@
 
         <!-- ── المنتجات ── -->
         <div class="col-12">
-          <div class="d-flex align-items-center justify-content-between mb-2">
+          <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
             <label class="form-label mb-0 fw-600">المنتجات <span class="text-danger">*</span></label>
-            <button type="button" class="btn btn-sm btn-outline-primary" (click)="addItem()">
-              + إضافة منتج
-            </button>
+            <div class="d-flex gap-2">
+              <button type="button" class="btn btn-sm btn-outline-success" (click)="openInvoiceModal()">
+                + فاتورة من المورد
+              </button>
+              <button type="button" class="btn btn-sm btn-outline-primary" (click)="addItem()">
+                + إضافة منتج
+              </button>
+            </div>
           </div>
 
           <div formArrayName="items">
@@ -238,6 +243,9 @@
               <div class="small text-muted">القسط الأخير المتوقع</div>
               <div class="fw-bold" dir="ltr">{{ getLastInstallmentPreview() | currencyAr: true }}</div>
             </div>
+            @if (getLastInstallmentPreview() < 0) {
+              <div class="text-danger small mt-1">قيمة القسط المدخلة أكبر من إجمالي العقد المتوقع لعدد الأقساط المحدد.</div>
+            }
           </div>
         }
 
@@ -360,3 +368,10 @@
     [onClose]="closePrintModal.bind(this)"
   />
 }
+
+<app-supplier-invoice-quick-add-modal
+  [open]="invoiceModalOpen()"
+  [supplierId]="form.controls.supplierId.value"
+  (closed)="closeInvoiceModal()"
+  (created)="onInvoiceCreated($event)"
+/>

@@ -279,9 +279,22 @@ export class InvoiceNewComponent implements OnInit {
     this.loadingInvoice.set(true);
     this.svc.getById(id).subscribe({
       next: (inv) => {
+        // This page only edits regular (warehouse-linked) invoices — a
+        // direct invoice's `warehouseId`/items[].productId are `null`, and
+        // patching them in here would silently drop every line item and
+        // submit a fake warehouse of `0` on save. The invoices list already
+        // hides this page's "تعديل" button for direct invoices, but that's
+        // UI-only, so guard the data path itself too.
+        if (inv.isDirect) {
+          this.loadingInvoice.set(false);
+          this.toast.error('هذه فاتورة مباشرة ولا يمكن تعديلها من هذه الصفحة');
+          this.router.navigate(['/invoices', id]);
+          return;
+        }
+
         this.form.patchValue({
           supplierId: inv.supplierId,
-          warehouseId: inv.warehouseId,
+          warehouseId: inv.warehouseId ?? 0,
           treasuryId: inv.treasuryId ?? 0,
           invoiceDate: this.isoToDateInput(inv.invoiceDate),
           dueDate: this.isoToDateInput(inv.dueDate),
@@ -291,7 +304,8 @@ export class InvoiceNewComponent implements OnInit {
 
         this.items.clear();
         for (const line of inv.items ?? []) {
-          this.registerLine(this.createLineGroup(line));
+          if (line.productId == null) continue;
+          this.registerLine(this.createLineGroup({ ...line, productId: line.productId }));
         }
         if (this.items.length === 0) this.addLine();
 

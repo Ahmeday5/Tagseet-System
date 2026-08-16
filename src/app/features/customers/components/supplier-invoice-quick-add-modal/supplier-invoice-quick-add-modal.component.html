@@ -1,0 +1,172 @@
+<app-modal
+  [open]="open()"
+  title="فاتورة مشتريات مباشرة"
+  size="lg"
+  [closeOnBackdrop]="!submitting()"
+  [closeOnEsc]="!submitting()"
+  (closed)="close()"
+>
+  @if (loadingRefs()) {
+    <div class="siq-loading-refs">
+      <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+      <span>جاري تحميل الموردين والخزائن...</span>
+    </div>
+  } @else {
+    <form [formGroup]="form" (ngSubmit)="submit()" novalidate autocomplete="off">
+      <div class="row g-3">
+        <div class="col-12 col-md-6">
+          <label class="form-label">المورد <span class="text-danger">*</span></label>
+          <app-searchable-select
+            formControlName="supplierId"
+            [options]="supplierOptions()"
+            placeholder="— اختر المورد —"
+            searchPlaceholder="ابحث باسم المورد…"
+          />
+          <app-form-error [control]="form.controls.supplierId" label="المورد" />
+        </div>
+
+        <div class="col-6 col-md-3">
+          <label class="form-label">تاريخ الفاتورة</label>
+          <input type="date" class="form-control" formControlName="invoiceDate" dir="ltr" />
+        </div>
+
+        <div class="col-6 col-md-3">
+          <label class="form-label">تاريخ الاستحقاق <span class="siq-optional">(اختياري)</span></label>
+          <input type="date" class="form-control" formControlName="dueDate" dir="ltr" />
+        </div>
+
+        <div class="col-12">
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <label class="form-label mb-0 fw-600">الأصناف <span class="text-danger">*</span></label>
+            <button type="button" class="btn btn-sm btn-outline-primary" (click)="addLine()">
+              + إضافة صنف
+            </button>
+          </div>
+
+          <div formArrayName="items">
+            @for (line of items.controls; track line; let i = $index) {
+              <div [formGroupName]="i" class="siq-item-card">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                  <span class="siq-item-label">صنف {{ i + 1 }}</span>
+                  @if (items.length > 1) {
+                    <button type="button" class="btn btn-sm btn-outline-danger siq-item-del" (click)="removeLine(i)">
+                      × حذف
+                    </button>
+                  }
+                </div>
+                <div class="row g-2">
+                  <div class="col-12 col-md-5">
+                    <label class="siq-field-label">اسم الصنف <span class="text-danger">*</span></label>
+                    <input
+                      type="text"
+                      class="form-control form-control-sm"
+                      formControlName="productName"
+                      placeholder="مثال: حديد تسليح 12 مم"
+                      autocomplete="off"
+                    />
+                  </div>
+                  <div class="col-4 col-md-2">
+                    <label class="siq-field-label">الكمية</label>
+                    <input
+                      type="number"
+                      class="form-control form-control-sm"
+                      formControlName="quantity"
+                      min="1"
+                      dir="ltr"
+                      (input)="onLineFieldChange(i, 'quantity', $any($event.target).value)"
+                    />
+                  </div>
+                  <div class="col-4 col-md-2">
+                    <label class="siq-field-label">سعر الوحدة</label>
+                    <input
+                      type="number"
+                      class="form-control form-control-sm"
+                      formControlName="unitPrice"
+                      min="0"
+                      dir="ltr"
+                      (input)="onLineFieldChange(i, 'unitPrice', $any($event.target).value)"
+                    />
+                  </div>
+                  <div class="col-4 col-md-3">
+                    <label class="siq-field-label">خصم (مبلغ)</label>
+                    <input
+                      type="number"
+                      class="form-control form-control-sm"
+                      formControlName="discountAmount"
+                      min="0"
+                      dir="ltr"
+                      (input)="onLineFieldChange(i, 'discountAmount', $any($event.target).value)"
+                    />
+                  </div>
+                </div>
+                <div class="siq-item-total">
+                  <span>إجمالي الصنف</span>
+                  <span>{{ lineTotal(i) | currencyAr: true }}</span>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+
+        <div class="col-12 col-md-6">
+          <label class="form-label">الخزنة <span class="siq-optional">(اختياري إن لم يوجد مدفوع)</span></label>
+          <app-searchable-select
+            formControlName="treasuryId"
+            [options]="treasuryOptions()"
+            placeholder="— اختر الخزنة —"
+            searchPlaceholder="ابحث باسم الخزنة…"
+          />
+        </div>
+
+        <div class="col-6 col-md-3">
+          <label class="form-label">المدفوع الآن</label>
+          <input type="number" min="0" class="form-control" formControlName="paidAmount" dir="ltr" />
+        </div>
+
+        <div class="col-6 col-md-3">
+          <label class="form-label">الباقي للمورد</label>
+          <input readonly class="form-control siq-rem-input" [value]="remaining() | currencyAr: true" />
+        </div>
+
+        <div class="col-12">
+          <label class="form-label">ملاحظات</label>
+          <input type="text" class="form-control" formControlName="notes" placeholder="(اختياري)" />
+        </div>
+      </div>
+
+      <div class="siq-summary-box">
+        <div class="siq-sr">
+          <span class="siq-muted">إجمالي الأصناف</span>
+          <span>{{ subtotal() | currencyAr: true }}</span>
+        </div>
+        <div class="siq-sr">
+          <span class="siq-muted">الخصم</span>
+          <span class="siq-disc">− {{ discountAmount() | currencyAr: true }}</span>
+        </div>
+        <div class="siq-sr siq-total-row">
+          <span>الإجمالي</span>
+          <span>{{ grandTotal() | currencyAr: true }}</span>
+        </div>
+      </div>
+
+      @if (serverError(); as msg) {
+        <div class="alert alert-danger mt-3 mb-0" role="alert" style="font-size:11px;">{{ msg }}</div>
+      }
+    </form>
+  }
+
+  <ng-container modal-footer>
+    <button type="button" class="btn" [disabled]="submitting()" (click)="close()">إلغاء</button>
+    <button
+      type="button"
+      class="btn btn-bl d-inline-flex align-items-center gap-2"
+      [disabled]="submitting() || loadingRefs() || form.invalid"
+      (click)="submit()"
+    >
+      @if (submitting()) {
+        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+      }
+      <span>{{ submitting() ? 'جاري الحفظ...' : 'حفظ الفاتورة والمتابعة' }}</span>
+    </button>
+  </ng-container>
+</app-modal>

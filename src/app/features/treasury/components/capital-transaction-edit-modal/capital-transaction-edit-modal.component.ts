@@ -25,7 +25,7 @@ import { CAPITAL_TX_TYPE_OPTIONS } from '../../constants/capital-transaction-lab
  * Edits a previously recorded capital deposit/withdrawal
  * (`PUT shareholders/{id}/capital-transactions/{txId}`).
  *
- * Only rows with direction `Deposit`/`Payment` (server type `Receipt`/`Payment`)
+ * Only rows with direction `Deposit`/`Withdrawal` (server type `Receipt`/`Payment`)
  * are editable — profit-capitalisation rows never reach this modal (see the
  * `editable` guard in `shareholder-capital-modal.component.ts`).
  */

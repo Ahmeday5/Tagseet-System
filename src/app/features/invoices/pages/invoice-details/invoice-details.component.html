@@ -125,11 +125,15 @@
 
       <div class="id-party">
         <div class="id-party-label">المخزن المستلم</div>
-        <div class="id-party-name">{{ inv.warehouseName }}</div>
-        <div class="id-party-meta">
-          <span class="id-party-meta-label">معرّف</span>
-          <span class="id-party-meta-val">#{{ inv.warehouseId }}</span>
-        </div>
+        @if (inv.isDirect) {
+          <div class="id-party-name text-muted">فاتورة مباشرة — بدون مخزن</div>
+        } @else {
+          <div class="id-party-name">{{ inv.warehouseName }}</div>
+          <div class="id-party-meta">
+            <span class="id-party-meta-label">معرّف</span>
+            <span class="id-party-meta-val">#{{ inv.warehouseId }}</span>
+          </div>
+        }
       </div>
 
       <div class="id-party id-party-dates">
@@ -167,7 +171,9 @@
                 <td class="id-line-num">{{ i + 1 }}</td>
                 <td class="fw-600">
                   {{ line.productName }}
-                  <span class="id-line-pid">#{{ line.productId }}</span>
+                  @if (line.productId) {
+                    <span class="id-line-pid">#{{ line.productId }}</span>
+                  }
                 </td>
                 <td>{{ line.quantity }}</td>
                 <td>{{ line.unitPrice | currencyAr: true }}</td>

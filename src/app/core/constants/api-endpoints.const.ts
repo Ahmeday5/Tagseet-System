@@ -106,6 +106,18 @@ export const API_ENDPOINTS = {
     /** POST: record a (partial or full) payment against a non-Draft invoice. */
     payments: (id: number) =>
       `dashboard/supplier-purchase-invoices/${id}/payments`,
+    /**
+     * POST: create a "direct" invoice — no warehouse, free-text `productName`
+     * line items, no draft/confirm step (always final).
+     */
+    direct: 'dashboard/supplier-purchase-invoices/direct',
+    /**
+     * PUT: edit a direct invoice. The server rejects this with 400 when the
+     * target invoice is actually warehouse-linked (`isDirect: false`) —
+     * callers must branch on the invoice's own `isDirect` flag, not guess.
+     */
+    directById: (id: number) =>
+      `dashboard/supplier-purchase-invoices/${id}/direct`,
   },
   dashboard: {
     summary: 'dashboard/summary',

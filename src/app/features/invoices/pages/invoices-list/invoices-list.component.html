@@ -99,6 +99,7 @@
         <th class="iv-w-9">المدفوع</th>
         <th class="iv-w-9">الباقي</th>
         <th class="iv-w-9">التاريخ</th>
+        <th class="iv-w-9">النوع</th>
         <th class="iv-w-9">الحالة</th>
         <th class="iv-w-12">إجراء</th>
       </tr>
@@ -117,6 +118,13 @@
           </td>
           <td class="fs-10">{{ formatDate(inv.invoiceDate) }}</td>
           <td>
+            @if (inv.isDirect) {
+              <span class="b b-info">مباشرة</span>
+            } @else {
+              <span class="text-muted">—</span>
+            }
+          </td>
+          <td>
             <span class="b" [class]="'b-' + statusView(inv.status).variant">
               {{ statusView(inv.status).label }}
             </span>
@@ -128,7 +136,7 @@
                 class="btn btn-sm"
                 (click)="viewInvoice(inv)"
               >تفاصيل</button>
-              @if (canEdit()) {
+              @if (canEdit() && !inv.isDirect) {
                 <button
                   type="button"
                   class="btn btn-sm btn-te"
@@ -170,7 +178,7 @@
         </tr>
       } @empty {
         <tr>
-          <td colspan="10" class="text-center fs-11 text-muted py-3">
+          <td colspan="11" class="text-center fs-11 text-muted py-3">
             @if (loading()) {
               جاري تحميل الفواتير...
             } @else {

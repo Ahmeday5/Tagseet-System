@@ -12,12 +12,14 @@ import { toPaged } from '../../../core/utils/api-list.util';
 import { PagedResponse } from '../../../core/models/api-response.model';
 import {
   ConfirmPurchaseInvoicePayload,
+  CreateDirectPurchaseInvoicePayload,
   CreatePurchaseInvoicePayload,
   PayInvoicePayload,
   PurchaseInvoice,
   PurchaseInvoiceFilters,
   PurchaseInvoiceListItem,
   PurchaseInvoiceSummary,
+  UpdateDirectPurchaseInvoicePayload,
   UpdatePurchaseInvoicePayload,
 } from '../models/invoice.model';
 
@@ -91,6 +93,44 @@ export class InvoicesService {
   ): Observable<PurchaseInvoice> {
     return this.api.put<PurchaseInvoice>(
       API_ENDPOINTS.purchaseInvoices.byId(id),
+      payload,
+      {
+        context: withInlineHandling(
+          withCacheInvalidate([INVOICES_CACHE_KEY]),
+        ),
+      },
+    );
+  }
+
+  /**
+   * Creates a "direct" invoice — no warehouse, free-text `productName` line
+   * items, always final (no draft/confirm step). Never touches inventory.
+   */
+  createDirect(
+    payload: CreateDirectPurchaseInvoicePayload,
+  ): Observable<PurchaseInvoice> {
+    return this.api.post<PurchaseInvoice>(
+      API_ENDPOINTS.purchaseInvoices.direct,
+      payload,
+      {
+        context: withInlineHandling(
+          withCacheInvalidate([INVOICES_CACHE_KEY]),
+        ),
+      },
+    );
+  }
+
+  /**
+   * Edits a direct invoice. Only valid when the target invoice's own
+   * `isDirect` flag is true — the server 400s otherwise; callers must check
+   * that flag before choosing this over `update()`.
+   */
+  updateDirect(
+    id: number,
+    payload: UpdateDirectPurchaseInvoicePayload,
+  ): Observable<PurchaseInvoice> {
+    return this.api.put<PurchaseInvoice>(
+      API_ENDPOINTS.purchaseInvoices.directById(id),
       payload,
       {
         context: withInlineHandling(

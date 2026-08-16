@@ -5,6 +5,7 @@ export enum CapitalTransactionType {
 
 export type CapitalTransactionDirection =
   | 'Deposit'
+  | 'Withdrawal'
   | 'Payment'
   | 'ProfitCapitalization';
 

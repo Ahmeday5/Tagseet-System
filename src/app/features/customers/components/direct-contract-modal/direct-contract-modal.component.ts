@@ -22,6 +22,7 @@ import { catchError, finalize } from 'rxjs/operators';
 
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';
 import { ContractPrintModalComponent } from '../../../contracts/components/contract-print-modal/contract-print-modal.component';
+import { SupplierInvoiceQuickAddModalComponent } from '../supplier-invoice-quick-add-modal/supplier-invoice-quick-add-modal.component';
 import { FormErrorComponent } from '../../../../shared/components/form-error/form-error.component';
 import {
   SearchableSelectComponent,
@@ -45,6 +46,7 @@ import {
   DirectContractItem,
 } from '../../../contracts/models/contract.model';
 import { DashboardClient } from '../../models/dashboard-client.model';
+import { PurchaseInvoice } from '../../../invoices/models/invoice.model';
 
 @Component({
   selector: 'app-direct-contract-modal',
@@ -57,6 +59,7 @@ import { DashboardClient } from '../../models/dashboard-client.model';
     SearchableSelectComponent,
     CurrencyArPipe,
     ContractPrintModalComponent,
+    SupplierInvoiceQuickAddModalComponent,
   ],
   templateUrl: './direct-contract-modal.component.html',
   styleUrl: './direct-contract-modal.component.scss',
@@ -88,6 +91,12 @@ export class DirectContractModalComponent {
   protected readonly isEditMode = computed(() => this.editId() !== null);
   protected readonly printContractId = signal<number | null>(null);
   private pendingCreated: CreatedDirectContract | null = null;
+
+  // ── inline "add supplier invoice" modal ──
+  // Opened from the items section so the operator can record the purchase
+  // invoice behind this sale without leaving the contract form. On save,
+  // the invoice's supplier + line items flow straight into this form.
+  protected readonly invoiceModalOpen = signal(false);
 
   // ── lookup data ──
   protected readonly clients = signal<DashboardClient[]>([]);
@@ -224,6 +233,45 @@ export class DirectContractModalComponent {
     return this.itemsArray.at(index)?.get(field) ?? null;
   }
 
+  // ── inline "add supplier invoice" ──
+
+  protected openInvoiceModal(): void {
+    this.invoiceModalOpen.set(true);
+  }
+
+  protected closeInvoiceModal(): void {
+    this.invoiceModalOpen.set(false);
+  }
+
+  /**
+   * The invoice modal reports the newly created purchase invoice — replace
+   * the (blank) product rows with its line items, attach the supplier, and
+   * suggest a cash price from the invoice total so the operator only has to
+   * confirm the markup instead of re-typing everything.
+   */
+  protected onInvoiceCreated(invoice: PurchaseInvoice): void {
+    this.invoiceModalOpen.set(false);
+
+    while (this.itemsArray.length > 0) this.itemsArray.removeAt(0);
+    for (const line of invoice.items) {
+      const group = this.createItemGroup();
+      group.patchValue({
+        productName: line.productName?.trim() || '',
+        purchasePrice: line.unitPrice,
+        quantity: line.quantity,
+      });
+      this.itemsArray.push(group);
+    }
+    if (this.itemsArray.length === 0) this.addItem();
+
+    this.form.patchValue({
+      supplierId: invoice.supplierId,
+      cashPrice: this.form.controls.cashPrice.value || invoice.totalAmount || null,
+    });
+
+    this.toast.success(`تم إرفاق فاتورة المشتريات ${invoice.invoiceNumber} ببيانات العقد`);
+  }
+
   // ── template handlers ──
 
   protected onSubmit(): void {
@@ -231,6 +279,11 @@ export class DirectContractModalComponent {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       this.toast.error(this.firstInvalidLabel() ?? 'يرجى تعبئة الحقول المطلوبة');
+      return;
+    }
+
+    if (this.form.get('isCustomInstallmentAmount')?.value && this.getLastInstallmentPreview() < 0) {
+      this.toast.error('قيمة القسط المدخلة أكبر من إجمالي العقد المتوقع لعدد الأقساط المحدد.');
       return;
     }
 
@@ -389,12 +442,9 @@ export class DirectContractModalComponent {
   protected getLastInstallmentPreview(): number {
     if (!this.form.get('isCustomInstallmentAmount')?.value) return 0;
 
-    const cashPrice = Number(this.form.get('cashPrice')?.value ?? 0);
-    const downPayment = Number(this.form.get('downPayment')?.value ?? 0);
-    const count = Math.max(1, Number(this.form.get('installmentsCount')?.value ?? 1));
+    const { totalAmount, count } = this.summary();
     const installmentAmount = Number(this.form.get('installmentAmount')?.value ?? 0);
-    const remaining = cashPrice - downPayment;
-    return remaining - (Math.max(0, count - 1) * installmentAmount);
+    return totalAmount - (Math.max(0, count - 1) * installmentAmount);
   }
 
   private recalculateInstallment(): void {

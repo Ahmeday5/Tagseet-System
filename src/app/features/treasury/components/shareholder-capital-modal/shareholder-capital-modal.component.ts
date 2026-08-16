@@ -430,7 +430,11 @@ export class ShareholderCapitalModalComponent {
 
   /** Only plain deposits/withdrawals can be edited/deleted — not profit-capitalisation rows. */
   protected isEditableRow(t: CapitalTransaction): boolean {
-    return t.direction === 'Deposit' || t.direction === 'Payment';
+    return (
+      t.direction === 'Deposit' ||
+      t.direction === 'Withdrawal' ||
+      t.direction === 'Payment'
+    );
   }
 
   // ─────────── row edit ───────────

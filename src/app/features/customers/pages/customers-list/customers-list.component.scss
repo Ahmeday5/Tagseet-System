@@ -163,7 +163,7 @@
 
 /* ── COLUMN WIDTHS (12 columns) ── */
 .cl-w-id       { width: 4%;  text-align: center; }
-.cl-w-name     { width: 16%; }
+.cl-w-name     { width: 16%; text-align: start; }
 .cl-w-phone    { width: 9%;  }
 .cl-w-goods    { width: 11%; }
 .cl-w-progress { width: 8%;  }
@@ -181,7 +181,7 @@
 }
 
 .cl-row-name {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   gap: 8px;
   text-align: start;

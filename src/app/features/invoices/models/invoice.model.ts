@@ -42,6 +42,8 @@ export interface PurchaseInvoiceListItem {
   remainingAmount: number;
   invoiceDate: string;
   status: PurchaseInvoiceStatus;
+  /** True for invoices created via the free-text "direct" flow (no warehouse). */
+  isDirect: boolean;
 }
 
 export interface PurchaseInvoiceFilters {
@@ -57,7 +59,8 @@ export interface PurchaseInvoiceFilters {
 // ─────────────────────────────────────────────────────────────────
 
 export interface PurchaseInvoiceItem {
-  productId: number;
+  /** `null` for a direct invoice's free-text line (see `productName`). */
+  productId: number | null;
   productName?: string;
   quantity: number;
   unitPrice: number;
@@ -74,7 +77,9 @@ export interface PurchaseInvoice {
   invoiceNumber: string;
   supplierId: number;
   supplierName: string;
-  warehouseId: number;
+  /** `null` for a direct invoice — it isn't tied to any warehouse. */
+  warehouseId: number | null;
+  /** Empty string for a direct invoice. */
   warehouseName: string;
   invoiceDate: string;
   dueDate: string;
@@ -88,6 +93,15 @@ export interface PurchaseInvoice {
   status: PurchaseInvoiceStatus;
   notes: string;
   items: PurchaseInvoiceItem[];
+  /**
+   * True when this invoice was created via the free-text "direct" flow
+   * (`POST/PUT .../direct`) — no warehouse, no draft/confirm step, items
+   * carry `productName` instead of a `productId`. Edits must branch on this
+   * flag: sending a regular `PUT .../{id}` to a direct invoice (or the
+   * direct `PUT .../{id}/direct` to a warehouse-linked one) is rejected
+   * with a 400 by the server.
+   */
+  isDirect: boolean;
 }
 
 /** POST /dashboard/supplier-purchase-invoices */
@@ -125,6 +139,44 @@ export interface CreatePurchaseInvoiceItem {
  * exact same body as create, so the type is shared rather than duplicated.
  */
 export type UpdatePurchaseInvoicePayload = CreatePurchaseInvoicePayload;
+
+// ─────────────────────────────────────────────────────────────────
+//  Direct invoice — POST/PUT .../supplier-purchase-invoices/direct
+//  No warehouse, no draft/confirm, free-text `productName` line items.
+// ─────────────────────────────────────────────────────────────────
+
+export interface DirectPurchaseInvoiceItem {
+  productName: string;
+  quantity: number;
+  unitPrice: number;
+  /** Flat currency amount for the whole line — must be between 0 and quantity*unitPrice. */
+  discountAmount: number;
+  /** Optional free-text note for this line, up to 1000 chars. */
+  notes?: string | null;
+}
+
+/** POST /dashboard/supplier-purchase-invoices/direct */
+export interface CreateDirectPurchaseInvoicePayload {
+  supplierId: number;
+  /** ISO 8601 string (UTC). Optional — server defaults to now. */
+  invoiceDate?: string;
+  /** ISO 8601 string (UTC). Optional. */
+  dueDate?: string | null;
+  /** Whole number percentage, e.g. `15` for 15% VAT. Optional — server defaults to 0. */
+  taxRatePercent?: number;
+  /** Optional — server defaults to 0. `treasuryId` is required whenever this is > 0. */
+  paidAmount?: number;
+  treasuryId?: number | null;
+  notes?: string | null;
+  items: DirectPurchaseInvoiceItem[];
+}
+
+/**
+ * PUT /dashboard/supplier-purchase-invoices/{id}/direct. Same body shape as
+ * create; the server rejects it with 400 if the target invoice isn't
+ * `isDirect`.
+ */
+export type UpdateDirectPurchaseInvoicePayload = CreateDirectPurchaseInvoicePayload;
 
 /** POST /dashboard/supplier-purchase-invoices/{id}/confirm */
 export interface ConfirmPurchaseInvoicePayload {

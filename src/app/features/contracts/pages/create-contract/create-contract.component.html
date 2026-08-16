@@ -166,6 +166,14 @@
             </div>
 
             <div class="col-12">
+              <div class="form-check form-switch d-flex align-items-center justify-content-between rounded-2 p-2" style="background:var(--bg2,#f8f9fa)">
+                <label class="form-check-label me-2" for="custom-installments">أقساط مخصصة</label>
+                <input class="form-check-input" type="checkbox" role="switch" id="custom-installments" formControlName="isCustomInstallmentAmount" />
+              </div>
+              <div class="small text-muted mt-1">عند التفعيل، يظل القسط المدخل قابلًا للتعديل ويحسب آخر قسط تلقائيًا من الباقي.</div>
+            </div>
+
+            <div class="col-12">
               <label class="form-label required">دورية الدفع</label>
               <select class="form-select" formControlName="paymentFrequency">
                 @for (f of frequencies; track f.value) {
@@ -176,12 +184,31 @@
 
             <hr class="my-2" />
 
-            <div class="col-12">
-              <div class="installment-result">
-                <div class="label">قيمة القسط</div>
-                <div class="value">{{ form.get('installmentAmount')?.value | currencyAr }}</div>
+            @if (form.get('isCustomInstallmentAmount')?.value) {
+              <div class="col-12">
+                <label class="form-label">قيمة القسط</label>
+                <div class="input-group">
+                  <input type="number" class="form-control" formControlName="installmentAmount" min="0" />
+                  <span class="input-group-text">ج.م</span>
+                </div>
               </div>
-            </div>
+              <div class="col-12">
+                <div class="rounded-2 p-2" style="background:var(--bg2,#f8f9fa)">
+                  <div class="small text-muted">القسط الأخير المتوقع</div>
+                  <div class="fw-bold" dir="ltr">{{ getLastInstallmentPreview() | currencyAr: true }}</div>
+                </div>
+                @if (getLastInstallmentPreview() < 0) {
+                  <div class="text-danger small mt-1">قيمة القسط المدخلة أكبر من إجمالي العقد المتوقع لعدد الأقساط المحدد.</div>
+                }
+              </div>
+            } @else {
+              <div class="col-12">
+                <div class="installment-result">
+                  <div class="label">قيمة القسط</div>
+                  <div class="value">{{ form.get('installmentAmount')?.value | currencyAr }}</div>
+                </div>
+              </div>
+            }
 
             <div class="col-12">
               <label class="form-label required">الخزنة (لإيداع المقدم)</label>
