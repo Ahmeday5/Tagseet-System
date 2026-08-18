@@ -49,8 +49,9 @@
             [ngModel]="payAmount()" (ngModelChange)="payAmount.set(+$event)" />
         </div>
         <div class="col-12 col-sm-6">
-          <label class="form-label">الخزينة</label>
+          <label class="form-label">الخزينة <span class="text-danger">*</span></label>
           <select class="form-select"
+            [class.is-invalid]="payTreasuryId() === null"
             [ngModel]="payTreasuryId() ?? ''"
             (ngModelChange)="payTreasuryId.set($event ? +$event : null)">
             <option value="">-- اختر الخزينة --</option>
@@ -60,9 +61,10 @@
           </select>
         </div>
         <div class="col-12 col-sm-6">
-          <label class="form-label">طريقة الدفع</label>
+          <label class="form-label">طريقة الدفع <small class="text-muted">(اختياري)</small></label>
           <select class="form-select"
-            [ngModel]="payMethod()" (ngModelChange)="payMethod.set($event)">
+            [ngModel]="payMethod() ?? ''" (ngModelChange)="payMethod.set($event || null)">
+            <option value="">-- غير محدد --</option>
             <option value="Cash">نقدي</option>
             <option value="Transfer">تحويل</option>
             <option value="Card">بطاقة</option>

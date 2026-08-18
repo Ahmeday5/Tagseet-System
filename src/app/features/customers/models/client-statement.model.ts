@@ -40,6 +40,8 @@ export interface ClientContractRow {
   totalPaid: number;
   remainingAmount: number;
   treasuryId: number | null;
+  representativeId: number | null;
+  representativeName: string | null;
 }
 
 /**
@@ -65,6 +67,8 @@ export interface ClientContractsResponse {
 export interface ClientContractsQuery {
   pageIndex?: number;
   pageSize?: number;
+  /** Partial, case-insensitive match against the contract's representative name. */
+  representativeName?: string;
 }
 
 /** Single item line returned inside `ContractDetails`. */
@@ -205,7 +209,8 @@ export interface PayInstallmentPayload {
   amount: number;
   treasuryId: number;
   paymentDate: string;
-  paymentMethod: string;
+  /** Optional — the backend no longer requires a payment method. */
+  paymentMethod?: string;
   notes?: string;
 }
 

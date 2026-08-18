@@ -53,9 +53,10 @@ export class InstallmentsService {
   }
 
   /**
-   * POST /installments/{id}/cancel-payment
+   * POST /dashboard/installments/{id}/cancel-payment
    *
-   * Reverts a paid/partial installment back to unpaid. Invalidates the same
+   * Reverts a paid/partial installment back to unpaid — no restriction on
+   * the installment's current status server-side. Invalidates the same
    * cache scopes as `pay` so all downstream widgets refresh automatically.
    */
   cancelPayment(installmentId: number): Observable<CancelInstallmentPaymentResponse> {

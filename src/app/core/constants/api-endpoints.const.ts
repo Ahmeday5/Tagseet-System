@@ -147,8 +147,12 @@ export const API_ENDPOINTS = {
      * Note: this endpoint is mounted at the API root (no /dashboard prefix).
      */
     pay: 'installments/pay',
-    /** POST: cancels a paid installment and reverts it to unpaid. */
-    cancelPayment: (id: number) => `installments/${id}/cancel-payment`,
+    /**
+     * POST: cancels a paid OR partially-paid installment and reverts it to
+     * unpaid — dashboard-scoped endpoint (no status restriction server-side).
+     */
+    cancelPayment: (id: number) =>
+      `dashboard/installments/${id}/cancel-payment`,
   },
   clientOrders: {
     base: 'dashboard/client-orders',
@@ -159,6 +163,8 @@ export const API_ENDPOINTS = {
   clients: {
     base: 'dashboard/clients',
     byId: (id: number) => `dashboard/clients/${id}`,
+    /** DELETE: removes a client (fails if it has linked contracts/orders). */
+    delete: (id: number) => `dashboard/clients/${id}`,
     topThisMonth: 'dashboard/clients/top-this-month',
     contracts: (id: number) => `dashboard/clients/${id}/contracts`,
     /** POST: sets a new password for the client's linked AppUser account. */
@@ -193,6 +199,8 @@ export const API_ENDPOINTS = {
   contracts: {
     base: 'dashboard/contracts',
     byId: (id: number) => `dashboard/contracts/${id}`,
+    /** DELETE: permanently removes a contract — only allowed when Cancelled. */
+    delete: (id: number) => `dashboard/contracts/${id}`,
     details: (id: number) => `dashboard/contracts/${id}/details`,
     cancel: (id: number) => `dashboard/contracts/${id}/cancel`,
     returnContract: (id: number) => `dashboard/contracts/${id}/return`,

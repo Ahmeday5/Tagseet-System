@@ -8,6 +8,17 @@
   </div>
 
   @if (selectedClientId() !== null) {
+  <div class="st-pick">
+    <label class="st-pick-label">المندوب</label>
+    <input
+      type="text"
+      class="form-control form-control-sm"
+      style="min-width:200px"
+      placeholder="بحث باسم المندوب..."
+      [value]="representativeSearch()"
+      (input)="onRepresentativeSearch($any($event.target).value)"
+    />
+  </div>
   <button class="btn btn-sm" (click)="refreshContracts()" [disabled]="contractsLoading()">
     تحديث
   </button>
@@ -68,6 +79,7 @@
         <tr>
           <th>#</th>
           <th>نوع العقد</th>
+          <th>المندوب</th>
           <th>المنتج</th>
           <th>الكمية</th>
           <th>تاريخ البيع</th>
@@ -89,11 +101,11 @@
       <tbody>
         @if (contractsLoading()) {
         <tr>
-          <td colspan="18" class="st-loading">جارٍ التحميل...</td>
+          <td colspan="19" class="st-loading">جارٍ التحميل...</td>
         </tr>
         } @else if (contracts().length === 0) {
         <tr>
-          <td colspan="18" class="st-empty">لا توجد عقود لهذا العميل بعد</td>
+          <td colspan="19" class="st-empty">لا توجد عقود لهذا العميل بعد</td>
         </tr>
         } @else {
         @for (row of contracts(); track row.id) {
@@ -103,6 +115,7 @@
             <app-badge [text]="row.isDirectContract ? 'مباشر' : 'عادي'" [type]="row.isDirectContract ? 'warn' : 'info'">
             </app-badge>
           </td>
+          <td>{{ row.representativeName || '—' }}</td>
           <td class="st-prod">{{ rowProductLabel(row) }}</td>
           <td>{{ rowQuantityTotal(row) }}</td>
           <td>{{ formatDate(row.dateOfSale) }}</td>
@@ -129,17 +142,6 @@
               <button class="btn btn-sm btn-bl" (click)="openDetails(row)">التفاصيل</button>
               <button class="btn btn-sm" (click)="editContract(row)">تعديل</button>
               <button
-                class="btn btn-sm"
-                [disabled]="isContractActionPending(row.id, 'return')"
-                (click)="confirmContractAction(row, 'return')"
-              >
-                @if (isContractActionPending(row.id, 'return')) {
-                  <span class="spinner-border spinner-border-sm"></span>
-                } @else {
-                  إرجاع
-                }
-              </button>
-              <button
                 class="btn btn-sm btn-re"
                 [disabled]="isContractActionPending(row.id, 'cancel')"
                 (click)="confirmContractAction(row, 'cancel')"
@@ -150,6 +152,20 @@
                   إلغاء
                 }
               </button>
+              @if (row.status === 'Cancelled') {
+                <button
+                  class="btn btn-sm btn-re"
+                  [disabled]="deletingContractId() === row.id"
+                  (click)="confirmDeleteContract(row)"
+                  title="حذف العقد نهائيًا"
+                >
+                  @if (deletingContractId() === row.id) {
+                    <span class="spinner-border spinner-border-sm"></span>
+                  } @else {
+                    حذف
+                  }
+                </button>
+              }
             </div>
           </td>
         </tr>
@@ -358,7 +374,7 @@
             <app-badge [text]="installmentLabel(it.status)" [type]="installmentBadge(it)" />
           </td>
           <td>
-            @if (it.status === 'Paid') {
+            @if (it.status === 'Paid' || it.status === 'Partial') {
               <button
                 class="btn btn-sm btn-re"
                 [disabled]="cancellingSequence() === it.sequence"
@@ -446,8 +462,9 @@
     </div>
 
     <div class="col-12 col-sm-6">
-      <label class="form-label">الخزينة</label>
-      <select class="form-select" [ngModel]="payForm().treasuryId ?? ''"
+      <label class="form-label">الخزينة <span class="text-danger">*</span></label>
+      <select class="form-select" [class.is-invalid]="payForm().treasuryId === null"
+        [ngModel]="payForm().treasuryId ?? ''"
         (ngModelChange)="updatePayForm('treasuryId', $event ? +$event : null)">
         <option value="">-- اختر الخزينة --</option>
         @for (t of treasuries(); track t.id) {
@@ -456,9 +473,10 @@
       </select>
     </div>
     <div class="col-12 col-sm-6">
-      <label class="form-label">طريقة السداد</label>
-      <select class="form-select" [ngModel]="payForm().paymentMethod"
-        (ngModelChange)="updatePayForm('paymentMethod', $event)">
+      <label class="form-label">طريقة السداد <small class="text-muted">(اختياري)</small></label>
+      <select class="form-select" [ngModel]="payForm().paymentMethod ?? ''"
+        (ngModelChange)="updatePayForm('paymentMethod', $event || null)">
+        <option value="">-- غير محدد --</option>
         <option value="Cash">نقدي</option>
         <option value="Transfer">تحويل بنكي</option>
         <option value="Card">بطاقة</option>
@@ -507,6 +525,9 @@
     <span>{{ p.voucherNumber }}</span>
   </div>
 
+  @if (editVoucherLoading()) {
+    <div class="st-loading">جارٍ تحميل بيانات السند...</div>
+  } @else {
   <div class="row g-2">
     <div class="col-12 col-sm-6">
       <label class="form-label">المبلغ (ج.م)</label>
@@ -529,9 +550,10 @@
       />
     </div>
     <div class="col-12 col-sm-6">
-      <label class="form-label">الخزينة</label>
+      <label class="form-label">الخزينة <span class="text-danger">*</span></label>
       <select
         class="form-select"
+        [class.is-invalid]="editVoucherForm().treasuryId === null"
         [ngModel]="editVoucherForm().treasuryId ?? ''"
         (ngModelChange)="updateEditVoucherForm('treasuryId', $event ? +$event : null)"
       >
@@ -552,10 +574,11 @@
     </div>
   </div>
   }
+  }
 
   <ng-container modal-footer>
     <button class="btn" (click)="closeEditVoucher()" [disabled]="editVoucherSubmitting()">إلغاء</button>
-    <button class="btn btn-bl" (click)="submitEditVoucher()" [disabled]="editVoucherSubmitting()">
+    <button class="btn btn-bl" (click)="submitEditVoucher()" [disabled]="editVoucherSubmitting() || editVoucherLoading()">
       {{ editVoucherSubmitting() ? 'جارٍ الحفظ...' : 'حفظ التعديلات' }}
     </button>
   </ng-container>

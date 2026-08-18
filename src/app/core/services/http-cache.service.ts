@@ -46,16 +46,26 @@ type CrossTabMessage =
  * `effect()` on it and refetch automatically when their data changes
  * elsewhere — including from another tab via BroadcastChannel.
  *
- *   - `pattern` — the substring that was invalidated (e.g. `'treasury'`)
- *   - `ts`      — wall-clock timestamp; useful as the dependency tick
- *                 even when the same pattern is invalidated repeatedly
+ *   - `pattern`  — the single substring that was invalidated (e.g.
+ *                  `'treasury'`); kept for backward compatibility.
+ *   - `patterns` — EVERY substring invalidated by the triggering call.
+ *                  `invalidateMany()` fires a single event carrying all of
+ *                  its patterns instead of one event per pattern — a signal
+ *                  write only marks effects dirty (it doesn't run them
+ *                  synchronously), so writing once per pattern in a tight
+ *                  loop meant every effect flush only ever observed the
+ *                  LAST pattern written, silently starving consumers
+ *                  listening for any earlier one. Always check `patterns`
+ *                  (via `onInvalidate`), never just `pattern`.
+ *   - `ts`       — wall-clock timestamp; useful as the dependency tick
+ *                  even when the same pattern is invalidated repeatedly
  *
- * Initial value uses `pattern: ''` so the first effect run is a no-op
- * (substring `.includes('')` would match every page, causing a needless
- * fetch on app boot).
+ * Initial value uses `patterns: []` so the first effect run is a no-op.
  */
 export interface InvalidationEvent {
+  /** @deprecated Use `patterns` — kept only for any direct old readers. */
   pattern: string;
+  patterns: readonly string[];
   ts: number;
 }
 
@@ -67,6 +77,7 @@ export class HttpCacheService {
 
   private readonly invalidationSignal = signal<InvalidationEvent>({
     pattern: '',
+    patterns: [],
     ts: 0,
   });
   /**
@@ -110,16 +121,35 @@ export class HttpCacheService {
   /** Drop every entry whose key contains `pattern` (substring, case-sensitive). */
   invalidate(pattern: string): void {
     if (!pattern) return;
-    for (const key of [...this.mem.keys()]) {
-      if (key.includes(pattern)) this.evict(key);
-    }
-    this.broadcast({ type: 'invalidate', pattern });
-    this.invalidationSignal.set({ pattern, ts: Date.now() });
+    this.invalidateMany([pattern]);
   }
 
-  /** Drop multiple patterns in one shot. */
+  /**
+   * Drop every entry matching ANY of the given patterns, then fire a
+   * SINGLE invalidation event carrying all of them.
+   *
+   * Must emit exactly one signal write for the whole batch — a signal
+   * write only marks dependent effects dirty (Angular coalesces multiple
+   * dirty-markings into one flush), so writing once per pattern in a loop
+   * would mean any effect that finally runs only observes the LAST write,
+   * silently starving `onInvalidate` listeners for every earlier pattern.
+   */
   invalidateMany(patterns: readonly string[]): void {
-    for (const p of patterns) this.invalidate(p);
+    const clean = patterns.filter(Boolean);
+    if (!clean.length) return;
+
+    for (const pattern of clean) {
+      for (const key of [...this.mem.keys()]) {
+        if (key.includes(pattern)) this.evict(key);
+      }
+      this.broadcast({ type: 'invalidate', pattern });
+    }
+
+    this.invalidationSignal.set({
+      pattern: clean[clean.length - 1],
+      patterns: clean,
+      ts: Date.now(),
+    });
   }
 
   /** Wipe everything — used on logout, role switch, etc. */
@@ -242,7 +272,11 @@ export class HttpCacheService {
         }
       }
       // Mirror locally so subscribed pages refetch on the cross-tab event.
-      this.invalidationSignal.set({ pattern: msg.pattern, ts: Date.now() });
+      this.invalidationSignal.set({
+        pattern: msg.pattern,
+        patterns: [msg.pattern],
+        ts: Date.now(),
+      });
       return;
     }
 

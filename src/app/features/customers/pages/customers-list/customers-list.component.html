@@ -111,12 +111,13 @@
           <th class="cl-w-amount">الباقي</th>
           <th class="cl-w-rating">التقييم</th>
           <th class="cl-w-status">الحالة</th>
+          <th class="cl-w-status">الأقساط المتأخرة</th>
           <th class="cl-w-actions text-center">الإجراءات</th>
         </tr>
       </thead>
       <tbody>
         @for (c of clients(); track c.id) {
-        <tr>
+        <tr class="cl-row-clickable" (click)="openProfile(c.id)">
           <td class="cl-id">#{{ c.id }}</td>
           <td>
             <div class="cl-row-name">
@@ -175,6 +176,13 @@
             <app-badge [text]="statusLabel(c.status)" [type]="statusBadge(c.status)" />
           </td>
           <td>
+            @if (c.overdueInstallmentsCount > 0) {
+            <app-badge [text]="'متأخر ' + c.overdueInstallmentsCount + ' قسط'" type="bad" />
+            } @else {
+            <span class="text-muted">—</span>
+            }
+          </td>
+          <td (click)="$event.stopPropagation()">
             <div class="d-flex gap-1 justify-content-center">
               <button
                 type="button"
@@ -221,12 +229,31 @@
                   <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
                 </svg>
               </button>
+              <button
+                *appHasPermission="PERMS.clientsFullAccess"
+                type="button"
+                class="btn btn-sm btn-re"
+                title="حذف العميل"
+                aria-label="حذف العميل"
+                [disabled]="deletingId() === c.id"
+                (click)="confirmDelete(c)"
+              >
+                @if (deletingId() === c.id) {
+                  <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                } @else {
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polyline points="3 6 5 6 21 6"/>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                  </svg>
+                }
+              </button>
             </div>
           </td>
         </tr>
         } @empty {
         <tr>
-          <td colspan="12" class="cl-empty">
+          <td colspan="13" class="cl-empty">
             @if (loading()) {
             <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
             <span>جاري تحميل العملاء...</span>

@@ -180,6 +180,15 @@
   font-family: monospace;
 }
 
+.cl-row-clickable {
+  cursor: pointer;
+  transition: background-color 0.12s ease;
+
+  &:hover {
+    background-color: var(--bg2, rgba(0, 0, 0, 0.035));
+  }
+}
+
 .cl-row-name {
   display: flex;
   align-items: center;

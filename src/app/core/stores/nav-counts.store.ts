@@ -1,9 +1,10 @@
-import { Injectable, computed, effect, inject, signal } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
 
 import { DashboardService } from '../../features/dashboard/services/dashboard.service';
 import { CatalogService } from '../../features/catalog/services/catalog.service';
 import { CustomersService } from '../../features/customers/services/customers.service';
 import { HttpCacheService } from '../services/http-cache.service';
+import { onInvalidate } from '../utils/auto-refresh.util';
 
 /**
  * Single source of truth for the live counters surfaced in the sidebar
@@ -74,14 +75,8 @@ export class NavCountsStore {
     // them can affect more than one counter. We let `refreshAll` do the
     // de-dup: a single tick triggers at most one fetch per source, and the
     // HTTP cache will serve fresh data within its TTL anyway.
-    const refetch = (pattern: string, fn: () => void) => {
-      effect(() => {
-        const event = this.cache.invalidations();
-        if (!event.pattern) return;
-        if (!event.pattern.includes(pattern)) return;
-        fn();
-      });
-    };
+    const refetch = (pattern: string, fn: () => void) =>
+      onInvalidate(this.cache, pattern, fn);
 
     refetch('payment', () => {
       this.refreshOverdue();

@@ -30,6 +30,8 @@ import { ToastService } from '../../../../core/services/toast.service';
 import { ApiError } from '../../../../core/models/api-response.model';
 import { apiErrorToMessage } from '../../../../core/utils/api-error.util';
 import { todayIsoDate } from '../../../../shared/utils/date-iso.util';
+import { HttpCacheService } from '../../../../core/services/http-cache.service';
+import { onInvalidate } from '../../../../core/utils/auto-refresh.util';
 
 type PaymentMethodKey = 'Cash' | 'Transfer' | 'Card' | 'STCPay' | 'ApplePay';
 
@@ -55,6 +57,7 @@ export class PaymentComponent {
   private readonly treasuryService = inject(TreasuryService);
   private readonly customersLegacy = inject(CustomersService); // mock recent payments
   private readonly toast = inject(ToastService);
+  private readonly cache = inject(HttpCacheService);
 
   // ── lookup data ──
   protected readonly clients = signal<DashboardClient[]>([]);
@@ -77,7 +80,8 @@ export class PaymentComponent {
   protected readonly selectedContractId = signal<number | null>(null);
   protected readonly payTreasuryId = signal<number | null>(null);
   protected readonly payAmount = signal<number>(0);
-  protected readonly payMethod = signal<PaymentMethodKey>('Cash');
+  /** `null` = not specified — the backend no longer requires a payment method. */
+  protected readonly payMethod = signal<PaymentMethodKey | null>(null);
   protected readonly payDate = signal<string>(todayIsoDate());
   protected readonly payNotes = signal<string>('');
 
@@ -149,6 +153,21 @@ export class PaymentComponent {
       },
       { allowSignalWrites: true },
     );
+
+    // Auto-refresh on any contract/payment/installment invalidation, so a
+    // payment recorded from anywhere in the app (this page, the statement
+    // modal, etc.) keeps this page's contract list and live pay card in
+    // sync without a manual reload.
+    onInvalidate(this.cache, 'contract', () => this.refreshAfterMutation());
+    onInvalidate(this.cache, 'payment', () => this.refreshAfterMutation());
+    onInvalidate(this.cache, 'installment', () => this.refreshAfterMutation());
+  }
+
+  private refreshAfterMutation(): void {
+    const clientId = this.selectedClientId();
+    if (clientId !== null) this.fetchContracts(clientId);
+    const contractId = this.selectedContractId();
+    if (contractId !== null) this.fetchContractDetails(contractId);
   }
 
   // ─────────── loaders ───────────
@@ -161,15 +180,11 @@ export class PaymentComponent {
   }
 
   private loadTreasuries(): void {
-    // Lookup is already role-scoped + active-only server-side; a rep gets
-    // just their own treasury, so it's used verbatim.
+    // Lookup is already role-scoped + active-only server-side; used verbatim.
+    // No default treasury is pre-selected — the operator must explicitly
+    // choose one for every payment.
     this.treasuryService.lookup().subscribe({
-      next: (list) => {
-        this.treasuries.set(list);
-        if (this.payTreasuryId() === null && list.length) {
-          this.payTreasuryId.set(list[0].id);
-        }
-      },
+      next: (list) => this.treasuries.set(list),
       error: () => this.treasuries.set([]),
     });
   }
@@ -234,12 +249,13 @@ export class PaymentComponent {
       return;
     }
 
+    const method = this.payMethod();
     const payload: PayInstallmentPayload = {
       contractId: contract.id,
       amount,
       treasuryId,
       paymentDate: new Date(this.payDate()).toISOString(),
-      paymentMethod: this.toServerMethod(this.payMethod()),
+      paymentMethod: method ? this.toServerMethod(method) : undefined,
       notes: this.payNotes().trim() || '',
     };
 
@@ -248,9 +264,9 @@ export class PaymentComponent {
       next: () => {
         this.submitting.set(false);
         this.toast.success('تم تسجيل الدفعة بنجاح');
-        // Refresh the details panel inline so the pay-info card reflects
-        // the new totals; the rest of the app updates via cache invalidation.
-        this.fetchContractDetails(contract.id);
+        // Refresh this page's own data directly — don't rely solely on the
+        // cache-invalidation cascade to eventually reach this instance.
+        this.refreshAfterMutation();
         this.payAmount.set(0);
         this.payNotes.set('');
       },

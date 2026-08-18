@@ -4,11 +4,13 @@ import {
   computed,
   effect,
   inject,
+  input,
   signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
-import { map } from 'rxjs/operators';
+import { of } from 'rxjs';
+import { map, switchMap } from 'rxjs/operators';
 
 import { CustomersService } from '../../services/customers.service';
 import { InstallmentsService } from '../../services/installments.service';
@@ -25,8 +27,14 @@ import {
   ContractPaymentRow,
   PayInstallmentPayload,
 } from '../../models/client-statement.model';
-import { UpdateVoucherPayload } from '../../../vouchers/models/voucher.model';
-import { RelatedPartyType } from '../../../vouchers/enums/voucher.enums';
+import {
+  UpdateVoucherPayload,
+  VoucherDto,
+} from '../../../vouchers/models/voucher.model';
+import {
+  ReferenceType,
+  RelatedPartyType,
+} from '../../../vouchers/enums/voucher.enums';
 import { DashboardClient } from '../../models/dashboard-client.model';
 import { LookupItem } from '../../../../core/models/lookup.model';
 import {
@@ -58,7 +66,8 @@ type PaymentMethodKey = 'Cash' | 'Transfer' | 'Card' | 'STCPay' | 'ApplePay';
 interface PaymentForm {
   amount: number;
   treasuryId: number | null;
-  paymentMethod: PaymentMethodKey;
+  /** `null` = not specified — the backend no longer requires a payment method. */
+  paymentMethod: PaymentMethodKey | null;
   paymentDate: string;
   notes: string;
 }
@@ -81,6 +90,13 @@ interface PaymentForm {
   styleUrl: './statement.component.scss',
 })
 export class StatementComponent {
+  /**
+   * When set (e.g. embedded inside the client-profile modal), the client
+   * picker is preset and locked to this client instead of left for the
+   * user to choose freely on the standalone /customers/statement page.
+   */
+  readonly initialClientId = input<number | null>(null);
+
   private readonly customersService = inject(CustomersService);
   private readonly contractsService = inject(ContractsService);
   private readonly installmentsService = inject(InstallmentsService);
@@ -120,6 +136,10 @@ export class StatementComponent {
   protected readonly count = signal(0);
   protected readonly totalPages = signal(0);
 
+  /** Free-text filter over the contract's representative name (debounced). */
+  protected readonly representativeSearch = signal('');
+  private repSearchDebounce: ReturnType<typeof setTimeout> | null = null;
+
   // ── server-computed totals across ALL of the client's contracts ────
   protected readonly contractsSummary = signal<ClientContractsSummary>({
     totalContractsValue: 0,
@@ -153,13 +173,14 @@ export class StatementComponent {
 
   // ── contract actions ──────────────────────────────────────────────────────────
   protected readonly contractActioningId = signal<number | null>(null);
-  protected readonly contractActionName = signal<'cancel' | 'return' | null>(null);
+  protected readonly contractActionName = signal<'cancel' | null>(null);
 
   // ── cancel installment (tracked by sequence within the active contract) ───────
   protected readonly cancellingSequence = signal<number | null>(null);
 
   // ── edit voucher modal ─────────────────────────────────────────────────────────
   protected readonly editVoucherOpen = signal(false);
+  protected readonly editVoucherLoading = signal(false);
   protected readonly editVoucherSubmitting = signal(false);
   protected readonly editVoucherTarget = signal<ContractPaymentRow | null>(
     null,
@@ -176,19 +197,31 @@ export class StatementComponent {
     this.loadClients();
     this.loadTreasuries();
 
-    // Refetch contracts whenever the selected client or page changes.
+    // Preset the picker to a given client when embedded elsewhere (e.g. the
+    // client-profile modal) — the picker itself stays visible and usable so
+    // the user can still switch to a different client from the same modal.
+    const presetClientId = this.initialClientId();
+    if (presetClientId !== null) {
+      this.selectedClientId.set(presetClientId);
+    }
+
+    // Refetch contracts whenever the selected client, page, or rep-name
+    // filter changes. The rep-name filter is debounced (see `onRepSearch`)
+    // by writing into `representativeSearch` only after the pause, so this
+    // effect doesn't need its own debounce logic.
     effect(
       () => {
         const clientId = this.selectedClientId();
         const page = this.pageIndex();
         const size = this.pageSize();
+        const repName = this.representativeSearch();
         if (clientId === null) {
           this.contracts.set([]);
           this.count.set(0);
           this.totalPages.set(0);
           return;
         }
-        this.fetchContracts(clientId, page, size, false);
+        this.fetchContracts(clientId, page, size, repName, false);
       },
       { allowSignalWrites: true },
     );
@@ -228,18 +261,14 @@ export class StatementComponent {
     clientId: number,
     pageIndex: number,
     pageSize: number,
+    representativeName: string,
     force: boolean,
   ): void {
     this.contractsLoading.set(true);
+    const query = { pageIndex, pageSize, representativeName };
     const stream$ = force
-      ? this.customersService.refreshClientContracts(clientId, {
-          pageIndex,
-          pageSize,
-        })
-      : this.customersService.getClientContracts(clientId, {
-          pageIndex,
-          pageSize,
-        });
+      ? this.customersService.refreshClientContracts(clientId, query)
+      : this.customersService.getClientContracts(clientId, query);
 
     stream$.subscribe({
       next: (res) => {
@@ -273,7 +302,13 @@ export class StatementComponent {
   private refreshAfterMutation(): void {
     const clientId = this.selectedClientId();
     if (clientId !== null) {
-      this.fetchContracts(clientId, this.pageIndex(), this.pageSize(), true);
+      this.fetchContracts(
+        clientId,
+        this.pageIndex(),
+        this.pageSize(),
+        this.representativeSearch(),
+        true,
+      );
     }
     const contractId = this.activeContractId();
     if (contractId !== null && this.detailsOpen()) {
@@ -292,7 +327,22 @@ export class StatementComponent {
   protected refreshContracts(): void {
     const id = this.selectedClientId();
     if (id === null) return;
-    this.fetchContracts(id, this.pageIndex(), this.pageSize(), true);
+    this.fetchContracts(
+      id,
+      this.pageIndex(),
+      this.pageSize(),
+      this.representativeSearch(),
+      true,
+    );
+  }
+
+  /** Debounced handler for the "بحث باسم المندوب" input. */
+  protected onRepresentativeSearch(value: string): void {
+    if (this.repSearchDebounce) clearTimeout(this.repSearchDebounce);
+    this.repSearchDebounce = setTimeout(() => {
+      this.pageIndex.set(1);
+      this.representativeSearch.set(value.trim());
+    }, 300);
   }
 
   /**
@@ -305,9 +355,14 @@ export class StatementComponent {
     if (!client || this.isPrinting()) return;
     this.isPrinting.set(true);
 
+    const representativeName = this.representativeSearch();
     fetchAllPages<ClientContractRow>((pageIndex, pageSize) =>
       this.customersService
-        .refreshClientContracts(client.id, { pageIndex, pageSize })
+        .refreshClientContracts(client.id, {
+          pageIndex,
+          pageSize,
+          representativeName,
+        })
         .pipe(map((res) => res.items)),
     ).subscribe({
       next: (rows) => {
@@ -470,7 +525,13 @@ export class StatementComponent {
     this.directContractEditId.set(null);
     const clientId = this.selectedClientId();
     if (clientId !== null) {
-      this.fetchContracts(clientId, this.pageIndex(), this.pageSize(), true);
+      this.fetchContracts(
+        clientId,
+        this.pageIndex(),
+        this.pageSize(),
+        this.representativeSearch(),
+        true,
+      );
     }
   }
 
@@ -478,7 +539,7 @@ export class StatementComponent {
 
   protected isContractActionPending(
     contractId: number,
-    action: 'cancel' | 'return',
+    action: 'cancel',
   ): boolean {
     return (
       this.contractActioningId() === contractId &&
@@ -488,13 +549,12 @@ export class StatementComponent {
 
   protected async confirmContractAction(
     row: ClientContractRow,
-    action: 'cancel' | 'return',
+    action: 'cancel',
   ): Promise<void> {
-    const actionLabel = action === 'cancel' ? 'إلغاء' : 'إرجاع';
     const ok = await this.dialog.confirm({
-      title: `${actionLabel} العقد`,
-      message: `هل أنت متأكد من ${actionLabel.toLowerCase()} هذا العقد؟`,
-      confirmText: actionLabel,
+      title: 'إلغاء العقد',
+      message: 'هل أنت متأكد من إلغاء هذا العقد؟',
+      confirmText: 'إلغاء',
       cancelText: 'تراجع',
       type: 'danger',
     });
@@ -503,18 +563,11 @@ export class StatementComponent {
     this.contractActioningId.set(row.id);
     this.contractActionName.set(action);
 
-    const request$ =
-      action === 'cancel'
-        ? this.contractsService.cancel(row.id)
-        : this.contractsService.returnContract(row.id);
-
-    request$.subscribe({
+    this.contractsService.cancel(row.id).subscribe({
       next: () => {
         this.contractActioningId.set(null);
         this.contractActionName.set(null);
-        this.toast.success(
-          action === 'cancel' ? 'تم إلغاء العقد بنجاح' : 'تم إرجاع العقد بنجاح',
-        );
+        this.toast.success('تم إلغاء العقد بنجاح');
         this.refreshContracts();
         if (this.activeContractId() === row.id) {
           this.reloadDetails(row.id);
@@ -523,12 +576,36 @@ export class StatementComponent {
       error: (err: ApiError) => {
         this.contractActioningId.set(null);
         this.contractActionName.set(null);
-        this.toast.error(
-          apiErrorToMessage(
-            err,
-            action === 'cancel' ? 'فشل إلغاء العقد' : 'فشل إرجاع العقد',
-          ),
-        );
+        this.toast.error(apiErrorToMessage(err, 'فشل إلغاء العقد'));
+      },
+    });
+  }
+
+  // ─────────── delete contract (Cancelled only) ───────────
+
+  protected readonly deletingContractId = signal<number | null>(null);
+
+  protected async confirmDeleteContract(row: ClientContractRow): Promise<void> {
+    const ok = await this.dialog.confirm({
+      title: 'حذف العقد',
+      message: `هل أنت متأكد من حذف العقد رقم #${row.id}؟ هذا الإجراء لا يمكن التراجع عنه.`,
+      confirmText: 'حذف',
+      cancelText: 'تراجع',
+      type: 'danger',
+    });
+    if (!ok) return;
+
+    this.deletingContractId.set(row.id);
+    this.contractsService.delete(row.id).subscribe({
+      next: () => {
+        this.deletingContractId.set(null);
+        this.toast.success('تم حذف العقد بنجاح');
+        if (this.activeContractId() === row.id) this.closeDetails();
+        this.refreshContracts();
+      },
+      error: (err: ApiError) => {
+        this.deletingContractId.set(null);
+        this.toast.error(apiErrorToMessage(err, 'فشل حذف العقد'));
       },
     });
   }
@@ -558,6 +635,10 @@ export class StatementComponent {
       next: () => {
         this.cancellingSequence.set(null);
         this.toast.success('تم إلغاء دفعة القسط بنجاح');
+        // Don't rely solely on the cache-invalidation cascade here — refresh
+        // this modal's own data directly so the table/badges/totals update
+        // immediately regardless of any other page's effect wiring.
+        this.refreshAfterMutation();
       },
       error: (err: ApiError) => {
         this.cancellingSequence.set(null);
@@ -569,14 +650,72 @@ export class StatementComponent {
   // ─────────── edit voucher modal ───────────
 
   protected openEditVoucher(payment: ContractPaymentRow): void {
+    if (!payment.id && !payment.voucherNumber?.trim()) {
+      this.toast.error('لا يمكن تعديل هذا السند — معرف السند غير متاح');
+      return;
+    }
     this.editVoucherTarget.set(payment);
     this.editVoucherForm.set({
       amount: payment.amount,
-      treasuryId: this.treasuries()[0]?.id ?? null,
+      treasuryId: null,
       date: payment.date,
       notes: payment.notes ?? '',
     });
     this.editVoucherOpen.set(true);
+    this.editVoucherLoading.set(true);
+
+    // The payments log doesn't always carry the voucher's DB id — fall back
+    // to resolving it from the voucher number before giving up. `search`
+    // only matches the related-party name server-side, so match the
+    // voucher number ourselves against a bounded page of installment
+    // receipt vouchers instead.
+    const resolveId$ = payment.id
+      ? of(payment.id)
+      : fetchAllPages<VoucherDto>(
+          (pageIndex, pageSize) =>
+            this.vouchersService.list({
+              referenceType: ReferenceType.Installment,
+              pageIndex,
+              pageSize,
+            }),
+          50,
+          4,
+        ).pipe(
+          map(
+            (vouchers) =>
+              vouchers.find((v) => v.voucherNumber === payment.voucherNumber)
+                ?.id ?? null,
+          ),
+        );
+
+    resolveId$
+      .pipe(
+        switchMap((id) => {
+          if (!id) throw { message: 'تعذّر إيجاد السند بالرقم المعروض' } as ApiError;
+          return this.vouchersService.getById(id).pipe(map((detail) => ({ id, detail })));
+        }),
+      )
+      .subscribe({
+        // Load the voucher's real treasury/date instead of guessing — a
+        // wrong guess here would silently move the payment to the wrong
+        // treasury.
+        next: ({ id, detail }) => {
+          this.editVoucherTarget.set({ ...payment, id });
+          this.editVoucherForm.set({
+            amount: detail.amount,
+            treasuryId: detail.treasuryId,
+            date: detail.date.split('T')[0],
+            notes: detail.notes ?? '',
+          });
+          this.editVoucherLoading.set(false);
+        },
+        error: (err: ApiError) => {
+          this.editVoucherLoading.set(false);
+          this.editVoucherOpen.set(false);
+          this.editVoucherTarget.set(null);
+          this.toast.error(apiErrorToMessage(err, 'تعذّر تحميل بيانات السند'));
+        },
+      });
   }
 
   protected closeEditVoucher(): void {
@@ -592,6 +731,8 @@ export class StatementComponent {
   }
 
   protected submitEditVoucher(): void {
+    if (this.editVoucherLoading()) return;
+
     const target = this.editVoucherTarget();
     const d = this.details();
     const f = this.editVoucherForm();
@@ -681,11 +822,11 @@ export class StatementComponent {
     if (!d) return;
     const suggested =
       d.nextInstallment?.amount ?? d.summary.totalRemaining ?? 0;
-    const defaultTreasury = this.treasuries()[0]?.id ?? null;
+    // No default treasury — the operator must explicitly choose one.
     this.payForm.set({
       amount: Math.round(suggested * 100) / 100,
-      treasuryId: defaultTreasury,
-      paymentMethod: 'Cash',
+      treasuryId: null,
+      paymentMethod: null,
       paymentDate: todayIsoDate(),
       notes: '',
     });
@@ -722,7 +863,9 @@ export class StatementComponent {
       amount: Number(f.amount),
       treasuryId: f.treasuryId,
       paymentDate: new Date(f.paymentDate).toISOString(),
-      paymentMethod: this.toServerMethod(f.paymentMethod),
+      paymentMethod: f.paymentMethod
+        ? this.toServerMethod(f.paymentMethod)
+        : undefined,
       notes: f.notes?.trim() || '',
     };
 
@@ -732,8 +875,9 @@ export class StatementComponent {
         this.paySubmitting.set(false);
         this.payOpen.set(false);
         this.toast.success('تم تسجيل الدفعة بنجاح');
-        // The mutation already invalidates cache keys; the effect-driven
-        // refresh + the onInvalidate hooks take care of the rest.
+        // Refresh this modal's own data directly — don't rely solely on
+        // the cache-invalidation cascade to eventually reach this instance.
+        this.refreshAfterMutation();
       },
       error: (err: ApiError) => {
         this.paySubmitting.set(false);

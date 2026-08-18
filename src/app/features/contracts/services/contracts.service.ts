@@ -156,6 +156,20 @@ export class ContractsService {
   }
 
   /**
+   * Permanently deletes a contract — server-side only allowed when the
+   * contract's status is Cancelled (400 otherwise).
+   *
+   * DELETE /dashboard/contracts/{id}
+   */
+  delete(id: number): Observable<void> {
+    return this.api.delete<void>(API_ENDPOINTS.contracts.delete(id), {
+      context: withInlineHandling(
+        withCacheInvalidate([CONTRACTS_CACHE_KEY, 'client']),
+      ),
+    });
+  }
+
+  /**
    * Full contract details — client, product, warehouse, summary, and the
    * full installments schedule.
    *

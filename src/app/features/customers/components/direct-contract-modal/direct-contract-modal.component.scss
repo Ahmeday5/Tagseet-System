@@ -96,3 +96,22 @@
 .dcm-summary-inst {
   color: var(--bl, #0d6efd);
 }
+
+.btn-supplier-invoice {
+  background: linear-gradient(135deg, #ff9f43, #ee5a24);
+  border: none;
+  color: #fff;
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(238, 90, 36, 0.35);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+
+  &:hover {
+    color: #fff;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(238, 90, 36, 0.45);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+}

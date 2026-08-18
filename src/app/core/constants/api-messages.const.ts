@@ -47,6 +47,12 @@ const EXACT_MESSAGES: Record<string, string> = {
   'invalid email or password': 'بيانات الدخول غير صحيحة',
   unauthorized: 'يلزم تسجيل الدخول للمتابعة',
   forbidden: 'ليس لديك صلاحية للقيام بهذا الإجراء',
+  // Voucher edit guard — the backend's own message is already correct and
+  // specific (an edit-time rule, not a delete-constraint), but the generic
+  // "مرتبط بـ" pattern below would otherwise rewrite it into the unrelated
+  // delete-oriented `LINKED_RECORDS_AR` text. Pin it here so it always wins.
+  'لا يمكن تعديل هذا السند لأنه مرتبط بعملية في النظام':
+    'لا يمكن تعديل هذا السند لأنه مرتبط بعملية في النظام',
 };
 
 interface MessagePattern {

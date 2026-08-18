@@ -179,6 +179,17 @@ export class CustomersService {
     );
   }
 
+  /**
+   * Deletes a client (DELETE /dashboard/clients/{id}). Fails server-side
+   * (400) if the client still has linked contracts or orders — the caller
+   * surfaces that message as-is. Invalidates the clients cache scope.
+   */
+  deleteClient(id: number): Observable<void> {
+    return this.api.delete<void>(API_ENDPOINTS.clients.delete(id), {
+      context: withInlineHandling(withCacheInvalidate([CLIENTS_CACHE_KEY])),
+    });
+  }
+
   private toClientsParams(
     query: DashboardClientsQuery,
   ): Record<string, unknown> {
@@ -198,10 +209,7 @@ export class CustomersService {
   ): Observable<ClientContractsResponse> {
     return this.api
       .get<ClientContractsResponse>(API_ENDPOINTS.clients.contracts(clientId), {
-        params: {
-          PageIndex: query.pageIndex ?? 1,
-          PageSize: query.pageSize ?? 10,
-        },
+        params: this.toClientContractsParams(query),
         context: withCache({ ttlMs: CLIENTS_TTL_MS }),
       })
       .pipe(map((res) => this.normalizeClientContracts(res)));
@@ -213,13 +221,20 @@ export class CustomersService {
   ): Observable<ClientContractsResponse> {
     return this.api
       .get<ClientContractsResponse>(API_ENDPOINTS.clients.contracts(clientId), {
-        params: {
-          PageIndex: query.pageIndex ?? 1,
-          PageSize: query.pageSize ?? 10,
-        },
+        params: this.toClientContractsParams(query),
         context: withCacheBypass(withCache({ ttlMs: CLIENTS_TTL_MS })),
       })
       .pipe(map((res) => this.normalizeClientContracts(res)));
+  }
+
+  private toClientContractsParams(
+    query: ClientContractsQuery,
+  ): Record<string, unknown> {
+    return {
+      PageIndex: query.pageIndex ?? 1,
+      PageSize: query.pageSize ?? 10,
+      representativeName: query.representativeName?.trim() || undefined,
+    };
   }
 
   private normalizeClientContracts(

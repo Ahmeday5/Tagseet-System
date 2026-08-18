@@ -37,15 +37,22 @@ export interface DashboardClient {
   phoneNumber: string;
   address: string;
 
-  // ── contract aggregates (null for `status === 'New'`) ──
+  // ── contract aggregates across ALL of the client's contracts
+  //    (null for `status === 'New'`) ──
+  /** Every contract's goods, joined with "، " — not just one contract's. */
   goods: string | null;
-  /** Display string in `paid/total` form, e.g. "3/12". */
+  /** Display string in `paid/total` form aggregated across all contracts, e.g. "3/12". */
   installmentProgress: string | null;
+  /** From the client's base (latest/active) contract — unaffected by the multi-contract aggregation above. */
   installmentAmount: number | null;
-  /** Backend label, e.g. "Monthly". Translated at render time. */
+  /** Backend label, e.g. "Monthly". Translated at render time. From the base contract, same as `installmentAmount`. */
   paymentFrequency: string | null;
+  /** Sum across ALL of the client's contracts. */
   totalContractAmount: number;
+  /** Sum across ALL of the client's contracts. */
   remainingAmount: number;
+  /** Total count of overdue installments across all of the client's contracts. */
+  overdueInstallmentsCount: number;
 
   rating: DashboardClientRating | null;
   status: DashboardClientStatus;

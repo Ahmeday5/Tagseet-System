@@ -95,6 +95,29 @@
   }
 
   <ng-container modal-footer>
+    @if (profile()) {
+      <button type="button" class="btn btn-gr" (click)="openStatement()">
+        كشف الحساب
+      </button>
+    }
     <button type="button" class="btn btn-bl" (click)="close()">إغلاق</button>
+  </ng-container>
+</app-modal>
+
+<!-- ── Statement of account (embedded, locked to this client) ── -->
+<app-modal
+  [open]="statementOpen()"
+  title="كشف حساب العميل"
+  size="xl"
+  [closeOnBackdrop]="true"
+  [closeOnEsc]="true"
+  (closed)="closeStatement()"
+>
+  @if (statementOpen() && clientId(); as cid) {
+    <app-statement [initialClientId]="cid" />
+  }
+
+  <ng-container modal-footer>
+    <button type="button" class="btn btn-bl" (click)="closeStatement()">إغلاق</button>
   </ng-container>
 </app-modal>

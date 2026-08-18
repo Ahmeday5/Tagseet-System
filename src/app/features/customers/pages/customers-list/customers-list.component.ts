@@ -20,7 +20,9 @@ import {
 import { PaginationComponent } from '../../../../shared/components/pagination/pagination.component';
 import { CurrencyArPipe } from '../../../../shared/pipes/currency-ar.pipe';
 import { ApiError } from '../../../../core/models/api-response.model';
+import { apiErrorToMessage } from '../../../../core/utils/api-error.util';
 import { ToastService } from '../../../../core/services/toast.service';
+import { DialogService } from '../../../../core/services/dialog.service';
 import { HttpCacheService } from '../../../../core/services/http-cache.service';
 import { onInvalidate } from '../../../../core/utils/auto-refresh.util';
 import { HasPermissionDirective } from '../../../../shared/directives/has-permission.directive';
@@ -56,6 +58,7 @@ const SEARCH_DEBOUNCE_MS = 300;
 export class CustomersListComponent {
   private readonly service = inject(CustomersService);
   private readonly toast = inject(ToastService);
+  private readonly dialog = inject(DialogService);
   private readonly cache = inject(HttpCacheService);
   private readonly printer = inject(PrintService);
 
@@ -94,6 +97,9 @@ export class CustomersListComponent {
   // ── change password modal ──
   protected readonly showPassword = signal(false);
   protected readonly passwordTarget = signal<DashboardClient | null>(null);
+
+  // ── delete ──
+  protected readonly deletingId = signal<number | null>(null);
 
   // ── derived ──
   protected readonly hasFilters = computed(
@@ -214,6 +220,12 @@ export class CustomersListComponent {
               align: 'center',
               format: (v) => this.statusLabel(v as DashboardClientStatus),
             },
+            {
+              key: 'overdueInstallmentsCount',
+              header: 'الأقساط المتأخرة',
+              align: 'center',
+              format: (v) => (Number(v) > 0 ? String(v) : '—'),
+            },
           ],
           rows,
         });
@@ -309,6 +321,36 @@ export class CustomersListComponent {
     // Jump to page 1 so the new contract's client is visible
     if (this.pageIndex() !== 1) this.pageIndex.set(1);
     else this.refresh();
+  }
+
+  // ─────────── delete ───────────
+
+  protected async confirmDelete(client: DashboardClient): Promise<void> {
+    const ok = await this.dialog.confirm({
+      title: 'حذف عميل',
+      message: `هل أنت متأكد من حذف "${client.fullName}"؟ هذا الإجراء لا يمكن التراجع عنه.`,
+      confirmText: 'حذف',
+      cancelText: 'إلغاء',
+      type: 'danger',
+    });
+    if (!ok) return;
+
+    this.deletingId.set(client.id);
+    this.service.deleteClient(client.id).subscribe({
+      next: () => {
+        this.deletingId.set(null);
+        this.toast.success('تم حذف العميل بنجاح');
+        if (this.clients().length === 1 && this.pageIndex() > 1) {
+          this.pageIndex.update((p) => p - 1);
+        } else {
+          this.refresh();
+        }
+      },
+      error: (err: ApiError) => {
+        this.deletingId.set(null);
+        this.toast.error(apiErrorToMessage(err, 'تعذّر حذف العميل'));
+      },
+    });
   }
 
   // ─────────── view helpers ───────────
