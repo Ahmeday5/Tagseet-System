@@ -514,7 +514,7 @@ export class DirectContractModalComponent {
       installmentsCount: 'عدد الأقساط',
       paymentFrequency: 'طريقة التقسيط',
       firstInstallmentDate: 'تاريخ أول قسط',
-      treasuryId: 'الخزينة',
+      treasuryId: 'خزينة المقدم',
     };
     for (const [key, label] of Object.entries(labels)) {
       if (this.form.get(key)?.invalid) return `يرجى مراجعة الحقل: ${label}`;

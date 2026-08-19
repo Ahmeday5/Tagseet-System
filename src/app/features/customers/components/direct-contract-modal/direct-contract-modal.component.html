@@ -69,10 +69,12 @@
                     <label class="form-label" style="font-size:12px">اسم المنتج <span class="text-danger">*</span></label>
                     <input
                       type="text"
-                      class="form-control form-control-sm"
+                      class="form-control form-control-sm dcm-readonly-field"
                       formControlName="productName"
-                      placeholder="مثال: شاشة سامسونج 55 بوصة"
+                      placeholder="يُملأ تلقائيًا من فاتورة المورد"
                       autocomplete="off"
+                      readonly
+                      tabindex="-1"
                     />
                     <app-form-error [control]="getItemControl(i, 'productName')!" label="اسم المنتج" />
                   </div>
@@ -80,12 +82,14 @@
                     <label class="form-label" style="font-size:12px">سعر التكلفة</label>
                     <input
                       type="number"
-                      class="form-control form-control-sm"
+                      class="form-control form-control-sm dcm-readonly-field"
                       formControlName="purchasePrice"
                       min="0"
                       step="0.01"
                       dir="ltr"
                       placeholder="0.00"
+                      readonly
+                      tabindex="-1"
                     />
                     <app-form-error [control]="getItemControl(i, 'purchasePrice')!" label="سعر التكلفة" />
                   </div>
@@ -93,11 +97,13 @@
                     <label class="form-label" style="font-size:12px">الكمية <span class="text-danger">*</span></label>
                     <input
                       type="number"
-                      class="form-control form-control-sm"
+                      class="form-control form-control-sm dcm-readonly-field"
                       formControlName="quantity"
                       min="1"
                       step="1"
                       dir="ltr"
+                      readonly
+                      tabindex="-1"
                     />
                     <app-form-error [control]="getItemControl(i, 'quantity')!" label="الكمية" />
                   </div>
@@ -246,16 +252,16 @@
           </div>
         }
 
-        <!-- الخزينة -->
+        <!-- خزينة المقدم -->
         <div class="col-12 col-md-6">
-          <label class="form-label">الخزينة <span class="text-danger">*</span></label>
+          <label class="form-label">خزينة المقدم <span class="text-danger">*</span></label>
           <app-searchable-select
             formControlName="treasuryId"
             [options]="treasuryOptions()"
-            placeholder="اختر الخزينة"
+            placeholder="اختر خزينة المقدم"
             searchPlaceholder="ابحث باسم الخزينة…"
           />
-          <app-form-error [control]="form.controls.treasuryId" label="الخزينة" />
+          <app-form-error [control]="form.controls.treasuryId" label="خزينة المقدم" />
         </div>
 
         <!-- المندوب -->

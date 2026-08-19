@@ -238,13 +238,26 @@ export class SubAccountVouchersModalComponent {
     return type === VoucherType.Receipt;
   }
 
+  /**
+   * Transfer-leg mirror rows (created by a direct sub-account-to-sub-account
+   * transfer) carry no treasury and can't be edited/deleted through the
+   * generic voucher endpoints — the backend rejects that with a 400.
+   */
+  protected isTransferLeg(v: SubAccountVoucher): boolean {
+    return v.treasuryId === null;
+  }
+
   // ── edit-voucher handlers ──
 
   protected openEditVoucher(v: SubAccountVoucher): void {
+    if (this.isTransferLeg(v)) {
+      this.toast.error('لا يمكن تعديل هذا السند لأنه ناتج عن عملية تحويل بين حسابين فرعيين.');
+      return;
+    }
     this.editVoucherTarget.set(v);
     this.editVoucherForm.set({
       amount: v.amount,
-      treasuryId: this.treasuries()[0]?.id ?? null,
+      treasuryId: v.treasuryId,
       date: v.date.split('T')[0],
       notes: v.notes ?? '',
     });
@@ -303,6 +316,10 @@ export class SubAccountVouchersModalComponent {
   // ── delete ──
 
   protected async confirmDeleteVoucher(v: SubAccountVoucher): Promise<void> {
+    if (this.isTransferLeg(v)) {
+      this.toast.error('لا يمكن حذف هذا السند لأنه ناتج عن عملية تحويل بين حسابين فرعيين.');
+      return;
+    }
     const ok = await this.dialog.confirm({
       title: 'حذف السند',
       message: `هل أنت متأكد من حذف سند "${v.voucherNumber}"؟ سيتم عكس أثره على رصيد الحساب. هذا الإجراء لا يمكن التراجع عنه.`,

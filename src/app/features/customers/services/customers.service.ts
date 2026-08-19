@@ -24,6 +24,7 @@ import {
   withCacheBypass,
   withCacheInvalidate,
   withInlineHandling,
+  withSilentErrors,
 } from '../../../core/http/http-context.tokens';
 
 const CLIENTS_TTL_MS = 2 * 60 * 1000; // 2 min — list churns whenever a payment is recorded
@@ -210,7 +211,8 @@ export class CustomersService {
     return this.api
       .get<ClientContractsResponse>(API_ENDPOINTS.clients.contracts(clientId), {
         params: this.toClientContractsParams(query),
-        context: withCache({ ttlMs: CLIENTS_TTL_MS }),
+        // Caller shows its own contextual toast on failure — skip the global one.
+        context: withSilentErrors(withCache({ ttlMs: CLIENTS_TTL_MS })),
       })
       .pipe(map((res) => this.normalizeClientContracts(res)));
   }
@@ -222,7 +224,7 @@ export class CustomersService {
     return this.api
       .get<ClientContractsResponse>(API_ENDPOINTS.clients.contracts(clientId), {
         params: this.toClientContractsParams(query),
-        context: withCacheBypass(withCache({ ttlMs: CLIENTS_TTL_MS })),
+        context: withSilentErrors(withCacheBypass(withCache({ ttlMs: CLIENTS_TTL_MS }))),
       })
       .pipe(map((res) => this.normalizeClientContracts(res)));
   }

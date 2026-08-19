@@ -200,10 +200,19 @@ export class StatementComponent {
     // Preset the picker to a given client when embedded elsewhere (e.g. the
     // client-profile modal) — the picker itself stays visible and usable so
     // the user can still switch to a different client from the same modal.
-    const presetClientId = this.initialClientId();
-    if (presetClientId !== null) {
-      this.selectedClientId.set(presetClientId);
-    }
+    // Reactive (not a one-off constructor read): `initialClientId` is bound
+    // by the parent *after* construction, so reading it here directly would
+    // always see `null` and silently fall back to the "choose a client"
+    // empty state instead of the client the user was already viewing.
+    effect(
+      () => {
+        const presetClientId = this.initialClientId();
+        if (presetClientId !== null) {
+          this.selectedClientId.set(presetClientId);
+        }
+      },
+      { allowSignalWrites: true },
+    );
 
     // Refetch contracts whenever the selected client, page, or rep-name
     // filter changes. The rep-name filter is debounced (see `onRepSearch`)
@@ -215,7 +224,7 @@ export class StatementComponent {
         const page = this.pageIndex();
         const size = this.pageSize();
         const repName = this.representativeSearch();
-        if (clientId === null) {
+        if (clientId === null || clientId === undefined || !Number.isFinite(clientId)) {
           this.contracts.set([]);
           this.count.set(0);
           this.totalPages.set(0);
@@ -264,6 +273,7 @@ export class StatementComponent {
     representativeName: string,
     force: boolean,
   ): void {
+    if (!Number.isFinite(clientId)) return;
     this.contractsLoading.set(true);
     const query = { pageIndex, pageSize, representativeName };
     const stream$ = force

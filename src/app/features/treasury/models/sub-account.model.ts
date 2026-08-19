@@ -55,6 +55,14 @@ export interface SubAccountVoucher {
   /** ISO timestamp (date-only at midnight, e.g. `2026-05-24T00:00:00`). */
   date: string;
   notes: string | null;
+  /**
+   * `null` marks a transfer-leg mirror row — created when money moves
+   * directly between two sub-accounts (`POST /sub-accounts/transfers`), with
+   * no treasury involved. These rows cannot be edited/deleted through the
+   * generic voucher endpoints; the backend rejects that with a 400.
+   */
+  treasuryId: number | null;
+  treasuryName: string | null;
 }
 
 /**
