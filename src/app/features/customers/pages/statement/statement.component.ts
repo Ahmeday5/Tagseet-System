@@ -167,6 +167,58 @@ export class StatementComponent {
     return Math.max(0, (d.summary.totalRemaining ?? 0) - amt);
   });
 
+  // ── payment ↔ installment sequence matching ────────────────────────────
+  // `ContractPaymentRow` carries no installment id from the API — only a
+  // date and amount. Approximate which installment each "قسط" voucher paid
+  // by greedily pairing payments to the nearest still-unclaimed installment
+  // by paid date (falling back to due date, then document order) so the
+  // "سندات القبض" table can show "قسط 1", "قسط 2", … instead of a bare
+  // repeated "قسط" label. This is a best-effort match, not a real link.
+  protected readonly paymentSequenceByIndex = computed<
+    Record<number, number | null>
+  >(() => {
+    const d = this.details();
+    const result: Record<number, number | null> = {};
+    if (!d) return result;
+
+    const installments = [...d.installments]
+      .filter((it) => it.paidAmount > 0)
+      .sort((a, b) => a.sequence - b.sequence);
+    const claimed = new Set<number>();
+
+    d.payments.forEach((p, index) => {
+      if (p.kind !== 'Installment') {
+        result[index] = null;
+        return;
+      }
+
+      const paymentTime = new Date(p.date).getTime();
+      let best: ContractInstallmentRow | null = null;
+      let bestDiff = Infinity;
+
+      for (const it of installments) {
+        if (claimed.has(it.sequence)) continue;
+        const reference = it.paidDate ?? it.dueDate;
+        const diff = Number.isFinite(paymentTime)
+          ? Math.abs(new Date(reference).getTime() - paymentTime)
+          : 0;
+        if (diff < bestDiff) {
+          bestDiff = diff;
+          best = it;
+        }
+      }
+
+      if (best) {
+        claimed.add(best.sequence);
+        result[index] = best.sequence;
+      } else {
+        result[index] = null;
+      }
+    });
+
+    return result;
+  });
+
   // ── directContract edit modal ──────────────────────────────────────────────────
   protected readonly directContractEditOpen = signal(false);
   protected readonly directContractEditId = signal<number | null>(null);
@@ -657,6 +709,67 @@ export class StatementComponent {
     });
   }
 
+  /**
+   * Cancel a receipt voucher's payment from the "سندات القبض" row. There is
+   * no dedicated cancel-voucher endpoint, and `ContractPaymentRow` carries
+   * no installment id — so this resolves the same best-effort date/amount
+   * match used for the "قسط N" label (`paymentSequenceByIndex`) and, if
+   * found, cancels that installment's payment exactly like the "إلغاء"
+   * button in the installments table. The confirmation dialog names the
+   * matched installment explicitly so the user can catch a wrong match
+   * before confirming.
+   */
+  protected async confirmCancelPaymentVoucher(
+    payment: ContractPaymentRow,
+    index: number,
+  ): Promise<void> {
+    const d = this.details();
+    if (!d) return;
+
+    if (payment.kind !== 'Installment') {
+      this.toast.error('لا يمكن إلغاء هذا النوع من السندات من هنا');
+      return;
+    }
+
+    const sequence = this.paymentSequenceByIndex()[index];
+    const installment = sequence != null
+      ? d.installments.find((it) => it.sequence === sequence)
+      : undefined;
+
+    if (!installment) {
+      this.toast.error('تعذّر تحديد القسط المرتبط بهذا السند لإلغائه');
+      return;
+    }
+
+    const installmentId = installment.id ?? 0;
+    if (!installmentId) {
+      this.toast.error('لا يمكن إلغاء هذا القسط — معرّف القسط غير متاح');
+      return;
+    }
+
+    const ok = await this.dialog.confirm({
+      title: 'إلغاء سند القبض',
+      message: `تمت مطابقة هذا السند تقريبيًا مع القسط رقم ${installment.sequence} (تاريخ الاستحقاق ${this.formatDate(installment.dueDate)}). هل أنت متأكد من إلغاء سداده؟ سيتم إرجاعه إلى حالة غير مسدد.`,
+      confirmText: 'إلغاء الدفعة',
+      cancelText: 'تراجع',
+      type: 'danger',
+    });
+    if (!ok) return;
+
+    this.cancellingSequence.set(installment.sequence);
+    this.installmentsService.cancelPayment(installmentId).subscribe({
+      next: () => {
+        this.cancellingSequence.set(null);
+        this.toast.success('تم إلغاء دفعة القسط بنجاح');
+        this.refreshAfterMutation();
+      },
+      error: (err: ApiError) => {
+        this.cancellingSequence.set(null);
+        this.toast.error(apiErrorToMessage(err, 'فشل إلغاء دفعة القسط'));
+      },
+    });
+  }
+
   // ─────────── edit voucher modal ───────────
 
   protected openEditVoucher(payment: ContractPaymentRow): void {
@@ -676,20 +789,18 @@ export class StatementComponent {
 
     // The payments log doesn't always carry the voucher's DB id — fall back
     // to resolving it from the voucher number before giving up. `search`
-    // only matches the related-party name server-side, so match the
-    // voucher number ourselves against a bounded page of installment
-    // receipt vouchers instead.
+    // only matches the related-party name server-side (no contract/voucher
+    // filter exists on this endpoint), so match the voucher number ourselves
+    // against every installment receipt voucher instead of a bounded page —
+    // a capped scan was silently missing vouchers that fell outside it.
     const resolveId$ = payment.id
       ? of(payment.id)
-      : fetchAllPages<VoucherDto>(
-          (pageIndex, pageSize) =>
-            this.vouchersService.list({
-              referenceType: ReferenceType.Installment,
-              pageIndex,
-              pageSize,
-            }),
-          50,
-          4,
+      : fetchAllPages<VoucherDto>((pageIndex, pageSize) =>
+          this.vouchersService.list({
+            referenceType: ReferenceType.Installment,
+            pageIndex,
+            pageSize,
+          }),
         ).pipe(
           map(
             (vouchers) =>
@@ -986,13 +1097,15 @@ export class StatementComponent {
     }
   }
 
-  protected paymentKindLabel(kind: string): string {
+  protected paymentKindLabel(kind: string, sequence?: number | null): string {
     const map: Record<string, string> = {
       DownPayment: 'مقدم',
       Installment: 'قسط',
       Overpayment: 'دفعة زائدة',
     };
-    return map[kind] ?? kind;
+    const label = map[kind] ?? kind;
+    if (kind === 'Installment' && sequence != null) return `${label} ${sequence}`;
+    return label;
   }
 
   /**

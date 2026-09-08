@@ -53,6 +53,8 @@ export interface DashboardClient {
   remainingAmount: number;
   /** Total count of overdue installments across all of the client's contracts. */
   overdueInstallmentsCount: number;
+  /** Sum of overdue installment amounts across all of the client's contracts. */
+  overdueInstallmentsAmount: number;
 
   rating: DashboardClientRating | null;
   status: DashboardClientStatus;

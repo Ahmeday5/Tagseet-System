@@ -403,7 +403,7 @@
       <thead>
         <tr>
           <th>#</th>
-          <th>التاريخ</th>
+          <th>تاريخ سداد القسط</th>
           <th>المبلغ</th>
           <th>النوع</th>
           <th>ملاحظات</th>
@@ -416,12 +416,29 @@
           <td>{{ i + 1 }}</td>
           <td>{{ formatDate(p.date) }}</td>
           <td style="font-weight:700;color:var(--gr)">{{ p.amount | currencyAr : true }}</td>
-          <td>{{ paymentKindLabel(p.kind) }}</td>
+          <td>{{ paymentKindLabel(p.kind, paymentSequenceByIndex()[i]) }}</td>
           <td class="st-notes" [class.st-notes-empty]="!p.notes?.trim()" [title]="paymentNoteText(p.notes)">
             {{ paymentNoteText(p.notes) }}
           </td>
           <td>
-            <button type="button" class="btn btn-sm" (click)="openEditVoucher(p)">تعديل</button>
+            <div class="d-flex gap-1">
+              <button type="button" class="btn btn-sm" (click)="openEditVoucher(p)">تعديل</button>
+              @if (p.kind === 'Installment') {
+                <button
+                  type="button"
+                  class="btn btn-sm btn-re"
+                  [disabled]="cancellingSequence() === paymentSequenceByIndex()[i]"
+                  (click)="confirmCancelPaymentVoucher(p, i)"
+                  title="إلغاء سداد القسط المرتبط بهذا السند"
+                >
+                  @if (cancellingSequence() !== null && cancellingSequence() === paymentSequenceByIndex()[i]) {
+                    <span class="spinner-border spinner-border-sm"></span>
+                  } @else {
+                    إلغاء
+                  }
+                </button>
+              }
+            </div>
           </td>
         </tr>
         }

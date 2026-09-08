@@ -226,6 +226,12 @@ export class CustomersListComponent {
               align: 'center',
               format: (v) => (Number(v) > 0 ? String(v) : '—'),
             },
+            {
+              key: 'overdueInstallmentsAmount',
+              header: 'مبلغ التأخير',
+              align: 'end',
+              format: 'currency',
+            },
           ],
           rows,
         });
@@ -390,6 +396,7 @@ export class CustomersListComponent {
     const map: Record<string, string> = {
       Monthly: 'شهري',
       Weekly: 'أسبوعي',
+      Bimonthly: 'كل شهرين',
       Quarterly: 'ربع سنوي',
       SemiAnnual: 'نصف سنوي',
       SemiAnnually: 'نصف سنوي',
@@ -442,5 +449,14 @@ export class CustomersListComponent {
     const url = `https://wa.me/${normalized}`;
 
     window.open(url, '_blank', 'noopener,noreferrer');
+  }
+
+  protected callClient(phone: string | null): void {
+    if (!phone) {
+      this.toast.error('رقم الهاتف غير متوفر');
+      return;
+    }
+
+    window.location.href = `tel:${phone.replace(/\s+/g, '')}`;
   }
 }

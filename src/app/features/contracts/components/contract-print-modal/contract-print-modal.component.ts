@@ -77,6 +77,7 @@ export class ContractPrintModalComponent implements OnInit, OnDestroy {
   frequencyLabel(freq: string): string {
     const map: Record<string, string> = {
       Monthly: 'شهري',
+      Bimonthly: 'كل شهرين',
       Quarterly: 'ربع سنوي',
       SemiAnnual: 'نصف سنوي',
     };
@@ -96,7 +97,7 @@ export class ContractPrintModalComponent implements OnInit, OnDestroy {
     if (!firstDate) return '';
     const d = new Date(firstDate);
     const months =
-      freq === 'Monthly' ? 1 : freq === 'Quarterly' ? 3 : 6;
+      freq === 'Monthly' ? 1 : freq === 'Bimonthly' ? 2 : freq === 'Quarterly' ? 3 : 6;
     d.setMonth(d.getMonth() + index * months);
     return this.formatDate(d.toISOString());
   }

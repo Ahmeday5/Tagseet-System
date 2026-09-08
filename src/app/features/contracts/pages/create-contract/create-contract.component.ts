@@ -114,6 +114,7 @@ export class CreateContractComponent implements OnInit {
 
   frequencies: { value: ContractPaymentFrequency; label: string }[] = [
     { value: 'Monthly', label: 'شهري' },
+    { value: 'Bimonthly', label: 'كل شهرين' },
     { value: 'Quarterly', label: 'ربع سنوي' },
     { value: 'SemiAnnual', label: 'نصف سنوي' },
   ];

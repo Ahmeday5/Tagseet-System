@@ -17,7 +17,7 @@ interface TabItem {
 export class CustomersShellComponent {
   protected readonly tabs: TabItem[] = [
     { path: 'customer-list', label: 'قائمة العملاء' },
-    { path: 'contract', label: 'عقد جديد' },
+    { path: 'contract', label: 'عقد بيع جديد من المخزن' },
     { path: 'payment', label: 'تسديد دفعة' },
     { path: 'statement', label: 'كشف الحساب' },
   ];

@@ -40,10 +40,10 @@ export interface ContractFormData {
 // ─────────────────────────────────────────────────────────────────
 
 /**
- * Backend `PaymentFrequency` enum (Monthly = 1, Quarterly = 3, SemiAnnual = 4).
+ * Backend `PaymentFrequency` enum (Monthly = 1, Bimonthly, Quarterly = 3, SemiAnnual = 4).
  * Sent/received by name. Daily/Weekly/Yearly are no longer supported.
  */
-export type ContractPaymentFrequency = 'Monthly' | 'Quarterly' | 'SemiAnnual';
+export type ContractPaymentFrequency = 'Monthly' | 'Bimonthly' | 'Quarterly' | 'SemiAnnual';
 
 export type ContractStatus =
   | 'Active'
