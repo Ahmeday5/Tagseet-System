@@ -1,0 +1,42 @@
+.trf-head {
+  align-items: flex-start;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.trf-sub {
+  font-size: 10.5px;
+  color: var(--txt3);
+  margin-top: 2px;
+}
+
+.trf-select {
+  font-family: inherit;
+  font-size: 11px;
+  padding: 6px 8px;
+  border-radius: var(--r);
+  border: 1px solid var(--brd2);
+  background: var(--bg2);
+  color: var(--txt);
+  width: 100%;
+
+  &:focus {
+    outline: none;
+    border-color: var(--bl);
+    box-shadow: 0 0 0 3px rgba(27, 95, 168, 0.12);
+  }
+}
+
+/* ── monthly profit indicators ── */
+.mp-positive { color: var(--gr); font-weight: 700; }
+.mp-negative { color: var(--re); font-weight: 700; }
+.mp-neutral { color: var(--txt2); font-weight: 700; }
+
+.mp-margin-excellent { color: var(--gr); font-weight: 700; }
+.mp-margin-good { color: var(--bl); font-weight: 600; }
+.mp-margin-fair { color: var(--am, #b8860b); font-weight: 600; }
+.mp-margin-low { color: var(--re); font-weight: 600; }
+
+.mp-current-month {
+  background: rgba(27, 95, 168, 0.06);
+}

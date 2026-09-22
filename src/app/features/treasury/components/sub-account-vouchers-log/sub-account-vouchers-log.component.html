@@ -1,11 +1,38 @@
-<app-modal
-  [open]="open()"
-  title="سجل سندات الحسابات الفرعية"
-  size="xl"
-  [closeOnBackdrop]="!loading()"
-  [closeOnEsc]="!loading()"
-  (closed)="close()"
->
+<div class="card">
+  <div class="chdr trf-head">
+    <div>
+      <div class="ct">سجل سندات الحسابات الفرعية</div>
+      <div class="trf-sub">كل سندات القبض والصرف على الحسابات الفرعية</div>
+    </div>
+    <div class="d-flex gap-1">
+      @if (hasFilters()) {
+        <button type="button" class="btn btn-sm trf-clear" (click)="clearFilters()">مسح</button>
+      }
+      <button
+        type="button"
+        class="btn btn-sm d-inline-flex align-items-center gap-1"
+        [disabled]="loading()"
+        (click)="refresh()"
+      >
+        @if (loading()) {
+          <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+        }
+        <span>تحديث</span>
+      </button>
+      <button
+        type="button"
+        class="btn btn-sm btn-bl d-inline-flex align-items-center gap-1"
+        [disabled]="vouchers().length === 0 || loading() || isPrinting()"
+        (click)="print()"
+      >
+        @if (isPrinting()) {
+          <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+        }
+        <span>🖨 طباعة PDF</span>
+      </button>
+    </div>
+  </div>
+
   <!-- ── FILTERS ── -->
   <div class="sav-filters">
     <label class="sav-field">
@@ -44,34 +71,6 @@
         searchPlaceholder="ابحث بالاسم أو الجوال…"
       />
     </label>
-  </div>
-
-  <div class="d-flex justify-content-end gap-1 mb-2">
-    @if (hasFilters()) {
-      <button type="button" class="btn btn-sm" (click)="clearFilters()">مسح</button>
-    }
-    <button
-      type="button"
-      class="btn btn-sm d-inline-flex align-items-center gap-1"
-      [disabled]="loading()"
-      (click)="refresh()"
-    >
-      @if (loading()) {
-        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-      }
-      <span>تحديث</span>
-    </button>
-    <button
-      type="button"
-      class="btn btn-sm btn-bl d-inline-flex align-items-center gap-1"
-      [disabled]="vouchers().length === 0 || loading() || isPrinting()"
-      (click)="print()"
-    >
-      @if (isPrinting()) {
-        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-      }
-      <span>🖨 طباعة PDF</span>
-    </button>
   </div>
 
   <!-- ── TABLE ── -->
@@ -165,11 +164,7 @@
       (pageSizeChange)="onPageSizeChange($event)"
     />
   }
-
-  <ng-container modal-footer>
-    <button type="button" class="btn" (click)="close()">إغلاق</button>
-  </ng-container>
-</app-modal>
+</div>
 
 <!-- ── Edit Voucher Modal ── -->
 <app-modal

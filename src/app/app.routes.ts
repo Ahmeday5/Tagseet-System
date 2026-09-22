@@ -152,6 +152,13 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'trial-balance',
+        loadChildren: () =>
+          import('./features/trial-balance/trial-balance.routes').then(
+            (m) => m.trialBalanceRoutes,
+          ),
+      },
+      {
         path: 'users',
         canActivate: [permissionGuard(PERMISSIONS.userManagement)],
         loadChildren: () =>

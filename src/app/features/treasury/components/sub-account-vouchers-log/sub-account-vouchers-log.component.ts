@@ -5,7 +5,6 @@ import {
   effect,
   inject,
   input,
-  output,
   signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -44,15 +43,15 @@ const DEFAULT_PAGE_SIZE = 10;
 const REFETCH_DEBOUNCE_MS = 250;
 
 /**
- * The full receipt/payment log across every sub-account, with server-side
+ * The full receipt/payment log across every sub-account, rendered as an
+ * always-visible card (not a modal) on the sub-accounts page. Server-side
  * search (name / voucher number), a type filter and a per-account filter.
- * Read-only reporting surface — creation happens from the panel rows.
  *
  * The account dropdown can be pre-seeded via [accounts] so it doesn't refetch;
- * if omitted, the modal drains the account list itself on first open.
+ * if omitted, the component drains the account list itself on init.
  */
 @Component({
-  selector: 'app-sub-account-vouchers-modal',
+  selector: 'app-sub-account-vouchers-log',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
@@ -64,17 +63,12 @@ const REFETCH_DEBOUNCE_MS = 250;
     CurrencyArPipe,
     DateArPipe,
   ],
-  templateUrl: './sub-account-vouchers-modal.component.html',
-  styleUrl: './sub-account-vouchers-modal.component.scss',
+  templateUrl: './sub-account-vouchers-log.component.html',
+  styleUrl: './sub-account-vouchers-log.component.scss',
 })
-export class SubAccountVouchersModalComponent {
-  // ── inputs ──
-  readonly open = input.required<boolean>();
+export class SubAccountVouchersLogComponent {
   /** Pre-seeded account options for the filter — `{ value, label, hint }`. */
   readonly accounts = input<SearchableSelectOption[]>([]);
-
-  // ── outputs ──
-  readonly closed = output<void>();
 
   // ── deps ──
   private readonly service = inject(SubAccountsService);
@@ -137,10 +131,9 @@ export class SubAccountVouchersModalComponent {
   private debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
-    // Refetch on open + on any filter / page change (debounced). The fetch is
-    // deferred so its signal writes run outside this effect's reactive context.
+    // Refetch on any filter / page change (debounced). The fetch is deferred
+    // so its signal writes run outside this effect's reactive context.
     effect(() => {
-      if (!this.open()) return;
       const trigger = this.trigger();
       if (this.debounceTimer) clearTimeout(this.debounceTimer);
       this.debounceTimer = setTimeout(
@@ -150,7 +143,7 @@ export class SubAccountVouchersModalComponent {
     });
 
     // Mirror seeded accounts into the local option signal, and drain the full
-    // list the first time the modal opens if nothing was provided.
+    // list on init if nothing was provided.
     effect(
       () => {
         const seeded = this.accounts();
@@ -159,33 +152,18 @@ export class SubAccountVouchersModalComponent {
       { allowSignalWrites: true },
     );
 
-    effect(
-      () => {
-        if (this.open() && this.accountOptions().length === 0) {
-          this.loadAccounts();
-        }
-      },
-      { allowSignalWrites: true },
-    );
+    if (this.accountOptions().length === 0) {
+      this.loadAccounts();
+    }
 
     // Load treasuries once for the edit-voucher form.
-    effect(
-      () => {
-        if (!this.open() || this.treasuries().length > 0) return;
-        this.treasuryService.lookup().subscribe({
-          next: (list) => this.treasuries.set(list),
-          error: () => {},
-        });
-      },
-      { allowSignalWrites: true },
-    );
+    this.treasuryService.lookup().subscribe({
+      next: (list) => this.treasuries.set(list),
+      error: () => {},
+    });
   }
 
   // ─────────── template handlers ───────────
-
-  protected close(): void {
-    this.closed.emit();
-  }
 
   protected refresh(): void {
     this.fetch(this.trigger(), true);

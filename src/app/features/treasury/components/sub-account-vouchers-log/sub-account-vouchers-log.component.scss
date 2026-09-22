@@ -1,3 +1,25 @@
+.trf-head {
+  align-items: flex-start;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.trf-sub {
+  font-size: 10.5px;
+  color: var(--txt3);
+  margin-top: 2px;
+}
+
+.trf-clear {
+  color: var(--re);
+  border-color: var(--re-l, rgba(220, 38, 38, 0.25));
+  background: var(--re-l, rgba(220, 38, 38, 0.08));
+
+  &:hover {
+    background: rgba(220, 38, 38, 0.14);
+  }
+}
+
 .sav-filters {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -23,7 +45,6 @@
   color: var(--txt3);
 }
 
-/* Local copies of the treasury table cell helpers (scoped in treasury-home). */
 .trf-date {
   font-size: 10.5px;
   color: var(--txt2);

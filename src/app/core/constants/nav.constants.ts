@@ -135,6 +135,25 @@ export const NAV_SECTIONS: NavSection[] = [
         requiredAnyPermission: [PERMISSIONS.treasuryView],
       },
       {
+        id: 'monthly-profits',
+        label: 'الأرباح الشهرية',
+        route: '/treasury/monthly-profits',
+        icon: 'trending-up',
+        requiredAnyPermission: [PERMISSIONS.treasuryView],
+        // Owners-only — mirrors the card it was extracted from.
+        hideForRoles: ['Representative'],
+      },
+      {
+        id: 'sub-accounts',
+        label: 'الحسابات الفرعية',
+        route: '/treasury/sub-accounts',
+        icon: 'sub-accounts',
+        requiredAnyPermission: [
+          PERMISSIONS.subAccountsView,
+          PERMISSIONS.subAccountsFullAccess,
+        ],
+      },
+      {
         id: 'vouchers',
         label: 'سندات القبض والصرف',
         route: '/vouchers',
@@ -147,6 +166,12 @@ export const NAV_SECTIONS: NavSection[] = [
         route: '/expenses-revenues',
         icon: 'chart',
         requiredAnyPermission: [PERMISSIONS.treasuryView],
+      },
+      {
+        id: 'trial-balance',
+        label: 'ميزان المراجعة',
+        route: '/trial-balance',
+        icon: 'scale',
       },
       {
         id: 'shareholders',

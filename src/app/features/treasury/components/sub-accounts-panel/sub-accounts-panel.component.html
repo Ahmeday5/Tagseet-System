@@ -8,22 +8,6 @@
       <button
         type="button"
         class="btn btn-sm d-inline-flex align-items-center gap-1"
-        (click)="openVouchers()"
-        title="عرض كل سندات الحسابات الفرعية"
-      >
-        📑 كل السندات
-      </button>
-      <button
-        type="button"
-        class="btn btn-sm d-inline-flex align-items-center gap-1"
-        (click)="openTransfersLog()"
-        title="عرض سجل التحويلات بين الحسابات الفرعية"
-      >
-        🔁 سجل التحويلات
-      </button>
-      <button
-        type="button"
-        class="btn btn-sm d-inline-flex align-items-center gap-1"
         (click)="openTransfer()"
         title="تحويل من حساب فرعي إلى آخر"
       >
@@ -171,20 +155,9 @@
   (closed)="closeStatement()"
 />
 
-<app-sub-account-vouchers-modal
-  [open]="vouchersOpen()"
-  (closed)="closeVouchers()"
-/>
-
 <app-sub-account-transfer-modal
   [open]="transferOpen()"
   [accounts]="accountOptions()"
   (closed)="closeTransfer()"
   (saved)="onTransferSaved($event)"
-/>
-
-<app-sub-account-transfers-modal
-  [open]="transfersLogOpen()"
-  [accounts]="accountOptions()"
-  (closed)="closeTransfersLog()"
 />

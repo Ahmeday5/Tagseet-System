@@ -6,11 +6,9 @@ import {
   inject,
   input,
   signal,
-  output,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
-import { ModalComponent } from '../../../../shared/components/modal/modal.component';
 import { PaginationComponent } from '../../../../shared/components/pagination/pagination.component';
 import {
   SearchableSelectComponent,
@@ -30,36 +28,31 @@ const DEFAULT_PAGE_SIZE = 10;
 const REFETCH_DEBOUNCE_MS = 250;
 
 /**
- * The full transfer log between sub-accounts, with a from-account filter,
- * a to-account filter and a date range. Read-only reporting surface —
- * creation happens from `app-sub-account-transfer-modal`.
+ * The full transfer log between sub-accounts, rendered as an always-visible
+ * card (not a modal) on the sub-accounts page — a from-account filter, a
+ * to-account filter and a date range. Read-only; creation happens from
+ * `app-sub-account-transfer-modal`.
  *
  * The account dropdowns can be pre-seeded via [accounts] so they don't
- * refetch; if omitted, the modal drains the account list itself on first open.
+ * refetch; if omitted, the component drains the account list itself on init.
  */
 @Component({
-  selector: 'app-sub-account-transfers-modal',
+  selector: 'app-sub-account-transfers-log',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     FormsModule,
-    ModalComponent,
     PaginationComponent,
     SearchableSelectComponent,
     CurrencyArPipe,
     DateArPipe,
   ],
-  templateUrl: './sub-account-transfers-modal.component.html',
-  styleUrl: './sub-account-transfers-modal.component.scss',
+  templateUrl: './sub-account-transfers-log.component.html',
+  styleUrl: './sub-account-transfers-log.component.scss',
 })
-export class SubAccountTransfersModalComponent {
-  // ── inputs ──
-  readonly open = input.required<boolean>();
+export class SubAccountTransfersLogComponent {
   /** Pre-seeded account options for the filters — `{ value, label, hint }`. */
   readonly accounts = input<SearchableSelectOption[]>([]);
-
-  // ── outputs ──
-  readonly closed = output<void>();
 
   // ── deps ──
   private readonly service = inject(SubAccountsService);
@@ -109,10 +102,9 @@ export class SubAccountTransfersModalComponent {
   private debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
-    // Refetch on open + on any filter / page change (debounced). The fetch is
-    // deferred so its signal writes run outside this effect's reactive context.
+    // Refetch on any filter / page change (debounced). The fetch is deferred
+    // so its signal writes run outside this effect's reactive context.
     effect(() => {
-      if (!this.open()) return;
       const trigger = this.trigger();
       if (this.debounceTimer) clearTimeout(this.debounceTimer);
       this.debounceTimer = setTimeout(
@@ -122,7 +114,7 @@ export class SubAccountTransfersModalComponent {
     });
 
     // Mirror seeded accounts into the local option signal, and drain the full
-    // list the first time the modal opens if nothing was provided.
+    // list on init if nothing was provided.
     effect(
       () => {
         const seeded = this.accounts();
@@ -131,21 +123,12 @@ export class SubAccountTransfersModalComponent {
       { allowSignalWrites: true },
     );
 
-    effect(
-      () => {
-        if (this.open() && this.accountOptions().length === 0) {
-          this.loadAccounts();
-        }
-      },
-      { allowSignalWrites: true },
-    );
+    if (this.accountOptions().length === 0) {
+      this.loadAccounts();
+    }
   }
 
   // ─────────── template handlers ───────────
-
-  protected close(): void {
-    this.closed.emit();
-  }
 
   protected refresh(): void {
     this.fetch(this.trigger(), true);

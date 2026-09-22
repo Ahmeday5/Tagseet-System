@@ -11,7 +11,6 @@ import {
   Treasury,
   TreasuryTransfer,
   TreasuryOperation,
-  MonthlyProfit,
 } from '../../models/treasury.model';
 import { catchError, of } from 'rxjs';
 import { TreasuryService } from '../../services/treasury.service';
@@ -20,7 +19,6 @@ import { RepresentativeSubTreasury } from '../../../reps/models/rep.model';
 import { LookupItem } from '../../../../core/models/lookup.model';
 import { TreasuryFormModelComponent } from '../../components/treasury-form-model/treasury-form-model.component';
 import { TreasuryTransferModalComponent } from '../../components/treasury-transfer-modal/treasury-transfer-modal.component';
-import { SubAccountsPanelComponent } from '../../components/sub-accounts-panel/sub-accounts-panel.component';
 import {
   BadgeComponent,
   BadgeType,
@@ -53,7 +51,6 @@ import { CommonModule } from '@angular/common';
   imports: [
     TreasuryFormModelComponent,
     TreasuryTransferModalComponent,
-    SubAccountsPanelComponent,
     BadgeComponent,
     PaginationComponent,
     CurrencyArPipe,
@@ -78,14 +75,6 @@ export class TreasuryHomeComponent implements OnInit {
 
   protected readonly isRep = computed(
     () => this.auth.currentUser()?.role === 'Representative',
-  );
-
-  /** Sub-accounts panel is visible to anyone with SubAccounts.View or SubAccounts.FullAccess. */
-  protected readonly canManageSubAccounts = computed(() =>
-    this.auth.hasAnyPermission([
-      PERMISSIONS.subAccountsView,
-      PERMISSIONS.subAccountsFullAccess,
-    ]),
   );
 
   // ── data ──
@@ -240,13 +229,6 @@ export class TreasuryHomeComponent implements OnInit {
   protected readonly oCount = signal(0);
   protected readonly oTotalPages = signal(0);
 
-  // ── monthly profits state ──
-  protected readonly monthlyProfits = signal<MonthlyProfit[]>([]);
-  protected readonly monthlyProfitsLoading = signal(false);
-  protected readonly selectedYear = signal<number | null>(null);
-  private monthlyProfitsDebounceTimer: ReturnType<typeof setTimeout> | null =
-    null;
-
   constructor() {
     // Auto-refresh whenever a treasury-related cache key is invalidated
     // anywhere (this tab or another via BroadcastChannel) — e.g. after
@@ -257,7 +239,6 @@ export class TreasuryHomeComponent implements OnInit {
       this.fetchOperations(this.operationsTrigger(), true);
       if (this.isRep()) return;
       this.fetchTransfers(this.transfersTrigger(), true);
-      this.fetchMonthlyProfits(this.selectedYear(), true);
     });
 
     effect(() => {
@@ -284,19 +265,6 @@ export class TreasuryHomeComponent implements OnInit {
         200,
       );
     });
-
-    // Refetch monthly profits on year change.
-    effect(() => {
-      if (this.isRep()) return;
-      const year = this.selectedYear();
-      if (this.monthlyProfitsDebounceTimer) {
-        clearTimeout(this.monthlyProfitsDebounceTimer);
-      }
-      this.monthlyProfitsDebounceTimer = setTimeout(
-        () => this.fetchMonthlyProfits(year, false),
-        200,
-      );
-    });
   }
 
   ngOnInit(): void {
@@ -305,7 +273,6 @@ export class TreasuryHomeComponent implements OnInit {
     this.loadOperations();
     if (this.isRep()) return;
     this.loadRepresentatives();
-    this.loadMonthlyProfits();
   }
 
   /** Lightweight reps lookup for resolving sub-rep treasury names. */
@@ -616,7 +583,6 @@ export class TreasuryHomeComponent implements OnInit {
   /** Background flags for the export-PDF buttons. */
   protected readonly isPrintingTransfers = signal(false);
   protected readonly isPrintingSubTreasuries = signal(false);
-  protected readonly isPrintingMonthlyProfits = signal(false);
 
   protected printOperations(): void {
     if (this.isPrintingOps()) return;
@@ -863,75 +829,6 @@ export class TreasuryHomeComponent implements OnInit {
     this.isPrintingSubTreasuries.set(false);
   }
 
-  protected printMonthlyProfits(): void {
-    if (this.isPrintingMonthlyProfits()) return;
-    const rows = this.monthlyProfits();
-    if (rows.length === 0) return;
-    this.isPrintingMonthlyProfits.set(true);
-
-    const totalRevenue = rows.reduce((s, r) => s + (r.revenue ?? 0), 0);
-    const totalExpenses = rows.reduce((s, r) => s + (r.expenses ?? 0), 0);
-    const totalProfit = totalRevenue - totalExpenses;
-    const margin =
-      totalRevenue > 0
-        ? Math.round((totalProfit / totalRevenue) * 1000) / 10
-        : 0;
-
-    this.printer.print<MonthlyProfit>({
-      title: 'الأرباح الشهرية',
-      subtitle: this.selectedYear()
-        ? `بيانات سنة ${this.selectedYear()}`
-        : 'ملخص الإيرادات والمصروفات وصافي الربح لكل شهر',
-      columns: [
-        { key: 'monthName', header: 'الشهر', align: 'start', bold: true },
-        {
-          key: 'revenue',
-          header: 'الإيرادات',
-          align: 'end',
-          format: 'currency',
-        },
-        {
-          key: 'expenses',
-          header: 'المصروفات',
-          align: 'end',
-          format: 'currency',
-        },
-        {
-          key: 'profit',
-          header: 'صافي الربح',
-          align: 'end',
-          format: 'currency',
-          bold: true,
-        },
-        {
-          key: 'marginPercent',
-          header: 'هامش الربح',
-          align: 'center',
-          format: 'percent',
-        },
-        {
-          key: (m) => m,
-          header: 'الحالة',
-          align: 'center',
-          format: (_v, m) =>
-            m.profit > 0 ? 'ربح' : m.profit < 0 ? 'خسارة' : 'تعادل',
-        },
-      ],
-      totals: {
-        label: 'الإجمالي',
-        cells: [
-          this.formatCurrencyTotal(totalRevenue),
-          this.formatCurrencyTotal(totalExpenses),
-          this.formatCurrencyTotal(totalProfit),
-          `${margin}%`,
-          totalProfit > 0 ? 'ربح' : totalProfit < 0 ? 'خسارة' : 'تعادل',
-        ],
-      },
-      rows,
-    });
-    this.isPrintingMonthlyProfits.set(false);
-  }
-
   // ─────────────── print helpers ───────────────
 
   private operationsPrintMeta(): Array<{ label: string; value: string }> {
@@ -971,56 +868,5 @@ export class TreasuryHomeComponent implements OnInit {
 
   private formatCurrencyTotal(value: number): string {
     return `${Math.round(value).toLocaleString('ar-EG')} ج.م`;
-  }
-
-  // ─────────────── monthly profits ───────────────
-
-  protected loadMonthlyProfits(): void {
-    this.fetchMonthlyProfits(null, false);
-  }
-
-  private fetchMonthlyProfits(year: number | null, force: boolean): void {
-    this.monthlyProfitsLoading.set(true);
-    const stream$ = force
-      ? this.treasuryService.refreshMonthlyProfits(year ?? undefined)
-      : this.treasuryService.listMonthlyProfits(year ?? undefined);
-
-    stream$.subscribe({
-      next: (data) => {
-        this.monthlyProfits.set(data ?? []);
-        this.monthlyProfitsLoading.set(false);
-      },
-      error: () => {
-        this.monthlyProfits.set([]);
-        this.monthlyProfitsLoading.set(false);
-      },
-    });
-  }
-
-  protected refreshMonthlyProfits(): void {
-    this.fetchMonthlyProfits(this.selectedYear(), true);
-  }
-
-  protected onYearChange(value: string): void {
-    this.selectedYear.set(value === '' ? null : Number(value));
-  }
-
-  protected profitClass(profit: number): string {
-    return profit > 0
-      ? 'mp-positive'
-      : profit < 0
-        ? 'mp-negative'
-        : 'mp-neutral';
-  }
-
-  protected marginClass(margin: number): string {
-    if (margin >= 30) return 'mp-margin-excellent';
-    if (margin >= 20) return 'mp-margin-good';
-    if (margin >= 10) return 'mp-margin-fair';
-    return 'mp-margin-low';
-  }
-
-  protected monthRowClass(isCurrentMonth: boolean): string {
-    return isCurrentMonth ? 'mp-current-month' : '';
   }
 }

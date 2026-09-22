@@ -30,21 +30,20 @@ import { SearchableSelectOption } from '../../../../shared/components/searchable
 import { SubAccountFormModalComponent } from '../sub-account-form-modal/sub-account-form-modal.component';
 import { SubAccountVoucherModalComponent } from '../sub-account-voucher-modal/sub-account-voucher-modal.component';
 import { SubAccountStatementModalComponent } from '../sub-account-statement-modal/sub-account-statement-modal.component';
-import { SubAccountVouchersModalComponent } from '../sub-account-vouchers-modal/sub-account-vouchers-modal.component';
 import { SubAccountTransferModalComponent } from '../sub-account-transfer-modal/sub-account-transfer-modal.component';
-import { SubAccountTransfersModalComponent } from '../sub-account-transfers-modal/sub-account-transfers-modal.component';
 
 const DEFAULT_PAGE_SIZE = 10;
 const REFETCH_DEBOUNCE_MS = 250;
 
 /**
  * Self-contained management surface for treasury sub-accounts — a single card
- * rendered beside the monthly-profits panel on the treasury home, gated to
- * Admin / GeneralManager by the host.
+ * rendered on the sub-accounts page, gated to Admin / GeneralManager by the
+ * host.
  *
- * Owns the paginated list and all four child dialogs (create/edit, add
- * voucher, per-account statement, all-vouchers log), so the host only has to
- * drop `<app-sub-accounts-panel />` into the grid.
+ * Owns the paginated list and its child dialogs (create/edit, add voucher,
+ * per-account statement, transfer-between-accounts), so the host only has to
+ * drop `<app-sub-accounts-panel />` into the page. The read-only vouchers and
+ * transfers logs live in their own sibling components on that same page.
  */
 @Component({
   selector: 'app-sub-accounts-panel',
@@ -56,9 +55,7 @@ const REFETCH_DEBOUNCE_MS = 250;
     SubAccountFormModalComponent,
     SubAccountVoucherModalComponent,
     SubAccountStatementModalComponent,
-    SubAccountVouchersModalComponent,
     SubAccountTransferModalComponent,
-    SubAccountTransfersModalComponent,
   ],
   templateUrl: './sub-accounts-panel.component.html',
   styleUrl: './sub-accounts-panel.component.scss',
@@ -102,15 +99,9 @@ export class SubAccountsPanelComponent {
   protected readonly statementOpen = signal(false);
   protected readonly statementAccount = signal<SubAccount | null>(null);
 
-  // ── all-vouchers modal ──
-  protected readonly vouchersOpen = signal(false);
-
   // ── transfer modal ──
   protected readonly transferOpen = signal(false);
   protected readonly accountOptions = signal<SearchableSelectOption[]>([]);
-
-  // ── all-transfers modal ──
-  protected readonly transfersLogOpen = signal(false);
 
   // ── derived ──
   protected readonly hasFilters = computed(() => this.searchTerm().trim().length > 0);
@@ -303,16 +294,6 @@ export class SubAccountsPanelComponent {
     this.statementOpen.set(false);
   }
 
-  // ─────────── all-vouchers modal ───────────
-
-  protected openVouchers(): void {
-    this.vouchersOpen.set(true);
-  }
-
-  protected closeVouchers(): void {
-    this.vouchersOpen.set(false);
-  }
-
   // ─────────── transfer modal ───────────
 
   protected openTransfer(): void {
@@ -346,15 +327,5 @@ export class SubAccountsPanelComponent {
         ),
       error: () => this.accountOptions.set([]),
     });
-  }
-
-  // ─────────── all-transfers modal ───────────
-
-  protected openTransfersLog(): void {
-    this.transfersLogOpen.set(true);
-  }
-
-  protected closeTransfersLog(): void {
-    this.transfersLogOpen.set(false);
   }
 }
