@@ -1,0 +1,37 @@
+<ol class="pb-list">
+  @for (step of steps(); track step.label) {
+    <li class="pb-row" [class.is-minus]="step.sign < 0">
+      <span class="pb-op" aria-hidden="true">{{ step.sign > 0 ? '+' : '−' }}</span>
+      <div class="pb-body">
+        <div class="pb-head">
+          <span class="pb-label">{{ step.label }}</span>
+          <span class="pb-amount">
+            <span class="visually-hidden">{{ step.sign > 0 ? 'يُضاف' : 'يُخصم' }}</span>
+            {{ step.amount | balanceAmount }}
+          </span>
+        </div>
+        <div class="pb-track" aria-hidden="true">
+          <span class="pb-fill" [style.width.%]="step.width"></span>
+        </div>
+        <div class="pb-hint">{{ step.hint }}</div>
+      </div>
+    </li>
+  }
+</ol>
+
+<div class="pb-result" [class.is-clamped]="clamped()">
+  <span class="pb-op" aria-hidden="true">=</span>
+  <div class="pb-body">
+    <div class="pb-head">
+      <span class="pb-label">إجمالي الأرباح</span>
+      <span class="pb-amount">{{ profit().totalProfit | balanceAmount }}</span>
+    </div>
+    @if (clamped()) {
+      <div class="pb-note" role="note">
+        الصافي الفعلي
+        <strong>{{ netProfit() | balanceAmount }}</strong>
+        (خسارة) — يُحتسب الإجمالي صفرًا لأنه لا يقل عن الصفر.
+      </div>
+    }
+  </div>
+</div>

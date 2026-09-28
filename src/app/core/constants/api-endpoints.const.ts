@@ -122,6 +122,8 @@ export const API_ENDPOINTS = {
   dashboard: {
     summary: 'dashboard/summary',
     homeSummary: 'dashboard/home-summary',
+    /** GET: trial balance — assets vs obligations reconciliation (Admin only). */
+    balanceCheck: 'dashboard/balance-check',
     vouchers: 'dashboard/vouchers',
     voucherById: (id: number) => `dashboard/vouchers/${id}`,
   },

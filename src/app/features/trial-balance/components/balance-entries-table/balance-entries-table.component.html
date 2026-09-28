@@ -1,0 +1,107 @@
+@let s = spec();
+
+<div class="bet-toolbar">
+  <label class="bet-search">
+    <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+      <circle cx="11" cy="11" r="6.5" />
+      <path d="M16 16l4.5 4.5" />
+    </svg>
+    <input
+      type="search"
+      [placeholder]="s.searchPlaceholder"
+      [value]="query()"
+      (input)="onSearch($any($event.target).value)"
+      [attr.aria-label]="s.searchPlaceholder"
+    />
+  </label>
+
+  @if (zeroCount() > 0) {
+    <button
+      type="button"
+      class="bet-chip"
+      [class.is-on]="hideZero()"
+      [attr.aria-pressed]="hideZero()"
+      (click)="toggleZero()"
+    >
+      <span class="bet-chip-dot" aria-hidden="true"></span>
+      إخفاء الأرصدة الصفرية
+      <span class="bet-chip-count">{{ zeroCount() | balanceCount }}</span>
+    </button>
+  }
+
+  <span class="bet-counter">
+    عرض {{ rows().length | balanceCount }} من {{ s.rows.length | balanceCount }}
+  </span>
+</div>
+
+<div class="bet-scroll">
+  <table class="bet-table">
+    <thead>
+      <tr>
+        <th class="bet-idx" scope="col">#</th>
+        <th scope="col" [attr.aria-sort]="ariaSort('name')">
+          <button type="button" class="bet-sort" (click)="sortBy('name')">
+            {{ s.nameHeader }}
+            <span class="bet-caret" [class.is-active]="sortKey() === 'name'" [class.is-asc]="sortDir() === 'asc'" aria-hidden="true"></span>
+          </button>
+        </th>
+        @if (hasMeta()) {
+          <th class="bet-num" scope="col">{{ s.metaHeader }}</th>
+        }
+        <th class="bet-num" scope="col" [attr.aria-sort]="ariaSort('amount')">
+          <button type="button" class="bet-sort" (click)="sortBy('amount')">
+            {{ s.amountHeader }}
+            <span class="bet-caret" [class.is-active]="sortKey() === 'amount'" [class.is-asc]="sortDir() === 'asc'" aria-hidden="true"></span>
+          </button>
+        </th>
+      </tr>
+    </thead>
+
+    <tbody>
+      @for (row of rows(); track row.id; let i = $index) {
+        <tr>
+          <td class="bet-idx">{{ i + 1 | balanceCount }}</td>
+          <td>
+            <div class="bet-name">
+              <span class="bet-name-text" [title]="row.name">{{ row.name || '—' }}</span>
+              @if (row.tag) {
+                <app-badge [text]="row.tag.text" [type]="row.tag.type" />
+              }
+            </div>
+          </td>
+          @if (hasMeta()) {
+            <td class="bet-num bet-meta">{{ row.meta ?? 0 | balanceCount }}</td>
+          }
+          <td class="bet-num bet-amount" [class]="amountClass(row.amount)">
+            {{ row.amount | balanceAmount }}
+          </td>
+        </tr>
+      } @empty {
+        <tr>
+          <td [attr.colspan]="colspan()" class="bet-empty">
+            @if (s.rows.length === 0) {
+              {{ s.emptyText }}
+            } @else if (query()) {
+              لا توجد نتائج مطابقة لبحثك.
+            } @else {
+              كل الأرصدة صفرية — ألغِ «إخفاء الأرصدة الصفرية» لعرضها.
+            }
+          </td>
+        </tr>
+      }
+    </tbody>
+
+    @if (rows().length > 0) {
+      <tfoot>
+        <tr>
+          <td [attr.colspan]="colspan() - 1">
+            {{ isFiltered() ? 'إجمالي المعروض' : 'الإجمالي' }}
+          </td>
+          <td class="bet-num" [class]="amountClass(visibleTotal())">
+            {{ visibleTotal() | balanceAmount }}
+          </td>
+        </tr>
+      </tfoot>
+    }
+  </table>
+</div>

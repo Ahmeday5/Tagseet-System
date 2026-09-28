@@ -1,0 +1,111 @@
+@let s = side();
+
+<section class="bsp" [class]="'bsp--' + s.key" [attr.aria-labelledby]="s.key + '-title'">
+  <header class="bsp-head">
+    <div class="bsp-head-text">
+      <span class="bsp-kicker">{{ s.key === 'assets' ? 'مدين' : 'دائن' }}</span>
+      <h2 class="bsp-title" [id]="s.key + '-title'">{{ s.title }}</h2>
+      <p class="bsp-sub">{{ s.subtitle }}</p>
+    </div>
+    <div class="bsp-total">
+      <span class="bsp-total-label">الإجمالي</span>
+      <span class="bsp-total-value">{{ s.total | balanceAmount }}</span>
+    </div>
+  </header>
+
+  <div class="bsp-bar" role="img" [attr.aria-label]="'توزيع ' + s.title">
+    @for (line of s.lines; track line.key) {
+      @if (line.share > 0) {
+        <span
+          class="bsp-bar-seg"
+          [style.width.%]="line.share"
+          [style.background]="color(line.key)"
+          [title]="line.label + ' — ' + shareText(line.share)"
+        ></span>
+      }
+    }
+  </div>
+
+  <ul class="bsp-lines">
+    @for (line of s.lines; track line.key) {
+      @let open = isExpanded(line.key);
+      @let panelId = s.key + '-' + line.key + '-panel';
+
+      <li class="bsp-line" [class.is-open]="open" [style.--line-color]="color(line.key)">
+        <button
+          type="button"
+          class="bsp-line-btn"
+          [attr.aria-expanded]="open"
+          [attr.aria-controls]="panelId"
+          (click)="toggle(line.key)"
+        >
+          <span class="bsp-line-icon" aria-hidden="true">
+            <app-nav-icon [name]="line.icon" [size]="17" />
+          </span>
+
+          <span class="bsp-line-text">
+            <span class="bsp-line-label">{{ line.label }}</span>
+            <span class="bsp-line-caption">{{ line.caption }}</span>
+          </span>
+
+          <span class="bsp-line-figures">
+            <span class="bsp-line-amount" [class.is-zero]="isZero(line.amount)" [class.is-neg]="line.amount < 0 && !isZero(line.amount)">
+              {{ line.amount | balanceAmount }}
+            </span>
+            <span class="bsp-line-share">
+              <span class="bsp-line-share-track" aria-hidden="true">
+                <span class="bsp-line-share-fill" [style.width.%]="line.share"></span>
+              </span>
+              {{ shareText(line.share) }}
+            </span>
+          </span>
+
+          <span class="bsp-line-chev" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="14" height="14"><path d="M6 9l6 6 6-6" /></svg>
+          </span>
+        </button>
+
+        @if (open) {
+          <div class="bsp-line-panel" [id]="panelId" role="region" [attr.aria-label]="line.label">
+            <p class="bsp-line-hint">{{ line.hint }}</p>
+
+            @if (line.kind === 'entries') {
+              <app-balance-entries-table [spec]="line.entries" />
+            } @else if (line.kind === 'profit') {
+              <app-profit-breakdown [profit]="line.profit" />
+            } @else if (line.kind === 'receivables') {
+              @let r = line.receivables;
+              <div class="bsp-stats">
+                <div class="bsp-stat">
+                  <span class="bsp-stat-label">إجمالي المستحقات</span>
+                  <span class="bsp-stat-value">{{ r.amount | balanceAmount }}</span>
+                </div>
+                <div class="bsp-stat">
+                  <span class="bsp-stat-label">عدد العقود</span>
+                  <span class="bsp-stat-value">{{ r.contractsCount | balanceCount }}</span>
+                </div>
+                <div class="bsp-stat">
+                  <span class="bsp-stat-label">أقساط غير مسددة</span>
+                  <span class="bsp-stat-value">{{ r.installmentsCount | balanceCount }}</span>
+                </div>
+                <div class="bsp-stat">
+                  <span class="bsp-stat-label">متوسط المستحق للعقد</span>
+                  <span class="bsp-stat-value">{{ average(r.amount, r.contractsCount) | balanceAmount }}</span>
+                </div>
+                <div class="bsp-stat">
+                  <span class="bsp-stat-label">متوسط القسط</span>
+                  <span class="bsp-stat-value">{{ average(r.amount, r.installmentsCount) | balanceAmount }}</span>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </li>
+    }
+  </ul>
+
+  <footer class="bsp-foot">
+    <span>إجمالي {{ s.title }}</span>
+    <strong>{{ s.total | balanceAmount }}</strong>
+  </footer>
+</section>

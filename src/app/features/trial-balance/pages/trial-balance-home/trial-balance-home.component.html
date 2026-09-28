@@ -1,8 +1,89 @@
 <div class="pgh">
   <div>
     <div class="pgt">ميزان المراجعة</div>
-    <div class="pgs">عرض إجمالي المدين والدائن لكل الحسابات خلال فترة محددة</div>
+    <div class="pgs">مطابقة إجمالي الأصول مع إجمالي الالتزامات — يجب أن يكون الفرق صفرًا</div>
   </div>
+
+  @if (!isForbidden()) {
+    <div class="tb-actions">
+      @if (lastUpdatedText()) {
+        <span class="tb-updated">
+          <span class="tb-updated-dot" [class.is-busy]="loading()" aria-hidden="true"></span>
+          آخر تحديث {{ lastUpdatedText() }}
+        </span>
+      }
+
+      <button
+        type="button"
+        class="btn btn-sm d-inline-flex align-items-center gap-1"
+        [disabled]="loading()"
+        (click)="reload()"
+      >
+        @if (loading()) {
+          <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+        }
+        <span>تحديث</span>
+      </button>
+
+      <button
+        type="button"
+        class="btn btn-sm btn-bl d-inline-flex align-items-center gap-1"
+        [disabled]="!view()"
+        (click)="print()"
+      >
+        <span>🖨 طباعة PDF</span>
+      </button>
+    </div>
+  }
 </div>
 
-<app-under-construction />
+<div class="tb-body">
+  @if (view(); as v) {
+    <app-balance-status-hero [view]="v" />
+
+    <div class="tb-sides">
+      <app-balance-side-panel [side]="v.assets" />
+      <app-balance-side-panel [side]="v.obligations" />
+    </div>
+  } @else if (isInitialLoad()) {
+    <div class="tb-skeleton" aria-busy="true" aria-label="جاري تحميل ميزان المراجعة">
+      <div class="tb-sk tb-sk-hero"></div>
+      <div class="tb-sides">
+        @for (panel of [0, 1]; track panel) {
+          <div class="tb-sk-panel">
+            <div class="tb-sk tb-sk-head"></div>
+            @for (line of [0, 1, 2, 3]; track line) {
+              <div class="tb-sk tb-sk-line"></div>
+            }
+          </div>
+        }
+      </div>
+    </div>
+  } @else if (isForbidden()) {
+    <div class="tb-state tb-state--forbidden" role="alert">
+      <span class="tb-state-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="30" height="30">
+          <rect x="5" y="10.5" width="14" height="10" rx="2" />
+          <path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" />
+        </svg>
+      </span>
+      <div class="tb-state-title">غير مصرح لك بعرض ميزان المراجعة</div>
+      <p class="tb-state-text">هذه الصفحة متاحة لمدير النظام فقط.</p>
+    </div>
+  } @else if (error()) {
+    <div class="tb-state tb-state--error" role="alert">
+      <span class="tb-state-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="30" height="30">
+          <path d="M12 3l10 17H2L12 3z" />
+          <path d="M12 10v4.5" />
+          <circle cx="12" cy="17.2" r=".6" fill="currentColor" />
+        </svg>
+      </span>
+      <div class="tb-state-title">تعذّر تحميل ميزان المراجعة</div>
+      <p class="tb-state-text">{{ errorText() }}</p>
+      <button type="button" class="btn btn-sm btn-bl" [disabled]="loading()" (click)="reload()">
+        إعادة المحاولة
+      </button>
+    </div>
+  }
+</div>

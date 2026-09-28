@@ -1,0 +1,270 @@
+:host {
+  display: block;
+}
+
+.bsh {
+  --tone: var(--am);
+  --tone-l: var(--am-l);
+  position: relative;
+  padding: 18px;
+  margin-bottom: 12px;
+  border: 1px solid var(--brd);
+  border-radius: var(--rl);
+  background:
+    radial-gradient(120% 140% at 100% 0%, var(--tone-l) 0%, transparent 55%),
+    var(--bg2);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: 0;
+    width: 4px;
+    background: var(--tone);
+  }
+
+  &.is-balanced {
+    --tone: var(--gr);
+    --tone-l: var(--gr-l);
+  }
+}
+
+.bsh-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+/* ── verdict ── */
+.bsh-verdict {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.bsh-seal {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--tone);
+  color: #fff;
+  box-shadow: 0 0 0 6px var(--tone-l);
+
+  svg {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+}
+
+.is-off .bsh-seal {
+  animation: bsh-pulse 2.4s ease-in-out infinite;
+}
+
+.bsh-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--tone);
+}
+
+.bsh-sub {
+  margin: 3px 0 0;
+  font-size: 11.5px;
+  color: var(--txt2);
+}
+
+.bsh-ratio {
+  color: var(--txt3);
+}
+
+/* ── equation ── */
+.bsh-equation {
+  display: flex;
+  align-items: stretch;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.bsh-term {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  min-width: 150px;
+  padding: 10px 14px;
+  border-radius: var(--r);
+  background: var(--bg2);
+  border: 1px solid var(--brd);
+
+  &--assets .bsh-term-value { color: var(--bl); }
+  &--obligations .bsh-term-value { color: var(--pu); }
+
+  &--diff {
+    background: var(--tone-l);
+    border-color: transparent;
+
+    .bsh-term-value { color: var(--tone); }
+  }
+}
+
+.bsh-term-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--txt3);
+}
+
+.bsh-term-value {
+  font-size: 15px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.bsh-op {
+  display: inline-flex;
+  align-items: center;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--txt3);
+}
+
+/* ── magnitude comparison ── */
+.bsh-compare {
+  display: grid;
+  gap: 6px;
+  margin-top: 16px;
+}
+
+.bsh-compare-row {
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  align-items: center;
+  gap: 10px;
+}
+
+.bsh-compare-label {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--txt2);
+}
+
+.bsh-compare-track {
+  display: block;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--bg3);
+  overflow: hidden;
+}
+
+.bsh-compare-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  transition: width 0.7s cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  &--assets { background: var(--bl); }
+  &--obligations { background: var(--pu); }
+}
+
+/* ── causes ── */
+.bsh-causes {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--brd2);
+}
+
+.bsh-causes-title {
+  margin-bottom: 8px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--txt);
+}
+
+.bsh-causes-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.bsh-cause {
+  --c: var(--bl);
+  --c-l: var(--bl-l);
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--r);
+  background: var(--c-l);
+
+  &--warn {
+    --c: var(--am);
+    --c-l: var(--am-l);
+  }
+}
+
+.bsh-cause-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  margin-top: 5px;
+  border-radius: 50%;
+  background: var(--c);
+}
+
+.bsh-cause-title {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--c);
+}
+
+.bsh-cause-text {
+  margin: 3px 0 0;
+  font-size: 10.5px;
+  line-height: 1.75;
+  color: var(--txt2);
+}
+
+@keyframes bsh-pulse {
+  0%, 100% { box-shadow: 0 0 0 6px var(--tone-l); }
+  50% { box-shadow: 0 0 0 10px var(--tone-l); }
+}
+
+@media (max-width: 768px) {
+  .bsh-equation {
+    width: 100%;
+  }
+
+  .bsh-term {
+    flex: 1 1 140px;
+    min-width: 0;
+  }
+
+  .bsh-op {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .is-off .bsh-seal {
+    animation: none;
+  }
+
+  .bsh-compare-fill {
+    transition: none;
+  }
+}

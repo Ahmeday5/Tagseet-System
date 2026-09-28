@@ -1,0 +1,270 @@
+:host {
+  display: block;
+}
+
+/* ── toolbar ── */
+.bet-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.bet-search {
+  flex: 1 1 200px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 0 10px;
+  height: 32px;
+  border: 1px solid var(--brd2);
+  border-radius: var(--r);
+  background: var(--bg2);
+  transition: border-color 0.15s, box-shadow 0.15s;
+
+  &:focus-within {
+    border-color: var(--bl);
+    box-shadow: 0 0 0 3px rgba(27, 95, 168, 0.12);
+  }
+
+  svg {
+    flex: none;
+    fill: none;
+    stroke: var(--txt3);
+    stroke-width: 2;
+    stroke-linecap: round;
+  }
+
+  input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    font-family: inherit;
+    font-size: 11px;
+    color: var(--txt);
+
+    &::placeholder {
+      color: var(--txt3);
+    }
+  }
+}
+
+.bet-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--brd2);
+  border-radius: 999px;
+  background: var(--bg2);
+  color: var(--txt2);
+  font-family: inherit;
+  font-size: 10.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+
+  &:hover {
+    border-color: var(--bl);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--bl);
+    outline-offset: 2px;
+  }
+
+  &.is-on {
+    background: var(--bl-l);
+    border-color: transparent;
+    color: var(--bl-d);
+
+    .bet-chip-dot {
+      background: var(--bl);
+      box-shadow: inset 0 0 0 2px var(--bl-l);
+    }
+  }
+}
+
+.bet-chip-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1.5px solid currentColor;
+  background: transparent;
+}
+
+.bet-chip-count {
+  min-width: 18px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.06);
+  font-size: 9.5px;
+  text-align: center;
+}
+
+.bet-counter {
+  margin-inline-start: auto;
+  font-size: 10.5px;
+  color: var(--txt3);
+  white-space: nowrap;
+}
+
+/* ── table ── */
+.bet-scroll {
+  max-height: 380px;
+  overflow: auto;
+  border: 1px solid var(--brd);
+  border-radius: var(--r);
+  background: var(--bg2);
+  overscroll-behavior: contain;
+}
+
+.bet-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 11px;
+
+  th,
+  td {
+    padding: 8px 10px;
+    text-align: start;
+    border-bottom: 1px solid var(--brd);
+    white-space: nowrap;
+  }
+
+  thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--bg3);
+    color: var(--txt2);
+    font-size: 10px;
+    font-weight: 700;
+  }
+
+  tbody tr {
+    transition: background 0.12s;
+
+    &:hover {
+      background: rgba(27, 95, 168, 0.04);
+    }
+
+    &:last-child td {
+      border-bottom: 0;
+    }
+  }
+
+  tfoot td {
+    position: sticky;
+    bottom: 0;
+    background: var(--bg3);
+    border-top: 1px solid var(--brd2);
+    border-bottom: 0;
+    font-weight: 700;
+    color: var(--txt);
+  }
+}
+
+.bet-idx {
+  width: 1%;
+  color: var(--txt3);
+  font-size: 10px;
+}
+
+.bet-num {
+  text-align: end !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.bet-meta {
+  color: var(--txt2);
+}
+
+.bet-amount {
+  font-weight: 700;
+  color: var(--txt);
+}
+
+.bet-neg {
+  color: var(--re) !important;
+}
+
+.bet-zero {
+  color: var(--txt3) !important;
+  font-weight: 500 !important;
+}
+
+.bet-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.bet-name-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 260px;
+  font-weight: 600;
+  color: var(--txt);
+}
+
+.bet-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--bl);
+    outline-offset: 2px;
+    border-radius: 3px;
+  }
+}
+
+.bet-caret {
+  width: 0;
+  height: 0;
+  border-inline: 4px solid transparent;
+  border-top: 5px solid var(--txt3);
+  opacity: 0.35;
+  transition: transform 0.15s, opacity 0.15s;
+
+  &.is-active {
+    opacity: 1;
+    border-top-color: var(--bl);
+  }
+
+  &.is-active.is-asc {
+    transform: rotate(180deg);
+  }
+}
+
+.bet-empty {
+  padding: 28px 12px !important;
+  text-align: center !important;
+  color: var(--txt3);
+  white-space: normal !important;
+}
+
+@media (max-width: 576px) {
+  .bet-counter {
+    margin-inline-start: 0;
+    width: 100%;
+  }
+
+  .bet-name-text {
+    max-width: 150px;
+  }
+}

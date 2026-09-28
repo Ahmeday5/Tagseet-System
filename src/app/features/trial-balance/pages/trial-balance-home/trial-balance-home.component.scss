@@ -1,0 +1,151 @@
+:host {
+  display: block;
+}
+
+.tb-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tb-updated {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10.5px;
+  color: var(--txt3);
+}
+
+.tb-updated-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--gr);
+  box-shadow: 0 0 0 3px var(--gr-l);
+
+  &.is-busy {
+    background: var(--am);
+    box-shadow: 0 0 0 3px var(--am-l);
+    animation: tb-blink 1s ease-in-out infinite;
+  }
+}
+
+.tb-body {
+  margin-top: 12px;
+}
+
+.tb-sides {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  align-items: start;
+}
+
+/* ── skeleton ── */
+.tb-sk {
+  border-radius: var(--rl);
+  background: linear-gradient(90deg, var(--bg3) 25%, var(--bg) 50%, var(--bg3) 75%);
+  background-size: 200% 100%;
+  animation: tb-shimmer 1.3s linear infinite;
+}
+
+.tb-sk-hero {
+  height: 150px;
+  margin-bottom: 12px;
+}
+
+.tb-sk-panel {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid var(--brd);
+  border-radius: var(--rl);
+  background: var(--bg2);
+}
+
+.tb-sk-head {
+  height: 70px;
+}
+
+.tb-sk-line {
+  height: 46px;
+  border-radius: var(--r);
+}
+
+/* ── empty / error states ── */
+.tb-state {
+  --c: var(--re);
+  --c-l: var(--re-l);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 56px 16px;
+  text-align: center;
+  border: 1px solid var(--brd);
+  border-radius: var(--rl);
+  background: var(--bg2);
+  box-shadow: var(--shadow);
+
+  &--forbidden {
+    --c: var(--am);
+    --c-l: var(--am-l);
+  }
+}
+
+.tb-state-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  margin-bottom: 4px;
+  border-radius: 50%;
+  background: var(--c-l);
+  color: var(--c);
+
+  svg {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+}
+
+.tb-state-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--txt);
+}
+
+.tb-state-text {
+  max-width: 420px;
+  margin: 0 0 6px;
+  font-size: 11.5px;
+  line-height: 1.7;
+  color: var(--txt2);
+}
+
+@keyframes tb-shimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+
+@keyframes tb-blink {
+  50% { opacity: 0.35; }
+}
+
+@media (max-width: 992px) {
+  .tb-sides {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tb-sk,
+  .tb-updated-dot.is-busy {
+    animation: none;
+  }
+}

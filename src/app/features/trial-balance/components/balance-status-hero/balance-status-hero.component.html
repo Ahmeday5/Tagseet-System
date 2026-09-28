@@ -1,0 +1,76 @@
+@let v = view();
+
+<section class="bsh" [class.is-balanced]="v.isBalanced" [class.is-off]="!v.isBalanced" aria-live="polite">
+  <div class="bsh-top">
+    <div class="bsh-verdict">
+      <span class="bsh-seal" aria-hidden="true">
+        @if (v.isBalanced) {
+          <svg viewBox="0 0 24 24" width="26" height="26"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
+        } @else {
+          <svg viewBox="0 0 24 24" width="26" height="26">
+            <path d="M12 7v6" />
+            <circle cx="12" cy="16.8" r=".6" fill="currentColor" />
+          </svg>
+        }
+      </span>
+      <div>
+        <h2 class="bsh-title">{{ v.isBalanced ? 'الميزان متوازن' : 'الميزان غير متوازن' }}</h2>
+        <p class="bsh-sub">
+          {{ direction() }}
+          @if (!v.isBalanced && ratioText(); as ratio) {
+            <span class="bsh-ratio">· نسبة الفرق {{ ratio }} من الأصول</span>
+          }
+        </p>
+      </div>
+    </div>
+
+    <div class="bsh-equation" role="group" aria-label="معادلة الميزان">
+      <div class="bsh-term bsh-term--assets">
+        <span class="bsh-term-label">الأصول</span>
+        <span class="bsh-term-value">{{ v.assets.total | balanceAmount }}</span>
+      </div>
+      <span class="bsh-op" aria-label="ناقص">−</span>
+      <div class="bsh-term bsh-term--obligations">
+        <span class="bsh-term-label">الالتزامات</span>
+        <span class="bsh-term-value">{{ v.obligations.total | balanceAmount }}</span>
+      </div>
+      <span class="bsh-op" aria-label="يساوي">=</span>
+      <div class="bsh-term bsh-term--diff">
+        <span class="bsh-term-label">الفرق</span>
+        <span class="bsh-term-value">{{ v.difference | balanceAmount }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="bsh-compare" aria-hidden="true">
+    <div class="bsh-compare-row">
+      <span class="bsh-compare-label">الأصول</span>
+      <span class="bsh-compare-track">
+        <span class="bsh-compare-fill bsh-compare-fill--assets" [style.width.%]="bars().assets"></span>
+      </span>
+    </div>
+    <div class="bsh-compare-row">
+      <span class="bsh-compare-label">الالتزامات</span>
+      <span class="bsh-compare-track">
+        <span class="bsh-compare-fill bsh-compare-fill--obligations" [style.width.%]="bars().obligations"></span>
+      </span>
+    </div>
+  </div>
+
+  @if (v.diagnostics.length > 0) {
+    <div class="bsh-causes">
+      <div class="bsh-causes-title">أسباب محتملة للفرق</div>
+      <ul class="bsh-causes-list">
+        @for (d of v.diagnostics; track d.title) {
+          <li class="bsh-cause" [class]="'bsh-cause--' + d.tone">
+            <span class="bsh-cause-dot" aria-hidden="true"></span>
+            <div>
+              <div class="bsh-cause-title">{{ d.title }}</div>
+              <p class="bsh-cause-text">{{ d.text }}</p>
+            </div>
+          </li>
+        }
+      </ul>
+    </div>
+  }
+</section>

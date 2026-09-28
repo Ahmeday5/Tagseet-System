@@ -1,0 +1,140 @@
+:host {
+  display: block;
+}
+
+.pb-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.pb-row,
+.pb-result {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: var(--r);
+}
+
+.pb-row {
+  --pb-tone: var(--gr);
+  --pb-tone-l: var(--gr-l);
+
+  &.is-minus {
+    --pb-tone: var(--re);
+    --pb-tone-l: var(--re-l);
+  }
+
+  &:hover {
+    background: var(--bg3);
+  }
+}
+
+.pb-op {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: var(--pb-tone-l, var(--bl-l));
+  color: var(--pb-tone, var(--bl));
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.pb-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.pb-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.pb-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--txt);
+}
+
+.pb-amount {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--pb-tone, var(--txt));
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.pb-track {
+  height: 5px;
+  margin: 6px 0 4px;
+  border-radius: 999px;
+  background: var(--bg3);
+  overflow: hidden;
+}
+
+.pb-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--pb-tone);
+  opacity: 0.75;
+  transition: width 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.pb-hint {
+  font-size: 10px;
+  color: var(--txt3);
+}
+
+.pb-result {
+  --pb-tone: var(--bl);
+  --pb-tone-l: var(--bl-l);
+  margin-top: 8px;
+  padding: 11px 10px;
+  border: 1px dashed var(--brd2);
+  background: linear-gradient(0deg, rgba(27, 95, 168, 0.04), rgba(27, 95, 168, 0.04)), var(--bg2);
+
+  .pb-label {
+    font-size: 12.5px;
+    font-weight: 700;
+  }
+
+  .pb-amount {
+    font-size: 14px;
+    font-weight: 800;
+  }
+
+  &.is-clamped {
+    --pb-tone: var(--am);
+    --pb-tone-l: var(--am-l);
+    border-color: var(--am);
+    background: var(--am-l);
+  }
+}
+
+.pb-note {
+  margin-top: 6px;
+  font-size: 10.5px;
+  line-height: 1.7;
+  color: var(--am);
+
+  strong {
+    font-weight: 800;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pb-fill {
+    transition: none;
+  }
+}

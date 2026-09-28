@@ -172,6 +172,8 @@ export const NAV_SECTIONS: NavSection[] = [
         label: 'ميزان المراجعة',
         route: '/trial-balance',
         icon: 'scale',
+        // Admin-only report — the backend answers 403 to a Representative.
+        hideForRoles: ['Representative'],
       },
       {
         id: 'shareholders',

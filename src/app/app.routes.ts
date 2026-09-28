@@ -2,7 +2,7 @@ import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
 import { guestGuard } from './core/guards/guest.guard';
 import { permissionGuard } from './core/guards/permission.guard';
-import { roleGuard } from './core/guards/role.guard';
+import { denyRolesGuard, roleGuard } from './core/guards/role.guard';
 import { accessGuard } from './core/guards/access.guard';
 import { PERMISSIONS } from './core/constants/permissions.const';
 
@@ -152,7 +152,9 @@ export const routes: Routes = [
           ),
       },
       {
+        // Admin-only report — the backend answers 403 to a Representative.
         path: 'trial-balance',
+        canActivate: [denyRolesGuard(['Representative'])],
         loadChildren: () =>
           import('./features/trial-balance/trial-balance.routes').then(
             (m) => m.trialBalanceRoutes,
