@@ -95,6 +95,18 @@ export interface CreateTreasuryTransferPayload {
   notes: string;
 }
 
+/**
+ * PUT /dashboard/treasuries/transfers/{id} body. Omitting `transferDate`
+ * keeps the stored date; `notes` is written as sent — `null` clears it.
+ */
+export interface UpdateTreasuryTransferPayload {
+  fromTreasuryId: number;
+  toTreasuryId: number;
+  amount: number;
+  transferDate?: string;
+  notes: string | null;
+}
+
 /** Query parameters for the paginated transfers list. */
 export interface TreasuryTransfersQuery {
   pageIndex?: number;

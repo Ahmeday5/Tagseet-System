@@ -196,7 +196,7 @@ export class SubAccountStatementModalComponent {
    * generic voucher endpoints — the backend rejects that with a 400.
    */
   protected isTransferLeg(v: SubAccountVoucher): boolean {
-    return v.treasuryId === null;
+    return v.treasuryId == null || v.voucherNumber?.startsWith('SA-TRF') === true;
   }
 
   /** Exports every voucher in the ledger (all pages) to a PDF. */

@@ -7,6 +7,7 @@ import {
   input,
   output,
   signal,
+  untracked,
 } from '@angular/core';
 import {
   AbstractControl,
@@ -16,27 +17,39 @@ import {
   ValidatorFn,
   Validators,
 } from '@angular/forms';
+import { Observable, map } from 'rxjs';
 
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';
 import { FormErrorComponent } from '../../../../shared/components/form-error/form-error.component';
 import { ApiError } from '../../../../core/models/api-response.model';
 import { ToastService } from '../../../../core/services/toast.service';
+import { resolveApiMessage } from '../../../../core/constants/api-messages.const';
 
 import { Treasury, TreasuryTransfer } from '../../models/treasury.model';
 import { TreasuryService } from '../../services/treasury.service';
+import { TreasuryType } from '../../enums/treasury-type.enum';
+
+/** Profit treasuries are settlement-only — the backend rejects transfers into/out of them. */
+const PROFIT_TREASURY_TYPES: ReadonlySet<TreasuryType> = new Set([
+  TreasuryType.Profits,
+  TreasuryType.SubRepresentativeProfits,
+  TreasuryType.CompanyProfits,
+]);
 
 /**
- * Inter-treasury transfer dialog.
+ * Inter-treasury transfer dialog — create, or edit when `[transfer]` is set.
  *
  *   <app-treasury-transfer-modal
  *     [open]="transferOpen()"
  *     [treasuries]="treasuries()"
+ *     [transfer]="editingTransfer()"
  *     (closed)="closeTransfer()"
  *     (saved)="onTransferSaved($event)" />
  *
- * The form resets every time `open` flips to true so reopening never shows
- * stale state from the previous attempt. `fromTreasuryId` and `toTreasuryId`
- * must differ — enforced via a form-level validator.
+ * The form resets (or re-seeds from `transfer`) every time `open` flips to
+ * true so reopening never shows stale state from the previous attempt.
+ * `fromTreasuryId` and `toTreasuryId` must differ — enforced via a form-level
+ * validator.
  */
 @Component({
   selector: 'app-treasury-transfer-modal',
@@ -50,6 +63,8 @@ export class TreasuryTransferModalComponent {
   // ── inputs ──
   readonly open = input.required<boolean>();
   readonly treasuries = input.required<Treasury[]>();
+  /** Transfer being edited; `null` means create. */
+  readonly transfer = input<TreasuryTransfer | null>(null);
 
   // ── outputs ──
   readonly closed = output<void>();
@@ -65,22 +80,26 @@ export class TreasuryTransferModalComponent {
   protected readonly serverError = signal<string | null>(null);
 
   // ── derived ──
-  /** Only active treasuries can participate in transfers. */
-  protected readonly activeTreasuries = computed(() =>
-    this.treasuries().filter((t) => t.isActive),
-  );
+  protected readonly isEdit = computed(() => this.transfer() !== null);
+
+  /**
+   * Active, non-profit treasuries. When editing, the transfer's own legs stay
+   * selectable even if since deactivated, so the form doesn't open invalid.
+   */
+  protected readonly selectableTreasuries = computed(() => {
+    const t = this.transfer();
+    const keep = new Set(t ? [t.fromTreasuryId, t.toTreasuryId] : []);
+    return this.treasuries().filter(
+      (x) =>
+        !PROFIT_TREASURY_TYPES.has(x.type) && (x.isActive || keep.has(x.id)),
+    );
+  });
 
   // ── form ──
   protected readonly form = this.fb.nonNullable.group(
     {
-      fromTreasuryId: [
-        null as number | null,
-        [Validators.required],
-      ],
-      toTreasuryId: [
-        null as number | null,
-        [Validators.required],
-      ],
+      fromTreasuryId: [null as number | null, [Validators.required]],
+      toTreasuryId: [null as number | null, [Validators.required]],
       amount: [0, [Validators.required, Validators.min(0.01)]],
       transferDate: [todayIso(), [Validators.required]],
       notes: [''],
@@ -92,9 +111,10 @@ export class TreasuryTransferModalComponent {
     effect(
       () => {
         if (!this.open()) return;
+        const transfer = untracked(this.transfer);
         this.serverError.set(null);
         this.submitting.set(false);
-        this.resetForm();
+        this.resetForm(transfer);
       },
       { allowSignalWrites: true },
     );
@@ -109,28 +129,43 @@ export class TreasuryTransferModalComponent {
     }
 
     const raw = this.form.getRawValue();
+    const base = {
+      fromTreasuryId: Number(raw.fromTreasuryId),
+      toTreasuryId: Number(raw.toTreasuryId),
+      amount: Number(raw.amount) || 0,
+      transferDate: raw.transferDate,
+    };
+    const notes = (raw.notes ?? '').trim();
+    const editing = this.transfer();
+
+    const request$: Observable<{ data: TreasuryTransfer; message: string }> =
+      editing
+        ? this.service
+            .updateTransfer(editing.id, { ...base, notes: notes || null })
+            .pipe(
+              map((res) => ({
+                data: res.data,
+                message: resolveApiMessage(res.message, 'تم تعديل التحويل بنجاح'),
+              })),
+            )
+        : this.service
+            .createTransfer({ ...base, notes })
+            .pipe(map((data) => ({ data, message: 'تم تنفيذ التحويل بنجاح' })));
+
     this.serverError.set(null);
     this.submitting.set(true);
 
-    this.service
-      .createTransfer({
-        fromTreasuryId: Number(raw.fromTreasuryId),
-        toTreasuryId: Number(raw.toTreasuryId),
-        amount: Number(raw.amount) || 0,
-        transferDate: raw.transferDate,
-        notes: (raw.notes ?? '').trim(),
-      })
-      .subscribe({
-        next: (res) => {
-          this.submitting.set(false);
-          this.toast.success('تم تنفيذ التحويل بنجاح');
-          this.saved.emit(res);
-        },
-        error: (err: ApiError) => {
-          this.submitting.set(false);
-          this.serverError.set(err.message);
-        },
-      });
+    request$.subscribe({
+      next: ({ data, message }) => {
+        this.submitting.set(false);
+        this.toast.success(message);
+        this.saved.emit(data);
+      },
+      error: (err: ApiError) => {
+        this.submitting.set(false);
+        this.serverError.set(err.message);
+      },
+    });
   }
 
   protected close(): void {
@@ -152,14 +187,24 @@ export class TreasuryTransferModalComponent {
 
   // ── internals ──
 
-  private resetForm(): void {
-    this.form.reset({
-      fromTreasuryId: null,
-      toTreasuryId: null,
-      amount: 0,
-      transferDate: todayIso(),
-      notes: '',
-    });
+  private resetForm(transfer: TreasuryTransfer | null): void {
+    this.form.reset(
+      transfer
+        ? {
+            fromTreasuryId: transfer.fromTreasuryId,
+            toTreasuryId: transfer.toTreasuryId,
+            amount: transfer.amount,
+            transferDate: (transfer.transferDate ?? '').slice(0, 10) || todayIso(),
+            notes: transfer.notes ?? '',
+          }
+        : {
+            fromTreasuryId: null,
+            toTreasuryId: null,
+            amount: 0,
+            transferDate: todayIso(),
+            notes: '',
+          },
+    );
   }
 }
 

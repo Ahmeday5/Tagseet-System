@@ -1,6 +1,6 @@
 <app-modal
   [open]="open()"
-  title="تحويل بين حسابات فرعية"
+  [title]="isEdit() ? 'تعديل تحويل بين حسابات فرعية' : 'تحويل بين حسابات فرعية'"
   size="md"
   [closeOnBackdrop]="!submitting()"
   [closeOnEsc]="!submitting()"
@@ -109,7 +109,9 @@
       @if (submitting()) {
         <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
       }
-      <span>{{ submitting() ? 'جاري التنفيذ...' : 'تنفيذ التحويل' }}</span>
+      <span>
+        {{ submitting() ? (isEdit() ? 'جاري الحفظ...' : 'جاري التنفيذ...') : (isEdit() ? 'حفظ التعديلات' : 'تنفيذ التحويل') }}
+      </span>
     </button>
   </ng-container>
 </app-modal>

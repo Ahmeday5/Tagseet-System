@@ -37,6 +37,7 @@ import { PrintService } from '../../../../core/services/print.service';
 import { onInvalidate } from '../../../../core/utils/auto-refresh.util';
 import { fetchAllPages } from '../../../../core/utils/api-list.util';
 import { ApiError } from '../../../../core/models/api-response.model';
+import { resolveApiMessage } from '../../../../core/constants/api-messages.const';
 import { TreasuryType } from '../../enums/treasury-type.enum';
 import {
   TREASURY_TYPE_BADGE,
@@ -104,6 +105,9 @@ export class TreasuryHomeComponent implements OnInit {
   protected readonly transfers = signal<TreasuryTransfer[]>([]);
   protected readonly transfersLoading = signal(false);
   protected readonly transferModalOpen = signal(false);
+  /** Transfer being edited in the modal; `null` = create. */
+  protected readonly editingTransfer = signal<TreasuryTransfer | null>(null);
+  protected readonly deletingTransferId = signal<number | null>(null);
 
   // transfer filters
   protected readonly tFromFilter = signal<number | ''>('');
@@ -481,6 +485,12 @@ export class TreasuryHomeComponent implements OnInit {
 
   // transfer modal handlers
   protected openTransfer(): void {
+    this.editingTransfer.set(null);
+    this.transferModalOpen.set(true);
+  }
+
+  protected openEditTransfer(transfer: TreasuryTransfer): void {
+    this.editingTransfer.set(transfer);
     this.transferModalOpen.set(true);
   }
 
@@ -491,7 +501,35 @@ export class TreasuryHomeComponent implements OnInit {
   protected onTransferSaved(_: TreasuryTransfer): void {
     this.transferModalOpen.set(false);
     // Cache invalidation in the service already triggers `onInvalidate`,
-    // which re-fetches treasuries AND transfers — no manual refresh needed.
+    // which re-fetches treasuries, operations AND transfers.
+  }
+
+  protected async confirmDeleteTransfer(t: TreasuryTransfer): Promise<void> {
+    if (this.deletingTransferId() !== null) return;
+    const ok = await this.dialog.confirm({
+      title: 'حذف تحويل',
+      message: `هل أنت متأكد من حذف هذا التحويل؟ سيتم إرجاع المبلغ (${t.amount.toLocaleString('ar-EG')} ج.م) من «${t.toTreasuryName}» إلى «${t.fromTreasuryName}».`,
+      confirmText: 'حذف',
+      cancelText: 'إلغاء',
+      type: 'danger',
+    });
+    if (!ok) return;
+
+    this.deletingTransferId.set(t.id);
+    this.treasuryService.deleteTransfer(t.id).subscribe({
+      next: (res) => {
+        this.deletingTransferId.set(null);
+        this.toast.success(resolveApiMessage(res.message, 'تم حذف التحويل بنجاح'));
+        // Invalidation → `onInvalidate` refetches transfers + balances.
+        if (this.transfers().length === 1 && this.tPageIndex() > 1) {
+          this.tPageIndex.update((p) => p - 1);
+        }
+      },
+      error: (err: ApiError) => {
+        this.deletingTransferId.set(null);
+        this.toast.error(err.message);
+      },
+    });
   }
 
   // ─────────────── operations ───────────────

@@ -225,6 +225,7 @@
                 <th>المبلغ</th>
                 <th>التاريخ</th>
                 <th>ملاحظات</th>
+                <th *appHasPermission="PERMS.treasuryFullAccess" class="text-center">إجراءات</th>
               </tr>
             </thead>
             <tbody>
@@ -241,10 +242,25 @@
                 <td class="trf-amount">{{ t.amount | currencyAr: true }}</td>
                 <td class="trf-date">{{ t.transferDate | dateAr: 'short' }}</td>
                 <td class="trf-notes" [title]="t.notes ?? ''">{{ t.notes || '—' }}</td>
+                <td *appHasPermission="PERMS.treasuryFullAccess" class="text-center">
+                  <div class="d-flex gap-1 justify-content-center">
+                    <button type="button" class="btn btn-sm btn-bl" [disabled]="deletingTransferId() === t.id"
+                      (click)="openEditTransfer(t)" title="تعديل">
+                      تعديل
+                    </button>
+                    <button type="button" class="btn btn-sm btn-re d-inline-flex align-items-center gap-1"
+                      [disabled]="deletingTransferId() !== null" (click)="confirmDeleteTransfer(t)" title="حذف">
+                      @if (deletingTransferId() === t.id) {
+                      <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                      }
+                      <span>حذف</span>
+                    </button>
+                  </div>
+                </td>
               </tr>
               } @empty {
               <tr>
-                <td colspan="6" class="text-center py-4" style="color:var(--txt3);font-size:12px">
+                <td colspan="7" class="text-center py-4" style="color:var(--txt3);font-size:12px">
                   @if (transfersLoading()) {
                   جاري التحميل...
                   } @else if (hasTransferFilters()) {
@@ -496,5 +512,5 @@
 <app-treasury-form-model [open]="modalOpen()" [mode]="modalMode()" [treasury]="modalTreasury()" (closed)="closeModal()"
   (saved)="onSaved($event)" />
 
-<app-treasury-transfer-modal [open]="transferModalOpen()" [treasuries]="treasuries()" (closed)="closeTransfer()"
-  (saved)="onTransferSaved($event)" />
+<app-treasury-transfer-modal [open]="transferModalOpen()" [treasuries]="treasuries()"
+  [transfer]="editingTransfer()" (closed)="closeTransfer()" (saved)="onTransferSaved($event)" />

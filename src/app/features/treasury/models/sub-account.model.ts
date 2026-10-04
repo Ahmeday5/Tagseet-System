@@ -137,6 +137,18 @@ export interface CreateSubAccountTransferPayload {
   notes: string;
 }
 
+/**
+ * PUT /dashboard/sub-accounts/transfers/{id} body. Omitting `transferDate`
+ * keeps the stored date; `notes` is written as sent — `null` clears it.
+ */
+export interface UpdateSubAccountTransferPayload {
+  fromSubAccountId: number;
+  toSubAccountId: number;
+  amount: number;
+  transferDate?: string;
+  notes: string | null;
+}
+
 /** Query parameters for the paginated sub-account transfers list. */
 export interface SubAccountTransfersQuery {
   pageIndex?: number;

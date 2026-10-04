@@ -7,7 +7,7 @@ import {
 } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { ApiResponse } from '../models/api-response.model';
+import { ApiResponse, ApiResult } from '../models/api-response.model';
 
 export interface RequestOptions {
   params?: Record<string, unknown>;
@@ -75,6 +75,27 @@ export class ApiService {
       .pipe(map((res) => this.unwrap<T>(res)));
   }
 
+  /** Like `put`, but keeps the envelope's `message` alongside the data. */
+  putWithMessage<T>(
+    endpoint: string,
+    body: unknown,
+    options: RequestOptions = {},
+  ): Observable<ApiResult<T>> {
+    return this.http
+      .put<ApiResponse<T> | T>(this.url(endpoint), body, this.opts(options))
+      .pipe(map((res) => this.unwrapWithMessage<T>(res)));
+  }
+
+  /** Like `delete`, but keeps the envelope's `message` alongside the data. */
+  deleteWithMessage<T>(
+    endpoint: string,
+    options: RequestOptions = {},
+  ): Observable<ApiResult<T>> {
+    return this.http
+      .delete<ApiResponse<T> | T>(this.url(endpoint), this.opts(options))
+      .pipe(map((res) => this.unwrapWithMessage<T>(res)));
+  }
+
   // ─────────── internals ───────────
 
   private url(endpoint: string): string {
@@ -113,6 +134,14 @@ export class ApiService {
       return (env.data ?? (env as unknown as T)) as T;
     }
     return res as T;
+  }
+
+  private unwrapWithMessage<T>(res: ApiResponse<T> | T): ApiResult<T> {
+    const message =
+      res && typeof res === 'object' && 'message' in (res as object)
+        ? ((res as ApiResponse<T>).message ?? null)
+        : null;
+    return { data: this.unwrap<T>(res), message };
   }
 
   private normalizeBase(raw: string): string {

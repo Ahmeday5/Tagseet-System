@@ -22,6 +22,8 @@ export const API_ENDPOINTS = {
     base: 'dashboard/treasuries',
     byId: (id: number) => `dashboard/treasuries/${id}`,
     transfers: 'dashboard/treasuries/transfers',
+    /** PUT edit / DELETE (reverses the balances) a single inter-treasury transfer. */
+    transferById: (id: number) => `dashboard/treasuries/transfers/${id}`,
     operations: 'dashboard/treasuries/operations',
     monthlyProfits: 'dashboard/treasuries/monthly-profits',
     /** Lightweight `{id,name}` list for pickers (role-scoped server-side). */
@@ -40,6 +42,8 @@ export const API_ENDPOINTS = {
     statement: (id: number) => `dashboard/sub-accounts/${id}/statement`,
     /** GET (paged) / POST: money movements between two sub-accounts. */
     transfers: 'dashboard/sub-accounts/transfers',
+    /** PUT edit / DELETE (reverses the balances) a single sub-account transfer. */
+    transferById: (id: number) => `dashboard/sub-accounts/transfers/${id}`,
   },
   shareholders: {
     base: 'dashboard/shareholders',

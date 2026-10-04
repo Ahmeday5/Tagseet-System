@@ -16,13 +16,20 @@ import {
 } from '../../../../shared/components/searchable-select/searchable-select.component';
 import { CurrencyArPipe } from '../../../../shared/pipes/currency-ar.pipe';
 import { DateArPipe } from '../../../../shared/pipes/date-ar.pipe';
+import { HasPermissionDirective } from '../../../../shared/directives/has-permission.directive';
 import { ApiError } from '../../../../core/models/api-response.model';
+import { PERMISSIONS } from '../../../../core/constants/permissions.const';
+import { resolveApiMessage } from '../../../../core/constants/api-messages.const';
+import { DialogService } from '../../../../core/services/dialog.service';
+import { HttpCacheService } from '../../../../core/services/http-cache.service';
 import { PrintService } from '../../../../core/services/print.service';
 import { ToastService } from '../../../../core/services/toast.service';
 import { fetchAllPages } from '../../../../core/utils/api-list.util';
+import { onInvalidate } from '../../../../core/utils/auto-refresh.util';
 
 import { SubAccountsService } from '../../services/sub-accounts.service';
 import { SubAccountTransfer } from '../../models/sub-account.model';
+import { SubAccountTransferModalComponent } from '../sub-account-transfer-modal/sub-account-transfer-modal.component';
 
 const DEFAULT_PAGE_SIZE = 10;
 const REFETCH_DEBOUNCE_MS = 250;
@@ -30,8 +37,9 @@ const REFETCH_DEBOUNCE_MS = 250;
 /**
  * The full transfer log between sub-accounts, rendered as an always-visible
  * card (not a modal) on the sub-accounts page — a from-account filter, a
- * to-account filter and a date range. Read-only; creation happens from
- * `app-sub-account-transfer-modal`.
+ * to-account filter and a date range. Rows can be edited (reusing
+ * `app-sub-account-transfer-modal`) or deleted; creation happens from the
+ * sub-accounts panel. Refetches on any `sub-account` cache invalidation.
  *
  * The account dropdowns can be pre-seeded via [accounts] so they don't
  * refetch; if omitted, the component drains the account list itself on init.
@@ -46,6 +54,8 @@ const REFETCH_DEBOUNCE_MS = 250;
     SearchableSelectComponent,
     CurrencyArPipe,
     DateArPipe,
+    HasPermissionDirective,
+    SubAccountTransferModalComponent,
   ],
   templateUrl: './sub-account-transfers-log.component.html',
   styleUrl: './sub-account-transfers-log.component.scss',
@@ -58,6 +68,15 @@ export class SubAccountTransfersLogComponent {
   private readonly service = inject(SubAccountsService);
   private readonly printer = inject(PrintService);
   private readonly toast = inject(ToastService);
+  private readonly dialog = inject(DialogService);
+  private readonly cache = inject(HttpCacheService);
+
+  protected readonly PERMS = PERMISSIONS;
+
+  // ── row actions ──
+  protected readonly editOpen = signal(false);
+  protected readonly editingTransfer = signal<SubAccountTransfer | null>(null);
+  protected readonly deletingId = signal<number | null>(null);
 
   // ── data ──
   protected readonly transfers = signal<SubAccountTransfer[]>([]);
@@ -126,6 +145,53 @@ export class SubAccountTransfersLogComponent {
     if (this.accountOptions().length === 0) {
       this.loadAccounts();
     }
+
+    // Any sub-account write (transfer created/edited/deleted, here or in
+    // another tab) refetches the current page.
+    onInvalidate(this.cache, 'sub-account', () => this.refresh());
+  }
+
+  // ─────────── row actions ───────────
+
+  protected openEdit(transfer: SubAccountTransfer): void {
+    this.editingTransfer.set(transfer);
+    this.editOpen.set(true);
+  }
+
+  protected closeEdit(): void {
+    this.editOpen.set(false);
+  }
+
+  protected onEditSaved(): void {
+    // Invalidation in the service drives the refetch via `onInvalidate`.
+    this.editOpen.set(false);
+  }
+
+  protected async confirmDelete(t: SubAccountTransfer): Promise<void> {
+    if (this.deletingId() !== null) return;
+    const ok = await this.dialog.confirm({
+      title: 'حذف تحويل',
+      message: `هل أنت متأكد من حذف هذا التحويل؟ سيتم إرجاع المبلغ (${t.amount.toLocaleString('ar-EG')} ج.م) من «${t.toSubAccountName}» إلى «${t.fromSubAccountName}».`,
+      confirmText: 'حذف',
+      cancelText: 'إلغاء',
+      type: 'danger',
+    });
+    if (!ok) return;
+
+    this.deletingId.set(t.id);
+    this.service.deleteTransfer(t.id).subscribe({
+      next: (res) => {
+        this.deletingId.set(null);
+        this.toast.success(resolveApiMessage(res.message, 'تم حذف التحويل بنجاح'));
+        if (this.transfers().length === 1 && this.pageIndex() > 1) {
+          this.pageIndex.update((p) => p - 1);
+        }
+      },
+      error: (err: ApiError) => {
+        this.deletingId.set(null);
+        this.toast.error(err.message);
+      },
+    });
   }
 
   // ─────────── template handlers ───────────

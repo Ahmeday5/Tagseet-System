@@ -1,6 +1,6 @@
 <app-modal
   [open]="open()"
-  title="تحويل بين خزائن"
+  [title]="isEdit() ? 'تعديل تحويل بين خزائن' : 'تحويل بين خزائن'"
   size="md"
   [closeOnBackdrop]="!submitting()"
   [closeOnEsc]="!submitting()"
@@ -16,7 +16,7 @@
           [class.is-invalid]="isInvalid('fromTreasuryId')"
         >
           <option [ngValue]="null" disabled>اختر خزينة المصدر</option>
-          @for (t of activeTreasuries(); track t.id) {
+          @for (t of selectableTreasuries(); track t.id) {
             <option [ngValue]="t.id">{{ t.name }}</option>
           }
         </select>
@@ -34,7 +34,7 @@
           [class.is-invalid]="isInvalid('toTreasuryId') || showSameTreasuryError()"
         >
           <option [ngValue]="null" disabled>اختر خزينة الوجهة</option>
-          @for (t of activeTreasuries(); track t.id) {
+          @for (t of selectableTreasuries(); track t.id) {
             <option [ngValue]="t.id">{{ t.name }}</option>
           }
         </select>
@@ -117,7 +117,9 @@
       @if (submitting()) {
         <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
       }
-      <span>{{ submitting() ? 'جاري التنفيذ...' : 'تنفيذ التحويل' }}</span>
+      <span>
+        {{ submitting() ? (isEdit() ? 'جاري الحفظ...' : 'جاري التنفيذ...') : (isEdit() ? 'حفظ التعديلات' : 'تنفيذ التحويل') }}
+      </span>
     </button>
   </ng-container>
 </app-modal>

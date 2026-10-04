@@ -187,3 +187,19 @@ export function translateApiMessage(
 
   return null;
 }
+
+/**
+ * User-facing Arabic text for a server success message: known strings are
+ * translated, Arabic text is kept verbatim, anything else degrades to `fallback`.
+ */
+export function resolveApiMessage(
+  raw: string | null | undefined,
+  fallback: string,
+): string {
+  const trimmed = raw?.trim();
+  if (!trimmed) return fallback;
+  return (
+    translateApiMessage(trimmed) ??
+    (containsArabic(trimmed) ? trimmed : fallback)
+  );
+}

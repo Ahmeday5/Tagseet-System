@@ -5,13 +5,17 @@ import {
   CreateTreasuryPayload,
   UpdateTreasuryPayload,
   CreateTreasuryTransferPayload,
+  UpdateTreasuryTransferPayload,
   TreasuryTransfer,
   TreasuryTransfersQuery,
   TreasuryOperation,
   TreasuryOperationsQuery,
   MonthlyProfit,
 } from '../models/treasury.model';
-import { PagedResponse } from '../../../core/models/api-response.model';
+import {
+  ApiResult,
+  PagedResponse,
+} from '../../../core/models/api-response.model';
 import { ApiService } from '../../../core/services/api.service';
 import { API_ENDPOINTS } from '../../../core/constants/api-endpoints.const';
 import {
@@ -25,6 +29,14 @@ import { LookupItem } from '../../../core/models/lookup.model';
 
 const TREASURY_CACHE_KEY = 'treasur';
 const TREASURY_TTL_MS = 15 * 60 * 1000;
+
+/** Transfer edits/deletes move balances — also drop the dashboard balance cards. */
+const TRANSFER_INVALIDATE_KEYS = [
+  TREASURY_CACHE_KEY,
+  'financial-separation',
+  'home-summary',
+  'balance-check',
+] as const;
 
 @Injectable({ providedIn: 'root' })
 export class TreasuryService {
@@ -119,6 +131,38 @@ export class TreasuryService {
       payload,
       {
         context: withInlineHandling(withCacheInvalidate([TREASURY_CACHE_KEY])),
+      },
+    );
+  }
+
+  /**
+   * Edits a transfer — the server reverses the old legs and re-posts the new
+   * ones, so every balance-bearing view (treasuries, operations, dashboard
+   * cards) is invalidated.
+   */
+  updateTransfer(
+    id: number,
+    payload: UpdateTreasuryTransferPayload,
+  ): Observable<ApiResult<TreasuryTransfer>> {
+    return this.api.putWithMessage<TreasuryTransfer>(
+      API_ENDPOINTS.treasuries.transferById(id),
+      payload,
+      {
+        context: withInlineHandling(
+          withCacheInvalidate(TRANSFER_INVALIDATE_KEYS),
+        ),
+      },
+    );
+  }
+
+  /** Deletes a transfer, moving the amount back from target to source. */
+  deleteTransfer(id: number): Observable<ApiResult<unknown>> {
+    return this.api.deleteWithMessage<unknown>(
+      API_ENDPOINTS.treasuries.transferById(id),
+      {
+        context: withInlineHandling(
+          withCacheInvalidate(TRANSFER_INVALIDATE_KEYS),
+        ),
       },
     );
   }

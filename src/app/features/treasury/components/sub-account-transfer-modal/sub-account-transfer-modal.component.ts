@@ -7,6 +7,7 @@ import {
   input,
   output,
   signal,
+  untracked,
 } from '@angular/core';
 import {
   AbstractControl,
@@ -16,6 +17,7 @@ import {
   ValidatorFn,
   Validators,
 } from '@angular/forms';
+import { Observable, map } from 'rxjs';
 
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';
 import { FormErrorComponent } from '../../../../shared/components/form-error/form-error.component';
@@ -25,16 +27,18 @@ import {
 } from '../../../../shared/components/searchable-select/searchable-select.component';
 import { ApiError } from '../../../../core/models/api-response.model';
 import { ToastService } from '../../../../core/services/toast.service';
+import { resolveApiMessage } from '../../../../core/constants/api-messages.const';
 
 import { SubAccountTransfer } from '../../models/sub-account.model';
 import { SubAccountsService } from '../../services/sub-accounts.service';
 
 /**
- * Inter-sub-account transfer dialog.
+ * Inter-sub-account transfer dialog — create, or edit when `[transfer]` is set.
  *
  *   <app-sub-account-transfer-modal
  *     [open]="transferOpen()"
  *     [accounts]="accountOptions()"
+ *     [transfer]="editingTransfer()"
  *     (closed)="closeTransfer()"
  *     (saved)="onTransferSaved($event)" />
  *
@@ -60,6 +64,9 @@ export class SubAccountTransferModalComponent {
   readonly open = input.required<boolean>();
   readonly accounts = input.required<SearchableSelectOption[]>();
 
+  /** Transfer being edited; `null` means create. */
+  readonly transfer = input<SubAccountTransfer | null>(null);
+
   // ── outputs ──
   readonly closed = output<void>();
   readonly saved = output<SubAccountTransfer>();
@@ -72,6 +79,9 @@ export class SubAccountTransferModalComponent {
   // ── reactive state ──
   protected readonly submitting = signal(false);
   protected readonly serverError = signal<string | null>(null);
+
+  // ── derived ──
+  protected readonly isEdit = computed(() => this.transfer() !== null);
 
   // ── form ──
   protected readonly form = this.fb.nonNullable.group(
@@ -89,9 +99,10 @@ export class SubAccountTransferModalComponent {
     effect(
       () => {
         if (!this.open()) return;
+        const transfer = untracked(this.transfer);
         this.serverError.set(null);
         this.submitting.set(false);
-        this.resetForm();
+        this.resetForm(transfer);
       },
       { allowSignalWrites: true },
     );
@@ -106,28 +117,43 @@ export class SubAccountTransferModalComponent {
     }
 
     const raw = this.form.getRawValue();
+    const base = {
+      fromSubAccountId: Number(raw.fromSubAccountId),
+      toSubAccountId: Number(raw.toSubAccountId),
+      amount: Number(raw.amount) || 0,
+      transferDate: raw.transferDate,
+    };
+    const notes = (raw.notes ?? '').trim();
+    const editing = this.transfer();
+
+    const request$: Observable<{ data: SubAccountTransfer; message: string }> =
+      editing
+        ? this.service
+            .updateTransfer(editing.id, { ...base, notes: notes || null })
+            .pipe(
+              map((res) => ({
+                data: res.data,
+                message: resolveApiMessage(res.message, 'تم تعديل التحويل بنجاح'),
+              })),
+            )
+        : this.service
+            .createTransfer({ ...base, notes })
+            .pipe(map((data) => ({ data, message: 'تم التحويل بنجاح' })));
+
     this.serverError.set(null);
     this.submitting.set(true);
 
-    this.service
-      .createTransfer({
-        fromSubAccountId: Number(raw.fromSubAccountId),
-        toSubAccountId: Number(raw.toSubAccountId),
-        amount: Number(raw.amount) || 0,
-        transferDate: raw.transferDate,
-        notes: (raw.notes ?? '').trim(),
-      })
-      .subscribe({
-        next: (res) => {
-          this.submitting.set(false);
-          this.toast.success('تم التحويل بنجاح');
-          this.saved.emit(res);
-        },
-        error: (err: ApiError) => {
-          this.submitting.set(false);
-          this.serverError.set(err.message);
-        },
-      });
+    request$.subscribe({
+      next: ({ data, message }) => {
+        this.submitting.set(false);
+        this.toast.success(message);
+        this.saved.emit(data);
+      },
+      error: (err: ApiError) => {
+        this.submitting.set(false);
+        this.serverError.set(err.message);
+      },
+    });
   }
 
   protected close(): void {
@@ -149,14 +175,24 @@ export class SubAccountTransferModalComponent {
 
   // ── internals ──
 
-  private resetForm(): void {
-    this.form.reset({
-      fromSubAccountId: null,
-      toSubAccountId: null,
-      amount: 0,
-      transferDate: todayIso(),
-      notes: '',
-    });
+  private resetForm(transfer: SubAccountTransfer | null): void {
+    this.form.reset(
+      transfer
+        ? {
+            fromSubAccountId: transfer.fromSubAccountId,
+            toSubAccountId: transfer.toSubAccountId,
+            amount: transfer.amount,
+            transferDate: (transfer.transferDate ?? '').slice(0, 10) || todayIso(),
+            notes: transfer.notes ?? '',
+          }
+        : {
+            fromSubAccountId: null,
+            toSubAccountId: null,
+            amount: 0,
+            transferDate: todayIso(),
+            notes: '',
+          },
+    );
   }
 }
 

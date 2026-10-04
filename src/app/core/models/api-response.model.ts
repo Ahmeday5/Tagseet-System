@@ -12,6 +12,15 @@ export interface ApiResponse<T = unknown> {
   timestamp?: string;
 }
 
+/**
+ * Unwrapped payload plus the envelope's `message` — for mutations whose
+ * server message should be surfaced to the user verbatim (e.g. success toasts).
+ */
+export interface ApiResult<T> {
+  data: T;
+  message: string | null;
+}
+
 /** Backend validation errors keyed by field name. */
 export type ApiFieldErrors = Record<string, string[] | string>;
 

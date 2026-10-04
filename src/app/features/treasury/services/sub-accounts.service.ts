@@ -2,7 +2,10 @@ import { inject, Injectable } from '@angular/core';
 import { map, Observable } from 'rxjs';
 import { ApiService } from '../../../core/services/api.service';
 import { API_ENDPOINTS } from '../../../core/constants/api-endpoints.const';
-import { PagedResponse } from '../../../core/models/api-response.model';
+import {
+  ApiResult,
+  PagedResponse,
+} from '../../../core/models/api-response.model';
 import {
   withCache,
   withCacheBypass,
@@ -22,6 +25,7 @@ import {
   SubAccountTransfersQuery,
   SubAccountVoucher,
   SubAccountVouchersQuery,
+  UpdateSubAccountTransferPayload,
   UpdateSubAccountVoucherPayload,
 } from '../models/sub-account.model';
 
@@ -35,6 +39,14 @@ const SUB_ACCOUNTS_CACHE_KEY = 'sub-account';
 
 /** Short TTL: balances move on every receipt/payment. */
 const SUB_ACCOUNTS_TTL_MS = 60 * 1000;
+
+/** Transfer edits/deletes move balances — also drop the dashboard balance cards. */
+const TRANSFER_INVALIDATE_KEYS = [
+  SUB_ACCOUNTS_CACHE_KEY,
+  'financial-separation',
+  'home-summary',
+  'balance-check',
+] as const;
 
 @Injectable({ providedIn: 'root' })
 export class SubAccountsService {
@@ -203,6 +215,38 @@ export class SubAccountsService {
       {
         context: withInlineHandling(
           withCacheInvalidate([SUB_ACCOUNTS_CACHE_KEY]),
+        ),
+      },
+    );
+  }
+
+  /**
+   * Edits a transfer — the server reverses the old legs and re-posts the new
+   * ones. Representatives may only touch transfers between their own accounts
+   * (enforced server-side).
+   */
+  updateTransfer(
+    id: number,
+    payload: UpdateSubAccountTransferPayload,
+  ): Observable<ApiResult<SubAccountTransfer>> {
+    return this.api.putWithMessage<SubAccountTransfer>(
+      API_ENDPOINTS.subAccounts.transferById(id),
+      payload,
+      {
+        context: withInlineHandling(
+          withCacheInvalidate(TRANSFER_INVALIDATE_KEYS),
+        ),
+      },
+    );
+  }
+
+  /** Deletes a transfer, moving the amount back from target to source. */
+  deleteTransfer(id: number): Observable<ApiResult<unknown>> {
+    return this.api.deleteWithMessage<unknown>(
+      API_ENDPOINTS.subAccounts.transferById(id),
+      {
+        context: withInlineHandling(
+          withCacheInvalidate(TRANSFER_INVALIDATE_KEYS),
         ),
       },
     );
