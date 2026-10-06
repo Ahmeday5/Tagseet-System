@@ -25,6 +25,8 @@ export const API_ENDPOINTS = {
     /** PUT edit / DELETE (reverses the balances) a single inter-treasury transfer. */
     transferById: (id: number) => `dashboard/treasuries/transfers/${id}`,
     operations: 'dashboard/treasuries/operations',
+    /** PUT edit / DELETE (reverses the balance effect) a single manual operation. */
+    operationById: (id: number) => `dashboard/treasuries/operations/${id}`,
     monthlyProfits: 'dashboard/treasuries/monthly-profits',
     /** Lightweight `{id,name}` list for pickers (role-scoped server-side). */
     lookup: 'dashboard/treasuries/lookup',

@@ -10,6 +10,7 @@ import {
   TreasuryTransfersQuery,
   TreasuryOperation,
   TreasuryOperationsQuery,
+  UpdateTreasuryOperationPayload,
   MonthlyProfit,
 } from '../models/treasury.model';
 import {
@@ -30,8 +31,8 @@ import { LookupItem } from '../../../core/models/lookup.model';
 const TREASURY_CACHE_KEY = 'treasur';
 const TREASURY_TTL_MS = 15 * 60 * 1000;
 
-/** Transfer edits/deletes move balances — also drop the dashboard balance cards. */
-const TRANSFER_INVALIDATE_KEYS = [
+/** Transfer/operation edits & deletes move balances — also drop the dashboard balance cards. */
+const BALANCE_INVALIDATE_KEYS = [
   TREASURY_CACHE_KEY,
   'financial-separation',
   'home-summary',
@@ -149,7 +150,7 @@ export class TreasuryService {
       payload,
       {
         context: withInlineHandling(
-          withCacheInvalidate(TRANSFER_INVALIDATE_KEYS),
+          withCacheInvalidate(BALANCE_INVALIDATE_KEYS),
         ),
       },
     );
@@ -161,7 +162,7 @@ export class TreasuryService {
       API_ENDPOINTS.treasuries.transferById(id),
       {
         context: withInlineHandling(
-          withCacheInvalidate(TRANSFER_INVALIDATE_KEYS),
+          withCacheInvalidate(BALANCE_INVALIDATE_KEYS),
         ),
       },
     );
@@ -202,6 +203,34 @@ export class TreasuryService {
         context: withCacheBypass(withCache({ ttlMs: TREASURY_TTL_MS })),
       })
       .pipe(toPaged<TreasuryOperation>());
+  }
+
+  /** Edits a manual operation — the server re-posts its effect on the treasury balance. */
+  updateOperation(
+    id: number,
+    payload: UpdateTreasuryOperationPayload,
+  ): Observable<ApiResult<TreasuryOperation>> {
+    return this.api.putWithMessage<TreasuryOperation>(
+      API_ENDPOINTS.treasuries.operationById(id),
+      payload,
+      {
+        context: withInlineHandling(
+          withCacheInvalidate(BALANCE_INVALIDATE_KEYS),
+        ),
+      },
+    );
+  }
+
+  /** Deletes a manual operation, reversing its effect on the treasury balance. */
+  deleteOperation(id: number): Observable<ApiResult<unknown>> {
+    return this.api.deleteWithMessage<unknown>(
+      API_ENDPOINTS.treasuries.operationById(id),
+      {
+        context: withInlineHandling(
+          withCacheInvalidate(BALANCE_INVALIDATE_KEYS),
+        ),
+      },
+    );
   }
 
   private toOperationsParams(

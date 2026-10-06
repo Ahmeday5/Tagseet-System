@@ -123,6 +123,15 @@ export interface TreasuryTransfersQuery {
    Treasury operations (all transactions/movements)
    ════════════════════════════════════════════════════════════════ */
 
+/** Counterparty of a treasury operation (`Treasury` = the other leg of an inter-treasury transfer). */
+export type OperationPartyType =
+  | 'Customer'
+  | 'Supplier'
+  | 'Shareholder'
+  | 'SubAccount'
+  | 'Representative'
+  | 'Treasury';
+
 /** Row shape returned by `GET /dashboard/treasuries/operations`. */
 export interface TreasuryOperation {
   id: number;
@@ -135,6 +144,25 @@ export interface TreasuryOperation {
   balanceAfter: number;
   treasuryId: number;
   treasuryName: string;
+  partyName: string | null;
+  partyType: OperationPartyType | null;
+  partyId: number | null;
+  /** Source document of the operation (informational). */
+  referenceType: string;
+  referenceId: number | null;
+  /** False when the operation must be edited/deleted from its originating screen. */
+  canEdit: boolean;
+  canDelete: boolean;
+}
+
+/**
+ * PUT /dashboard/treasuries/operations/{id} body. Omitting `date` keeps the
+ * stored date; `notes` replaces the stored description as sent.
+ */
+export interface UpdateTreasuryOperationPayload {
+  amount: number;
+  date?: string;
+  notes: string | null;
 }
 
 /** Query parameters for the paginated operations list. */

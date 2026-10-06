@@ -452,11 +452,13 @@
                   <th>#</th>
                   <th>الخزينة</th>
                   <th>النوع</th>
+                  <th>الجهة</th>
                   <th>الوصف</th>
                   <th>المبلغ</th>
                   <th>الرصيد بعد العملية</th>
                   <th>المستخدم</th>
                   <th>التاريخ</th>
+                  <th *appHasPermission="PERMS.treasuryFullAccess" class="text-center">إجراءات</th>
                 </tr>
               </thead>
               <tbody>
@@ -466,6 +468,16 @@
                   <td style="font-weight:600">{{ op.treasuryName }}</td>
                   <td>
                     <app-badge [text]="directionLabel(op.direction)" [type]="directionBadge(op.direction)" />
+                  </td>
+                  <td>
+                    @if (op.partyName) {
+                    <span style="display:block;font-weight:600">{{ op.partyName }}</span>
+                    @if (op.partyType) {
+                    <app-badge [text]="partyLabel(op)" [type]="partyBadge(op)" />
+                    }
+                    } @else {
+                    —
+                    }
                   </td>
                   <td style="font-size:11px;max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
                     [title]="op.description">
@@ -479,10 +491,31 @@
                   </td>
                   <td style="font-size:10.5px;color:var(--txt2)">{{ op.userName }}</td>
                   <td class="trf-date">{{ op.date | dateAr: 'short' }}</td>
+                  <td *appHasPermission="PERMS.treasuryFullAccess" class="text-center">
+                    <div class="d-flex gap-1 justify-content-center">
+                      <!-- Wrapper spans carry the tooltip: disabled buttons don't fire hover events. -->
+                      <span [title]="op.canEdit ? 'تعديل' : OPERATION_LOCKED_HINT">
+                        <button type="button" class="btn btn-sm btn-bl"
+                          [disabled]="!op.canEdit || deletingOperationId() === op.id" (click)="openEditOperation(op)">
+                          تعديل
+                        </button>
+                      </span>
+                      <span [title]="op.canDelete ? 'حذف' : OPERATION_LOCKED_HINT">
+                        <button type="button" class="btn btn-sm btn-re d-inline-flex align-items-center gap-1"
+                          [disabled]="!op.canDelete || deletingOperationId() !== null"
+                          (click)="confirmDeleteOperation(op)">
+                          @if (deletingOperationId() === op.id) {
+                          <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                          }
+                          <span>حذف</span>
+                        </button>
+                      </span>
+                    </div>
+                  </td>
                 </tr>
                 } @empty {
                 <tr>
-                  <td colspan="8" class="text-center py-4" style="color:var(--txt3);font-size:12px">
+                  <td colspan="10" class="text-center py-4" style="color:var(--txt3);font-size:12px">
                     @if (operationsLoading()) {
                     جاري التحميل...
                     } @else if (hasOperationFilters()) {
@@ -514,3 +547,6 @@
 
 <app-treasury-transfer-modal [open]="transferModalOpen()" [treasuries]="treasuries()"
   [transfer]="editingTransfer()" (closed)="closeTransfer()" (saved)="onTransferSaved($event)" />
+
+<app-treasury-operation-modal [operation]="editingOperation()" (closed)="closeEditOperation()"
+  (saved)="onOperationSaved()" (gone)="onOperationGone()" />

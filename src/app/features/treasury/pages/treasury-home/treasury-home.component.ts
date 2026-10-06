@@ -19,6 +19,7 @@ import { RepresentativeSubTreasury } from '../../../reps/models/rep.model';
 import { LookupItem } from '../../../../core/models/lookup.model';
 import { TreasuryFormModelComponent } from '../../components/treasury-form-model/treasury-form-model.component';
 import { TreasuryTransferModalComponent } from '../../components/treasury-transfer-modal/treasury-transfer-modal.component';
+import { TreasuryOperationModalComponent } from '../../components/treasury-operation-modal/treasury-operation-modal.component';
 import {
   BadgeComponent,
   BadgeType,
@@ -43,6 +44,12 @@ import {
   TREASURY_TYPE_BADGE,
   TREASURY_TYPE_LABELS,
 } from '../../constants/treasury-type-labels';
+import {
+  OPERATION_LOCKED_HINT,
+  OPERATION_PARTY_BADGE,
+  OPERATION_PARTY_LABELS,
+  operationMutationError,
+} from '../../constants/operation-party-labels';
 import { CommonModule } from '@angular/common';
 
 @Component({
@@ -52,6 +59,7 @@ import { CommonModule } from '@angular/common';
   imports: [
     TreasuryFormModelComponent,
     TreasuryTransferModalComponent,
+    TreasuryOperationModalComponent,
     BadgeComponent,
     PaginationComponent,
     CurrencyArPipe,
@@ -221,6 +229,10 @@ export class TreasuryHomeComponent implements OnInit {
   /** Set while we fetch the full dataset for a print export. */
   protected readonly isPrintingOps = signal(false);
   private operationsDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Operation open in the edit modal; `null` = closed. */
+  protected readonly editingOperation = signal<TreasuryOperation | null>(null);
+  protected readonly deletingOperationId = signal<number | null>(null);
+  protected readonly OPERATION_LOCKED_HINT = OPERATION_LOCKED_HINT;
 
   // operations filters
   protected readonly oTreasuryFilter = signal<number | ''>('');
@@ -616,6 +628,62 @@ export class TreasuryHomeComponent implements OnInit {
     return signedAmount >= 0 ? 'trf-amount-positive' : 'trf-amount-negative';
   }
 
+  protected partyLabel(op: TreasuryOperation): string {
+    return op.partyType ? (OPERATION_PARTY_LABELS[op.partyType] ?? op.partyType) : '';
+  }
+
+  protected partyBadge(op: TreasuryOperation): BadgeType {
+    return op.partyType ? (OPERATION_PARTY_BADGE[op.partyType] ?? 'info') : 'info';
+  }
+
+  // operation edit / delete
+  protected openEditOperation(op: TreasuryOperation): void {
+    this.editingOperation.set(op);
+  }
+
+  protected closeEditOperation(): void {
+    this.editingOperation.set(null);
+  }
+
+  protected onOperationSaved(): void {
+    this.editingOperation.set(null);
+    // Cache invalidation → `onInvalidate` refetches operations + balances.
+  }
+
+  protected onOperationGone(): void {
+    this.editingOperation.set(null);
+    this.refreshOperations();
+  }
+
+  protected async confirmDeleteOperation(op: TreasuryOperation): Promise<void> {
+    if (this.deletingOperationId() !== null) return;
+    const ok = await this.dialog.confirm({
+      title: 'حذف عملية',
+      message: 'هل أنت متأكد من حذف هذه العملية؟ سيتم عكس أثرها على رصيد الخزنة.',
+      confirmText: 'حذف',
+      cancelText: 'إلغاء',
+      type: 'danger',
+    });
+    if (!ok) return;
+
+    this.deletingOperationId.set(op.id);
+    this.treasuryService.deleteOperation(op.id).subscribe({
+      next: (res) => {
+        this.deletingOperationId.set(null);
+        this.toast.success(resolveApiMessage(res.message, 'تم حذف العملية بنجاح'));
+        // Invalidation → `onInvalidate` refetches operations + balances.
+        if (this.operations().length === 1 && this.oPageIndex() > 1) {
+          this.oPageIndex.update((p) => p - 1);
+        }
+      },
+      error: (err: ApiError) => {
+        this.deletingOperationId.set(null);
+        this.toast.error(operationMutationError(err));
+        if (err.status === 404) this.refreshOperations();
+      },
+    });
+  }
+
   protected readonly todayDate = new Date();
 
   /** Background flags for the export-PDF buttons. */
@@ -662,6 +730,12 @@ export class TreasuryHomeComponent implements OnInit {
               header: 'النوع',
               align: 'center',
               format: (v) => (v === 'Receipt' ? 'إيراد' : 'صرف'),
+            },
+            {
+              key: 'partyName',
+              header: 'الجهة',
+              align: 'start',
+              format: (v) => (v as string | null) || '—',
             },
             { key: 'description', header: 'الوصف', align: 'start' },
             {
