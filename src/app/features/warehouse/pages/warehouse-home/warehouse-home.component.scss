@@ -89,17 +89,23 @@
 
 
 /* ── Inventory table column widths + cell colors ── */
-.wh-w-name   { width: 15%; }
-.wh-w-num    { width: 8%;  text-align: center; }
-.wh-w-price  { width: 10%; }
+/*
+ * Columns size to their content (min-widths, no fixed %) — with 12 columns
+ * fixed percentages overflow 100% and starve the last column. The `.tw`
+ * wrapper scrolls horizontally when the viewport is narrower than the sum.
+ */
+.wh-w-name   { min-width: 140px; }
+.wh-w-num    { min-width: 64px; text-align: center; }
+.wh-w-price  { min-width: 96px; }
 .wh-w-notes  {
-  width: 14%;
-  max-width: 0; // forces the ellipsis truncation below to respect the column %
+  min-width: 180px;
+  max-width: 260px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  text-align: start !important;
 }
-.wh-w-serial { width: 14%; }
+.wh-w-serial { min-width: 140px; }
 
 .wh-pos        { color: var(--gr); font-weight: 600; }
 .wh-warn-cell  { color: var(--am); font-weight: 600; }
