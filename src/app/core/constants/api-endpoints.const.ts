@@ -81,6 +81,8 @@ export const API_ENDPOINTS = {
     byId: (id: number) => `dashboard/warehouses/${id}`,
     summary: 'dashboard/warehouses/summary',
     inventory: 'dashboard/warehouses/inventory',
+    /** GET: per-warehouse + grand totals, same filters as `inventory`. */
+    inventoryTotals: 'dashboard/warehouses/inventory/totals',
     /** Lightweight `{id,name}` list for pickers (role-scoped server-side). */
     lookup: 'dashboard/warehouses/lookup',
   },

@@ -1,0 +1,72 @@
+<section class="card" [class.is-loading]="loading()" [attr.aria-busy]="loading()">
+  <header class="chdr">
+    <div>
+      <div class="ct">إجماليات المخزون حسب المخزن</div>
+      <div class="sub">مقارنة الكميات والقيم بين المخازن وفق الفلاتر المحددة أعلاه · اضغط على اسم المخزن لعرض أصنافه</div>
+    </div>
+  </header>
+
+  <div class="tw">
+    <table>
+      <thead>
+        <tr>
+          <th rowspan="2" class="col-name">المخزن</th>
+          <th rowspan="2" title="عدد الأصناف المختلفة">الأصناف</th>
+          <th colspan="3" class="grp gs">الكميات <span class="unit">(وحدة)</span></th>
+          <th colspan="3" class="grp gs">القيم المالية</th>
+          <th rowspan="2" class="gs" title="قيمة المبيعات ناقص تكلفة المباع">صافي الربح</th>
+          <th rowspan="2" class="col-progress" title="نسبة الوحدات المباعة من المشتراة">نسبة البيع</th>
+        </tr>
+        <tr>
+          <th class="gs">المشتراة</th>
+          <th>المباعة</th>
+          <th>المتاحة</th>
+          <th class="gs" title="قيمة الكمية المتاحة بسعر الشراء">قيمة المتاح</th>
+          <th title="تكلفة شراء الوحدات المباعة">تكلفة المباع</th>
+          <th title="إجمالي المبيعات بأسعار البيع">قيمة المبيعات</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        @for (row of rows(); track row.warehouseId) {
+          <tr>
+            <td class="col-name">
+              <button type="button" class="wh-link" (click)="warehouseSelect.emit(row.warehouseId)">
+                {{ row.warehouseName }}
+              </button>
+            </td>
+            <ng-container *ngTemplateOutlet="cells; context: { $implicit: row.totals }" />
+          </tr>
+        }
+      </tbody>
+
+      @if (grandTotal(); as g) {
+        <tfoot>
+          <tr>
+            <td class="col-name">الإجمالي العام</td>
+            <ng-container *ngTemplateOutlet="cells; context: { $implicit: g }" />
+          </tr>
+        </tfoot>
+      }
+    </table>
+  </div>
+</section>
+
+<ng-template #cells let-t>
+  <td>{{ t.productsCount | number }}</td>
+  <td class="gs">{{ t.purchasedQuantity | number }}</td>
+  <td>{{ t.soldQuantity | number }}</td>
+  <td [class.tone-warn]="t.availableQuantity === 0">{{ t.availableQuantity | number }}</td>
+  <td class="gs">{{ t.stockValue | currencyAr: true }}</td>
+  <td>{{ t.soldCost | currencyAr: true }}</td>
+  <td>{{ t.salesValue | currencyAr: true }}</td>
+  <td class="gs" [class.tone-good]="t.totalProfit > 0" [class.tone-bad]="t.totalProfit < 0">
+    {{ t.totalProfit | currencyAr: true }}
+  </td>
+  <td class="col-progress">
+    <div class="progress-cell">
+      <span class="bar" aria-hidden="true"><span [style.width.%]="soldPercent(t)"></span></span>
+      <span class="pct">{{ soldPercent(t) | number: '1.0-0' }}%</span>
+    </div>
+  </td>
+</ng-template>

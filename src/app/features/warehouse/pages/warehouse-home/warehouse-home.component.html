@@ -60,6 +60,9 @@
         >{{ w.availableQuantity }} وحدة</span>
       </div>
       <div class="sr"><span style="color:var(--txt2)">قيمة الشراء</span><span>{{ w.purchaseValue | currencyAr: true }}</span></div>
+      <div class="sr"><span style="color:var(--txt2)">قيمة المتاح</span><span>{{ w.stockValue | currencyAr: true }}</span></div>
+      <div class="sr"><span style="color:var(--txt2)">تكلفة المباع</span><span>{{ w.soldCost | currencyAr: true }}</span></div>
+      <div class="sr"><span style="color:var(--txt2)">قيمة المبيعات</span><span style="color:var(--bl)">{{ w.salesValue | currencyAr: true }}</span></div>
       <div class="sr"><span style="color:var(--txt2)">إجمالي الربح</span><span style="color:var(--gr)">{{ w.totalProfit | currencyAr: true }}</span></div>
 
       <div class="prog-bg">
@@ -157,6 +160,8 @@
     </div>
   </div>
 
+  <app-inventory-kpis [totals]="invGrandTotal()" [loading]="invTotalsLoading()" />
+
   <div class="tw" style="margin-bottom:0">
     <table class="w-100">
       <thead>
@@ -168,6 +173,9 @@
           <th class="wh-w-price">سعر الشراء</th>
           <th class="wh-w-price">سعر البيع</th>
           <th class="wh-w-num">الهامش %</th>
+          <th class="wh-w-price">قيمة المتاح</th>
+          <th class="wh-w-price">تكلفة المباع</th>
+          <th class="wh-w-price">قيمة المبيعات</th>
           <th class="wh-w-price">إجمالي الربح</th>
           <th class="wh-w-notes">ملاحظات</th>
         </tr>
@@ -184,12 +192,15 @@
             <td>{{ item.purchasePrice | currencyAr: true }}</td>
             <td>{{ item.sellingPrice | currencyAr: true }}</td>
             <td class="wh-pos">{{ item.marginPercent | number: '1.0-1' }}%</td>
+            <td>{{ item.stockValue | currencyAr: true }}</td>
+            <td>{{ item.soldCost | currencyAr: true }}</td>
+            <td>{{ item.salesValue | currencyAr: true }}</td>
             <td class="wh-pos">{{ item.totalProfit | currencyAr: true }}</td>
             <td class="wh-w-notes" [title]="item.notes || ''">{{ item.notes || '—' }}</td>
           </tr>
         } @empty {
           <tr>
-            <td colspan="9" class="wh-inv-empty">
+            <td colspan="12" class="wh-inv-empty">
               @if (invLoading()) {
                 <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
                 <span>جاري تحميل الأصناف...</span>
@@ -219,6 +230,15 @@
     />
   }
 </div>
+
+@if (showBreakdown()) {
+  <app-inventory-totals-breakdown
+    [rows]="invTotals()!.warehouses"
+    [grandTotal]="invTotals()!.grandTotal"
+    [loading]="invTotalsLoading()"
+    (warehouseSelect)="onWarehouseChange($event)"
+  />
+}
 
 
 <app-warehouse-form-modal

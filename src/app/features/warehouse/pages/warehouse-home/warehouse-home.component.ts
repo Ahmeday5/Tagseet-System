@@ -8,15 +8,21 @@ import {
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { DecimalPipe } from '@angular/common';
+import { Subscription } from 'rxjs';
 import { CurrencyArPipe } from '../../../../shared/pipes/currency-ar.pipe';
 import { PaginationComponent } from '../../../../shared/components/pagination/pagination.component';
 import { WarehouseService } from '../../services/warehouse.service';
 import {
   Warehouse,
   WarehouseInventoryItem,
+  WarehouseInventoryTotals,
+  WarehouseInventoryTotalsQuery,
+  WarehouseInventoryTotalsResponse,
   WarehouseSummary,
 } from '../../models/warehouse.model';
 import { WarehouseFormModalComponent } from '../../components/warehouse-form-modal/warehouse-form-modal.component';
+import { InventoryKpisComponent } from '../../components/inventory-kpis/inventory-kpis.component';
+import { InventoryTotalsBreakdownComponent } from '../../components/inventory-totals-breakdown/inventory-totals-breakdown.component';
 import { FormMode } from '../../../../shared/models/form-mode.model';
 import { DialogService } from '../../../../core/services/dialog.service';
 import { ToastService } from '../../../../core/services/toast.service';
@@ -62,6 +68,8 @@ const INVENTORY_PAGE_SIZE = 10;
     CurrencyArPipe,
     PaginationComponent,
     WarehouseFormModalComponent,
+    InventoryKpisComponent,
+    InventoryTotalsBreakdownComponent,
   ],
   templateUrl: './warehouse-home.component.html',
   styleUrl: './warehouse-home.component.scss',
@@ -109,6 +117,20 @@ export class WarehouseHomeComponent implements OnInit {
   protected readonly invCount      = signal(0);
   protected readonly invTotalPages = signal(0);
 
+  // ── inventory totals (table footer) ──
+  protected readonly invTotals = signal<WarehouseInventoryTotalsResponse | null>(null);
+  protected readonly invTotalsLoading = signal(false);
+  /** Headline totals; falls back to the lone warehouse row if the API omits the grand total. */
+  protected readonly invGrandTotal = computed<WarehouseInventoryTotals | null>(() => {
+    const t = this.invTotals();
+    if (!t) return null;
+    return t.grandTotal ?? (t.warehouses.length === 1 ? t.warehouses[0].totals : null);
+  });
+  /** A per-warehouse comparison only means something with 2+ warehouses in scope. */
+  protected readonly showBreakdown = computed(
+    () => (this.invTotals()?.warehouses.length ?? 0) > 1,
+  );
+
   // ── modal state ──
   protected readonly modalOpen      = signal(false);
   protected readonly modalMode      = signal<FormMode>('create');
@@ -125,6 +147,7 @@ export class WarehouseHomeComponent implements OnInit {
 
   /** Search-only debounce — pagination + warehouse changes fire immediately. */
   private invDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+  private totalsSub?: Subscription;
 
   ngOnInit(): void {
     this.loadSummary();
@@ -166,12 +189,12 @@ export class WarehouseHomeComponent implements OnInit {
    * picker, pagination, manual refresh — anything that maps to a single
    * deliberate user action where waiting would feel sluggish.
    */
-  private fetchInventoryNow(force = false): void {
+  private fetchInventoryNow(force = false, withTotals = true): void {
     if (this.invDebounceTimer) {
       clearTimeout(this.invDebounceTimer);
       this.invDebounceTimer = null;
     }
-    this.fetchInventory(force);
+    this.fetchInventory(force, withTotals);
   }
 
   /**
@@ -183,16 +206,22 @@ export class WarehouseHomeComponent implements OnInit {
     this.invDebounceTimer = setTimeout(() => this.fetchInventory(false), 300);
   }
 
-  private fetchInventory(force: boolean): void {
-    const warehouseId = this.selectedWarehouseId();
-
-    const query = {
-      warehouseId,
+  /**
+   * @param withTotals totals ignore paging, so page/page-size changes skip them.
+   */
+  private fetchInventory(force: boolean, withTotals = true): void {
+    const filters: WarehouseInventoryTotalsQuery = {
+      warehouseId: this.selectedWarehouseId(),
       search: this.invSearch().trim(),
       onlyAvailable: this.invOnlyAvailable(),
+    };
+    const query = {
+      ...filters,
       pageIndex: this.invPageIndex(),
       pageSize: this.invPageSize(),
     };
+
+    if (withTotals) this.fetchTotals(filters, force);
 
     this.invLoading.set(true);
     const stream$ = force
@@ -214,9 +243,27 @@ export class WarehouseHomeComponent implements OnInit {
     });
   }
 
+  private fetchTotals(filters: WarehouseInventoryTotalsQuery, force: boolean): void {
+    // Cancel the previous request so a slow, stale response can't overwrite newer filters.
+    this.totalsSub?.unsubscribe();
+    this.invTotalsLoading.set(true);
+    this.totalsSub = this.svc.inventoryTotals(filters, force).subscribe({
+      next: (res) => {
+        this.invTotals.set(
+          res ? { warehouses: res.warehouses ?? [], grandTotal: res.grandTotal ?? null } : null,
+        );
+        this.invTotalsLoading.set(false);
+      },
+      error: () => {
+        this.invTotals.set(null);
+        this.invTotalsLoading.set(false);
+      },
+    });
+  }
+
   // ─────────── inventory filter handlers ───────────
 
-  protected onWarehouseChange(value: string): void {
+  protected onWarehouseChange(value: string | number): void {
     const id = Number(value) || 0;
     this.selectedWarehouseId.set(id);
     this.invPageIndex.set(1);
@@ -237,13 +284,13 @@ export class WarehouseHomeComponent implements OnInit {
 
   protected onInvPageChange(page: number): void {
     this.invPageIndex.set(page);
-    this.fetchInventoryNow();
+    this.fetchInventoryNow(false, false);
   }
 
   protected onInvPageSizeChange(size: number): void {
     this.invPageSize.set(size);
     this.invPageIndex.set(1);
-    this.fetchInventoryNow();
+    this.fetchInventoryNow(false, false);
   }
 
   // ─────────── modal handlers ───────────

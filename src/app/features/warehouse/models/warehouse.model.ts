@@ -140,6 +140,12 @@ export interface WarehouseSummary {
   availableQuantity: number;
   /** Total cost of items currently held (purchase price × quantity). */
   purchaseValue: number;
+  /** Cost value of the available stock. */
+  stockValue: number;
+  /** Cost of the sold quantity. */
+  soldCost: number;
+  /** Revenue of the sold quantity. */
+  salesValue: number;
   totalProfit: number;
   /** 0 → 100. */
   soldPercent: number;
@@ -162,7 +168,12 @@ export interface WarehouseInventoryItem {
   purchasePrice: number;
   sellingPrice: number;
   marginPercent: number;
-  /** Comma-separated string or `null` when not tracked. */
+  /** Cost value of the available stock. */
+  stockValue: number;
+  /** Cost of the sold quantity. */
+  soldCost: number;
+  /** Revenue of the sold quantity. */
+  salesValue: number;
   totalProfit: number;
   /**
    * Per-line notes from every purchase invoice that brought this product
@@ -178,6 +189,41 @@ export interface WarehouseInventoryQuery {
   pageIndex?: number;
   pageSize?: number;
   search?: string;
-  /** Omit to fetch all; `true`/`false` filters to available/unavailable only. */
+  /**
+   * Omit to fetch all; `true` → `onlyAvailable=true`,
+   * `false` → `onlyUnavailable=true` on the wire.
+   */
   onlyAvailable?: boolean;
 }
+
+// ─────────────────────────────────────────────────────────────────
+//  Live API: GET /dashboard/warehouses/inventory/totals
+//  Per-warehouse + grand totals for the same filters as the table.
+// ─────────────────────────────────────────────────────────────────
+
+export interface WarehouseInventoryTotals {
+  productsCount: number;
+  purchasedQuantity: number;
+  soldQuantity: number;
+  availableQuantity: number;
+  stockValue: number;
+  soldCost: number;
+  salesValue: number;
+  totalProfit: number;
+}
+
+export interface WarehouseInventoryTotalsRow {
+  warehouseId: number;
+  warehouseName: string;
+  totals: WarehouseInventoryTotals;
+}
+
+export interface WarehouseInventoryTotalsResponse {
+  warehouses: WarehouseInventoryTotalsRow[];
+  grandTotal: WarehouseInventoryTotals | null;
+}
+
+export type WarehouseInventoryTotalsQuery = Omit<
+  WarehouseInventoryQuery,
+  'pageIndex' | 'pageSize'
+>;

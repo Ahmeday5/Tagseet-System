@@ -7,6 +7,8 @@ import {
   Warehouse,
   WarehouseInventoryItem,
   WarehouseInventoryQuery,
+  WarehouseInventoryTotalsQuery,
+  WarehouseInventoryTotalsResponse,
   WarehouseSummary,
 } from '../models/warehouse.model';
 import { ApiService } from '../../../core/services/api.service';
@@ -139,13 +141,40 @@ export class WarehouseService {
     );
   }
 
+  // ─────────────────────────────────────────────────────────────────
+  //  Live API — /dashboard/warehouses/inventory/totals
+  //  Per-warehouse + grand totals; takes the table's filters (no paging).
+  // ─────────────────────────────────────────────────────────────────
+
+  inventoryTotals(
+    query: WarehouseInventoryTotalsQuery,
+    force = false,
+  ): Observable<WarehouseInventoryTotalsResponse> {
+    const cache = withCache({ ttlMs: WAREHOUSE_TTL_MS });
+    return this.api.get<WarehouseInventoryTotalsResponse>(
+      API_ENDPOINTS.warehouses.inventoryTotals,
+      {
+        params: this.toFilterParams(query),
+        context: force ? withCacheBypass(cache) : cache,
+      },
+    );
+  }
+
   private toInventoryParams(query: WarehouseInventoryQuery): Record<string, unknown> {
     return {
-      warehouseId: query.warehouseId || undefined,
+      ...this.toFilterParams(query),
       PageIndex: query.pageIndex ?? 1,
       PageSize: query.pageSize ?? 10,
+    };
+  }
+
+  /** Shared filters; the availability tri-state maps to two mutually exclusive flags. */
+  private toFilterParams(query: WarehouseInventoryTotalsQuery): Record<string, unknown> {
+    return {
+      warehouseId: query.warehouseId || undefined,
       search: query.search ?? '',
-      onlyAvailable: query.onlyAvailable,
+      onlyAvailable: query.onlyAvailable === true ? true : undefined,
+      onlyUnavailable: query.onlyAvailable === false ? true : undefined,
     };
   }
 }

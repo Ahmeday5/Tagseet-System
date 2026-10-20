@@ -1,0 +1,104 @@
+:host { display: block; }
+
+.card {
+  transition: opacity 0.15s;
+  &.is-loading { opacity: 0.6; }
+}
+
+.sub {
+  font-size: 10.5px;
+  color: var(--txt3);
+  margin-top: 2px;
+}
+
+.tw {
+  margin-bottom: 0;
+
+  table { font-variant-numeric: tabular-nums; }
+
+  thead th {
+    font-weight: 600;
+    vertical-align: middle;
+  }
+
+  /* Group headers ("الكميات" / "القيم المالية") */
+  thead tr:first-child th.grp {
+    color: var(--txt);
+    border-bottom: 1px solid var(--brd2);
+  }
+
+  /* First cell of each column group (quantities / values / profit) */
+  .gs { border-inline-start: 1px solid var(--brd); }
+
+  tbody td { padding: 10px 12px; }
+
+  tfoot td {
+    padding: 11px 12px;
+    text-align: center;
+    font-weight: 700;
+    background: var(--bg3);
+    border-top: 2px solid var(--brd2);
+  }
+}
+
+.unit {
+  font-weight: 400;
+  color: var(--txt3);
+}
+
+.col-name {
+  text-align: start !important;
+  min-width: 160px;
+}
+
+.col-progress { min-width: 120px; }
+
+.wh-link {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  font-weight: 600;
+  color: var(--bl);
+  cursor: pointer;
+  text-align: start;
+
+  &:hover { text-decoration: underline; }
+  &:focus-visible {
+    outline: 2px solid var(--bl);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+}
+
+.tone-good { color: var(--gr); font-weight: 600; }
+.tone-bad  { color: var(--re); font-weight: 600; }
+.tone-warn { color: var(--am); font-weight: 600; }
+
+.progress-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  .bar {
+    flex: 1;
+    height: 5px;
+    border-radius: 3px;
+    background: var(--brd);
+    overflow: hidden;
+
+    span {
+      display: block;
+      height: 100%;
+      border-radius: 3px;
+      background: var(--bl);
+    }
+  }
+
+  .pct {
+    min-width: 34px;
+    font-size: 10px;
+    color: var(--txt2);
+    text-align: end;
+  }
+}

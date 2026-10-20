@@ -1,0 +1,60 @@
+<div class="kpis" [class.is-loading]="loading()" [attr.aria-busy]="loading()">
+  @if (totals(); as t) {
+    <div class="kpi" title="عدد الأصناف المختلفة التي تطابق الفلاتر الحالية">
+      <span class="kpi-label">عدد الأصناف</span>
+      <span class="kpi-value">{{ t.productsCount | number }}</span>
+      <span class="kpi-hint">صنف ضمن النطاق المحدد</span>
+    </div>
+
+    <div class="kpi" title="الكمية المتبقية في المخزن ولم تُبع بعد">
+      <span class="kpi-label">الكمية المتاحة</span>
+      <span class="kpi-value" [class.tone-warn]="t.availableQuantity === 0">
+        {{ t.availableQuantity | number }} <small>وحدة</small>
+      </span>
+      <span class="kpi-hint">من أصل {{ t.purchasedQuantity | number }} وحدة مشتراة</span>
+    </div>
+
+    <div class="kpi" title="قيمة الكمية المتاحة محسوبة بسعر الشراء (التكلفة)">
+      <span class="kpi-label">قيمة المخزون المتاح</span>
+      <span class="kpi-value">{{ t.stockValue | currencyAr: true }}</span>
+      <span class="kpi-hint">بسعر التكلفة</span>
+    </div>
+
+    <div class="kpi" title="إجمالي ما تم بيعه بأسعار البيع">
+      <span class="kpi-label">قيمة المبيعات</span>
+      <span class="kpi-value tone-info">{{ t.salesValue | currencyAr: true }}</span>
+      <span class="kpi-hint">
+        {{ t.soldQuantity | number }} وحدة مباعة · {{ soldPercent() | number: '1.0-0' }}% من المشتريات
+      </span>
+      <span class="kpi-bar" aria-hidden="true"><span [style.width.%]="soldPercent()"></span></span>
+    </div>
+
+    <div class="kpi" title="تكلفة شراء الوحدات التي تم بيعها">
+      <span class="kpi-label">تكلفة المباع</span>
+      <span class="kpi-value">{{ t.soldCost | currencyAr: true }}</span>
+      <span class="kpi-hint">تكلفة شراء الوحدات المباعة</span>
+    </div>
+
+    <div class="kpi" title="قيمة المبيعات ناقص تكلفة المباع">
+      <span class="kpi-label">صافي الربح</span>
+      <span class="kpi-value" [class.tone-good]="t.totalProfit > 0" [class.tone-bad]="t.totalProfit < 0">
+        {{ t.totalProfit | currencyAr: true }}
+      </span>
+      <span class="kpi-hint">
+        @if (marginPercent() !== null) {
+          هامش {{ marginPercent() | number: '1.0-1' }}% من المبيعات
+        } @else {
+          لا توجد مبيعات بعد
+        }
+      </span>
+    </div>
+  } @else if (loading()) {
+    @for (_ of [1, 2, 3, 4, 5, 6]; track $index) {
+      <div class="kpi kpi-skeleton" aria-hidden="true">
+        <span class="sk sk-label"></span>
+        <span class="sk sk-value"></span>
+        <span class="sk sk-hint"></span>
+      </div>
+    }
+  }
+</div>
