@@ -124,3 +124,10 @@
   </div>
 
 </div>
+
+<app-payment-receipt-modal
+  [open]="receipt() !== null"
+  [result]="receipt()"
+  [context]="receiptContext()"
+  (closed)="closeReceipt()"
+/>

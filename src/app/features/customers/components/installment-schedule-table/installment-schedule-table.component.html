@@ -1,0 +1,88 @@
+<div class="tw">
+  <table class="table ist">
+    <thead>
+      <tr>
+        <th class="ist-c-seq">م</th>
+        <th>تاريخ الاستحقاق</th>
+        <th>قيمة القسط</th>
+        <th>المسدد</th>
+        <th>المتبقي</th>
+        <th>تاريخ السداد</th>
+        <th>الخزينة</th>
+        <th>الحالة</th>
+        <th>ملاحظات</th>
+        <th>إجراءات</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (line of lines(); track line.key) {
+      @let it = line.installment;
+      <tr [class.ist-group-start]="line.isGroupStart" [class.ist-row-late]="it.isOverdue && it.remaining > 0">
+        @if (line.isGroupStart) {
+        <td class="ist-span ist-c-seq" [attr.rowspan]="line.groupSize">{{ it.sequence }}</td>
+        <td class="ist-span" [attr.rowspan]="line.groupSize">{{ it.dueDate | dateAr: 'short' }}</td>
+        <td class="ist-span" [attr.rowspan]="line.groupSize">
+          <div class="ist-due">{{ it.dueAmount | currencyAr: true }}</div>
+          @if (it.paidAmount > 0) {
+          <div class="ist-progress" [title]="'مسدد ' + (it.paidAmount | currencyAr: true) + ' من ' + (it.dueAmount | currencyAr: true)">
+            <div class="ist-progress-text">
+              مسدد {{ it.paidAmount | currencyAr: true }} من {{ it.dueAmount | currencyAr: true }}
+            </div>
+            <div class="ist-progress-track">
+              <div class="ist-progress-bar" [style.width.%]="progressPercent(it)"></div>
+            </div>
+          </div>
+          }
+        </td>
+        }
+
+        <td class="ist-paid">
+          {{ line.paid | currencyAr }}
+          @if (line.isSharedVoucher && line.part; as part) {
+          <div class="ist-hint">جزء من سند بقيمة {{ part.voucherTotal | currencyAr: true }}</div>
+          }
+        </td>
+        <td class="ist-remaining" [class.ist-remaining-zero]="line.remainingAfter <= 0">
+          {{ line.remainingAfter | currencyAr: true }}
+        </td>
+        <td>{{ line.paidDate ? (line.paidDate | dateAr: 'short') : '' }}</td>
+
+        @if (line.part; as part) {
+        <td>{{ part.treasuryName || '—' }}</td>
+        <td><app-badge [text]="statusLabel(line.status)" [type]="statusBadge(line.status)" /></td>
+        <td class="ist-notes" [title]="noteText(part.notes)">{{ noteText(part.notes) }}</td>
+        <td>
+          @if (paymentOf(line); as payment) {
+          <div class="ist-actions">
+            @if (payment.canEdit) {
+            <button type="button" class="btn btn-sm" [disabled]="busyVoucherId() === payment.id"
+              (click)="edit.emit(payment)">تعديل</button>
+            }
+            @if (payment.canDelete) {
+            <button type="button" class="btn btn-sm btn-re" [disabled]="busyVoucherId() === payment.id"
+              (click)="remove.emit(payment)">
+              @if (busyVoucherId() === payment.id) {
+              <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+              } @else {
+              حذف
+              }
+            </button>
+            }
+          </div>
+          }
+        </td>
+        } @else {
+        <td></td>
+        <td><app-badge [text]="statusLabel(line.status)" [type]="statusBadge(line.status)" /></td>
+        <td></td>
+        <td></td>
+        }
+      </tr>
+      } @empty {
+      <tr>
+        <td colspan="10" class="ist-empty">لا توجد أقساط لهذا العقد</td>
+      </tr>
+      }
+    </tbody>
+  </table>
+</div>

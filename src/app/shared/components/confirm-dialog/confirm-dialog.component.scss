@@ -3,6 +3,8 @@
   color: var(--txt2);
   line-height: 1.7;
   margin: 0;
+  /* Callers may pass multi-line messages (e.g. a list of affected rows). */
+  white-space: pre-line;
 }
 
 .cd-title-danger  { color: var(--re); }

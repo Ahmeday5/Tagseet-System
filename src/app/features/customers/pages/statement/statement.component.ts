@@ -9,32 +9,29 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
-import { of } from 'rxjs';
-import { map, switchMap } from 'rxjs/operators';
+import { map } from 'rxjs/operators';
 
 import { CustomersService } from '../../services/customers.service';
 import { InstallmentsService } from '../../services/installments.service';
 import { ContractsService } from '../../../contracts/services/contracts.service';
 import { TreasuryService } from '../../../treasury/services/treasury.service';
-import { VouchersService } from '../../../vouchers/services/vouchers.service';
 import { DialogService } from '../../../../core/services/dialog.service';
 import {
   ClientContractRow,
   ClientContractsSummary,
   ContractDetails,
-  ContractInstallmentRow,
-  ContractInstallmentStatus,
   ContractPaymentRow,
+  InstallmentPaymentResult,
   PayInstallmentPayload,
 } from '../../models/client-statement.model';
+import { describeAllocations, formatAmount } from '../../utils/installment-schedule.util';
+import { InstallmentScheduleTableComponent } from '../../components/installment-schedule-table/installment-schedule-table.component';
+import { ContractPaymentsTableComponent } from '../../components/contract-payments-table/contract-payments-table.component';
+import { InstallmentPaymentEditModalComponent } from '../../components/installment-payment-edit-modal/installment-payment-edit-modal.component';
 import {
-  UpdateVoucherPayload,
-  VoucherDto,
-} from '../../../vouchers/models/voucher.model';
-import {
-  ReferenceType,
-  RelatedPartyType,
-} from '../../../vouchers/enums/voucher.enums';
+  PaymentReceiptContext,
+  PaymentReceiptModalComponent,
+} from '../../components/payment-receipt-modal/payment-receipt-modal.component';
 import { DashboardClient } from '../../models/dashboard-client.model';
 import { LookupItem } from '../../../../core/models/lookup.model';
 import {
@@ -56,7 +53,6 @@ import { onInvalidate } from '../../../../core/utils/auto-refresh.util';
 import { todayIsoDate } from '../../../../shared/utils/date-iso.util';
 import { PrintService } from '../../../../core/services/print.service';
 import { fetchAllPages } from '../../../../core/utils/api-list.util';
-import { translatePaymentNote } from '../../../../core/utils/payment-note.util';
 import { DirectContractModalComponent } from '../../components/direct-contract-modal/direct-contract-modal.component';
 
 const DEFAULT_PAGE_SIZE = 10;
@@ -85,6 +81,10 @@ interface PaymentForm {
     CurrencyArPipe,
     SearchableSelectComponent,
     DirectContractModalComponent,
+    InstallmentScheduleTableComponent,
+    ContractPaymentsTableComponent,
+    InstallmentPaymentEditModalComponent,
+    PaymentReceiptModalComponent,
   ],
   templateUrl: './statement.component.html',
   styleUrl: './statement.component.scss',
@@ -96,12 +96,13 @@ export class StatementComponent {
    * user to choose freely on the standalone /customers/statement page.
    */
   readonly initialClientId = input<number | null>(null);
+  /** `?clientId=` query param (router input binding) — deep links from other screens. */
+  readonly clientId = input<string | undefined>(undefined);
 
   private readonly customersService = inject(CustomersService);
   private readonly contractsService = inject(ContractsService);
   private readonly installmentsService = inject(InstallmentsService);
   private readonly treasuryService = inject(TreasuryService);
-  private readonly vouchersService = inject(VouchersService);
   private readonly dialog = inject(DialogService);
   private readonly toast = inject(ToastService);
   private readonly cache = inject(HttpCacheService);
@@ -167,57 +168,14 @@ export class StatementComponent {
     return Math.max(0, (d.summary.totalRemaining ?? 0) - amt);
   });
 
-  // ── payment ↔ installment sequence matching ────────────────────────────
-  // `ContractPaymentRow` carries no installment id from the API — only a
-  // date and amount. Approximate which installment each "قسط" voucher paid
-  // by greedily pairing payments to the nearest still-unclaimed installment
-  // by paid date (falling back to due date, then document order) so the
-  // "سندات القبض" table can show "قسط 1", "قسط 2", … instead of a bare
-  // repeated "قسط" label. This is a best-effort match, not a real link.
-  protected readonly paymentSequenceByIndex = computed<
-    Record<number, number | null>
-  >(() => {
-    const d = this.details();
-    const result: Record<number, number | null> = {};
-    if (!d) return result;
+  // ── payment receipt (shown after a successful payment) ─────────────────
+  protected readonly receipt = signal<InstallmentPaymentResult | null>(null);
+  protected readonly receiptContext = signal<PaymentReceiptContext | null>(null);
 
-    const installments = [...d.installments]
-      .filter((it) => it.paidAmount > 0)
-      .sort((a, b) => a.sequence - b.sequence);
-    const claimed = new Set<number>();
-
-    d.payments.forEach((p, index) => {
-      if (p.kind !== 'Installment') {
-        result[index] = null;
-        return;
-      }
-
-      const paymentTime = new Date(p.date).getTime();
-      let best: ContractInstallmentRow | null = null;
-      let bestDiff = Infinity;
-
-      for (const it of installments) {
-        if (claimed.has(it.sequence)) continue;
-        const reference = it.paidDate ?? it.dueDate;
-        const diff = Number.isFinite(paymentTime)
-          ? Math.abs(new Date(reference).getTime() - paymentTime)
-          : 0;
-        if (diff < bestDiff) {
-          bestDiff = diff;
-          best = it;
-        }
-      }
-
-      if (best) {
-        claimed.add(best.sequence);
-        result[index] = best.sequence;
-      } else {
-        result[index] = null;
-      }
-    });
-
-    return result;
-  });
+  // ── per-voucher edit / delete ──────────────────────────────────────────
+  protected readonly editPaymentTarget = signal<ContractPaymentRow | null>(null);
+  /** Voucher with an in-flight delete — its row actions are disabled. */
+  protected readonly busyVoucherId = signal<number | null>(null);
 
   // ── directContract edit modal ──────────────────────────────────────────────────
   protected readonly directContractEditOpen = signal(false);
@@ -226,24 +184,6 @@ export class StatementComponent {
   // ── contract actions ──────────────────────────────────────────────────────────
   protected readonly contractActioningId = signal<number | null>(null);
   protected readonly contractActionName = signal<'cancel' | null>(null);
-
-  // ── cancel installment (tracked by sequence within the active contract) ───────
-  protected readonly cancellingSequence = signal<number | null>(null);
-
-  // ── edit voucher modal ─────────────────────────────────────────────────────────
-  protected readonly editVoucherOpen = signal(false);
-  protected readonly editVoucherLoading = signal(false);
-  protected readonly editVoucherSubmitting = signal(false);
-  protected readonly editVoucherTarget = signal<ContractPaymentRow | null>(
-    null,
-  );
-
-  protected readonly editVoucherForm = signal<{
-    amount: number;
-    treasuryId: number | null;
-    date: string;
-    notes: string;
-  }>({ amount: 0, treasuryId: null, date: '', notes: '' });
 
   constructor() {
     this.loadClients();
@@ -258,7 +198,9 @@ export class StatementComponent {
     // empty state instead of the client the user was already viewing.
     effect(
       () => {
-        const presetClientId = this.initialClientId();
+        const fromQuery = Number(this.clientId());
+        const presetClientId =
+          this.initialClientId() ?? (Number.isFinite(fromQuery) && fromQuery > 0 ? fromQuery : null);
         if (presetClientId !== null) {
           this.selectedClientId.set(presetClientId);
         }
@@ -672,229 +614,69 @@ export class StatementComponent {
     });
   }
 
-  // ─────────── cancel installment payment ───────────
+  // ─────────── per-voucher edit / delete ───────────
 
-  protected async confirmCancelInstallment(
-    it: ContractInstallmentRow,
-  ): Promise<void> {
-    const installmentId = it.id ?? 0;
-    if (!installmentId) {
-      this.toast.error('لا يمكن إلغاء هذا القسط — معرّف القسط غير متاح');
-      return;
-    }
+  protected openEditPayment(payment: ContractPaymentRow): void {
+    if (!payment.canEdit) return;
+    this.editPaymentTarget.set(payment);
+  }
 
-    const ok = await this.dialog.confirm({
-      title: 'إلغاء دفعة القسط',
-      message: `هل أنت متأكد من إلغاء سداد القسط رقم ${it.sequence}؟ سيتم إرجاعه إلى حالة غير مسدد.`,
-      confirmText: 'إلغاء الدفعة',
-      cancelText: 'تراجع',
-      type: 'danger',
-    });
-    if (!ok) return;
+  protected closeEditPayment(): void {
+    this.editPaymentTarget.set(null);
+  }
 
-    this.cancellingSequence.set(it.sequence);
-    this.installmentsService.cancelPayment(installmentId).subscribe({
-      next: () => {
-        this.cancellingSequence.set(null);
-        this.toast.success('تم إلغاء دفعة القسط بنجاح');
-        // Don't rely solely on the cache-invalidation cascade here — refresh
-        // this modal's own data directly so the table/badges/totals update
-        // immediately regardless of any other page's effect wiring.
-        this.refreshAfterMutation();
-      },
-      error: (err: ApiError) => {
-        this.cancellingSequence.set(null);
-        this.toast.error(apiErrorToMessage(err, 'فشل إلغاء دفعة القسط'));
-      },
-    });
+  /** The backend re-allocated every payment — statuses may have changed. */
+  protected onPaymentEdited(): void {
+    this.editPaymentTarget.set(null);
+    this.refreshAfterMutation();
   }
 
   /**
-   * Cancel a receipt voucher's payment from the "سندات القبض" row. There is
-   * no dedicated cancel-voucher endpoint, and `ContractPaymentRow` carries
-   * no installment id — so this resolves the same best-effort date/amount
-   * match used for the "قسط N" label (`paymentSequenceByIndex`) and, if
-   * found, cancels that installment's payment exactly like the "إلغاء"
-   * button in the installments table. The confirmation dialog names the
-   * matched installment explicitly so the user can catch a wrong match
-   * before confirming.
+   * Deletes the WHOLE voucher (not just the part it was triggered from), so
+   * the dialog spells out every installment it covered.
    */
-  protected async confirmCancelPaymentVoucher(
-    payment: ContractPaymentRow,
-    index: number,
-  ): Promise<void> {
-    const d = this.details();
-    if (!d) return;
+  protected async confirmDeletePayment(payment: ContractPaymentRow): Promise<void> {
+    if (!payment.canDelete || this.busyVoucherId() !== null) return;
 
-    if (payment.kind !== 'Installment') {
-      this.toast.error('لا يمكن إلغاء هذا النوع من السندات من هنا');
-      return;
-    }
-
-    const sequence = this.paymentSequenceByIndex()[index];
-    const installment = sequence != null
-      ? d.installments.find((it) => it.sequence === sequence)
-      : undefined;
-
-    if (!installment) {
-      this.toast.error('تعذّر تحديد القسط المرتبط بهذا السند لإلغائه');
-      return;
-    }
-
-    const installmentId = installment.id ?? 0;
-    if (!installmentId) {
-      this.toast.error('لا يمكن إلغاء هذا القسط — معرّف القسط غير متاح');
-      return;
+    const source = payment.treasuryName ? ` من ${payment.treasuryName}` : '';
+    const lines = [
+      `حذف السند ${payment.voucherNumber} بقيمة ${formatAmount(payment.amount)}${source}؟`,
+      'سيتم خصم المبلغ من الخزنة وإعادة توزيع باقي الدفعات على الأقساط.',
+    ];
+    if (payment.installments.length > 1) {
+      lines.push(
+        '',
+        'هذا السند يغطي أكثر من قسط، والحذف يشمل السند بالكامل:',
+        describeAllocations(payment.installments, this.details()?.installments),
+      );
     }
 
     const ok = await this.dialog.confirm({
-      title: 'إلغاء سند القبض',
-      message: `تمت مطابقة هذا السند تقريبيًا مع القسط رقم ${installment.sequence} (تاريخ الاستحقاق ${this.formatDate(installment.dueDate)}). هل أنت متأكد من إلغاء سداده؟ سيتم إرجاعه إلى حالة غير مسدد.`,
-      confirmText: 'إلغاء الدفعة',
+      title: 'حذف سند القبض',
+      message: lines.join('\n'),
+      confirmText: 'حذف السند',
       cancelText: 'تراجع',
       type: 'danger',
     });
     if (!ok) return;
 
-    this.cancellingSequence.set(installment.sequence);
-    this.installmentsService.cancelPayment(installmentId).subscribe({
+    this.busyVoucherId.set(payment.id);
+    this.installmentsService.deletePayment(payment.id).subscribe({
       next: () => {
-        this.cancellingSequence.set(null);
-        this.toast.success('تم إلغاء دفعة القسط بنجاح');
+        this.busyVoucherId.set(null);
+        this.toast.success(`تم حذف السند ${payment.voucherNumber} بنجاح`);
         this.refreshAfterMutation();
       },
       error: (err: ApiError) => {
-        this.cancellingSequence.set(null);
-        this.toast.error(apiErrorToMessage(err, 'فشل إلغاء دفعة القسط'));
+        this.busyVoucherId.set(null);
+        this.toast.error(apiErrorToMessage(err, 'فشل حذف السند'));
       },
     });
   }
 
-  // ─────────── edit voucher modal ───────────
-
-  protected openEditVoucher(payment: ContractPaymentRow): void {
-    if (!payment.id && !payment.voucherNumber?.trim()) {
-      this.toast.error('لا يمكن تعديل هذا السند — معرف السند غير متاح');
-      return;
-    }
-    this.editVoucherTarget.set(payment);
-    this.editVoucherForm.set({
-      amount: payment.amount,
-      treasuryId: null,
-      date: payment.date,
-      notes: payment.notes ?? '',
-    });
-    this.editVoucherOpen.set(true);
-    this.editVoucherLoading.set(true);
-
-    // The payments log doesn't always carry the voucher's DB id — fall back
-    // to resolving it from the voucher number before giving up. `search`
-    // only matches the related-party name server-side (no contract/voucher
-    // filter exists on this endpoint), so match the voucher number ourselves
-    // against every installment receipt voucher instead of a bounded page —
-    // a capped scan was silently missing vouchers that fell outside it.
-    const resolveId$ = payment.id
-      ? of(payment.id)
-      : fetchAllPages<VoucherDto>((pageIndex, pageSize) =>
-          this.vouchersService.list({
-            referenceType: ReferenceType.Installment,
-            pageIndex,
-            pageSize,
-          }),
-        ).pipe(
-          map(
-            (vouchers) =>
-              vouchers.find((v) => v.voucherNumber === payment.voucherNumber)
-                ?.id ?? null,
-          ),
-        );
-
-    resolveId$
-      .pipe(
-        switchMap((id) => {
-          if (!id) throw { message: 'تعذّر إيجاد السند بالرقم المعروض' } as ApiError;
-          return this.vouchersService.getById(id).pipe(map((detail) => ({ id, detail })));
-        }),
-      )
-      .subscribe({
-        // Load the voucher's real treasury/date instead of guessing — a
-        // wrong guess here would silently move the payment to the wrong
-        // treasury.
-        next: ({ id, detail }) => {
-          this.editVoucherTarget.set({ ...payment, id });
-          this.editVoucherForm.set({
-            amount: detail.amount,
-            treasuryId: detail.treasuryId,
-            date: detail.date.split('T')[0],
-            notes: detail.notes ?? '',
-          });
-          this.editVoucherLoading.set(false);
-        },
-        error: (err: ApiError) => {
-          this.editVoucherLoading.set(false);
-          this.editVoucherOpen.set(false);
-          this.editVoucherTarget.set(null);
-          this.toast.error(apiErrorToMessage(err, 'تعذّر تحميل بيانات السند'));
-        },
-      });
-  }
-
-  protected closeEditVoucher(): void {
-    if (this.editVoucherSubmitting()) return;
-    this.editVoucherOpen.set(false);
-    this.editVoucherTarget.set(null);
-  }
-
-  protected updateEditVoucherForm<
-    K extends keyof ReturnType<typeof this.editVoucherForm>,
-  >(key: K, value: ReturnType<typeof this.editVoucherForm>[K]): void {
-    this.editVoucherForm.update((f) => ({ ...f, [key]: value }));
-  }
-
-  protected submitEditVoucher(): void {
-    if (this.editVoucherLoading()) return;
-
-    const target = this.editVoucherTarget();
-    const d = this.details();
-    const f = this.editVoucherForm();
-
-    if (!target || !d || !target.id) {
-      this.toast.error('فشل تحديد السند — معرف السند غير متاح');
-      return;
-    }
-    if (!f.amount || f.amount <= 0) {
-      this.toast.error('أدخل مبلغًا صحيحًا');
-      return;
-    }
-    if (!f.treasuryId) {
-      this.toast.error('اختر الخزينة');
-      return;
-    }
-
-    const payload: UpdateVoucherPayload = {
-      amount: Number(f.amount),
-      treasuryId: f.treasuryId,
-      date: f.date,
-      relatedPartyType: RelatedPartyType.Customer,
-      relatedPartyId: d.client.id,
-      notes: f.notes?.trim() ?? '',
-    };
-
-    this.editVoucherSubmitting.set(true);
-    this.vouchersService.update(target.id, payload).subscribe({
-      next: () => {
-        this.editVoucherSubmitting.set(false);
-        this.editVoucherOpen.set(false);
-        this.editVoucherTarget.set(null);
-        this.toast.success('تم تعديل السند بنجاح');
-        const contractId = this.activeContractId();
-        if (contractId !== null) this.reloadDetails(contractId);
-      },
-      error: (err: ApiError) => {
-        this.editVoucherSubmitting.set(false);
-        this.toast.error(apiErrorToMessage(err, 'فشل تعديل السند'));
-      },
-    });
+  protected closeReceipt(): void {
+    this.receipt.set(null);
+    this.receiptContext.set(null);
   }
 
   // ─────────── details modal ───────────
@@ -992,10 +774,15 @@ export class StatementComponent {
 
     this.paySubmitting.set(true);
     this.installmentsService.pay(payload).subscribe({
-      next: () => {
+      next: (result) => {
         this.paySubmitting.set(false);
         this.payOpen.set(false);
-        this.toast.success('تم تسجيل الدفعة بنجاح');
+        this.receiptContext.set({
+          clientName: d.client.fullName,
+          contractId: d.contract.id,
+          treasuryName: this.treasuries().find((t) => t.id === f.treasuryId)?.name ?? null,
+        });
+        this.receipt.set(result);
         // Refresh this modal's own data directly — don't rely solely on
         // the cache-invalidation cascade to eventually reach this instance.
         this.refreshAfterMutation();
@@ -1067,54 +854,6 @@ export class StatementComponent {
       default:
         return 'info';
     }
-  }
-
-  protected installmentLabel(s: ContractInstallmentStatus): string {
-    const map: Record<string, string> = {
-      Paid: 'مسدد',
-      Partial: 'جزئي',
-      Upcoming: 'قادم',
-      Overdue: 'متأخر',
-      Late: 'متأخر',
-      Unpaid: 'غير مسدد',
-    };
-    return map[s] ?? s;
-  }
-
-  protected installmentBadge(row: ContractInstallmentRow): BadgeType {
-    if (row.isOverdue) return 'bad';
-    switch (row.status) {
-      case 'Paid':
-        return 'ok';
-      case 'Partial':
-        return 'warn';
-      case 'Overdue':
-      case 'Late':
-        return 'bad';
-      case 'Upcoming':
-      default:
-        return 'info';
-    }
-  }
-
-  protected paymentKindLabel(kind: string, sequence?: number | null): string {
-    const map: Record<string, string> = {
-      DownPayment: 'مقدم',
-      Installment: 'قسط',
-      Overpayment: 'دفعة زائدة',
-    };
-    const label = map[kind] ?? kind;
-    if (kind === 'Installment' && sequence != null) return `${label} ${sequence}`;
-    return label;
-  }
-
-  /**
-   * The backend stamps `"Payment Method: cash."` (English) onto every
-   * voucher note — translate that fragment to Arabic while keeping any
-   * other free-text notes as-is.
-   */
-  protected paymentNoteText(notes: string | null): string {
-    return translatePaymentNote(notes) || '—';
   }
 
   protected formatDate(value: string | null | undefined): string {

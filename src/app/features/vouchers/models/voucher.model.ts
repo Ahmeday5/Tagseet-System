@@ -43,6 +43,14 @@ export interface VoucherDetailDto {
   referenceId: number | null;
   installmentId: number | null;
   notes: string;
+  /** Installment vouchers only: how the amount was split across installments. */
+  installmentAllocations?: VoucherInstallmentAllocation[];
+}
+
+export interface VoucherInstallmentAllocation {
+  installmentId: number;
+  sequence: number;
+  amount: number;
 }
 
 /**

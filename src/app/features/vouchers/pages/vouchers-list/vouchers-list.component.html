@@ -173,7 +173,12 @@
             </td>
             <td class="vc-notes" [title]="v.notes ?? ''">{{ cleanNotes(v.notes) }}</td>
             <td>
-              <button type="button" class="btn btn-sm" (click)="openEdit(v); $event.stopPropagation()">تعديل</button>
+              @if (isInstallmentVoucher(v)) {
+                <button type="button" class="btn btn-sm" title="سندات الأقساط تُعدَّل وتُحذف من شاشة العقد"
+                  (click)="openDetail(v); $event.stopPropagation()">التفاصيل</button>
+              } @else {
+                <button type="button" class="btn btn-sm" (click)="openEdit(v); $event.stopPropagation()">تعديل</button>
+              }
             </td>
           </tr>
         } @empty {
@@ -287,6 +292,45 @@
         <dd class="vd-notes">{{ cleanNotes(v.notes) }}</dd>
       </div>
     </dl>
+
+    @if (isInstallmentVoucher(v)) {
+      <div class="vd-alloc">
+        <div class="vd-alloc-title">توزيع السند على الأقساط</div>
+        @if (detailFullLoading()) {
+          <div class="d-flex align-items-center gap-2 py-2" style="color:var(--txt3)">
+            <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+            <span>جاري التحميل...</span>
+          </div>
+        } @else if (detailFull()?.installmentAllocations?.length) {
+          <table class="vd-alloc-table">
+            <thead>
+              <tr>
+                <th>رقم القسط</th>
+                <th>المبلغ المسدد</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (a of detailFull()!.installmentAllocations!; track a.installmentId) {
+                <tr>
+                  <td>قسط {{ a.sequence }}</td>
+                  <td>{{ a.amount | currencyAr: true }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        } @else if (detailFull()) {
+          <div class="vd-alloc-empty">لا يوجد توزيع مسجل لهذا السند.</div>
+        }
+
+        <div class="vd-alloc-hint">
+          تعديل وحذف سندات الأقساط يتم من شاشة العقد، حيث يُعاد توزيع الدفعات على الأقساط تلقائيًا.
+          @if (detailFull()?.relatedPartyId; as clientId) {
+            <a class="vd-alloc-link" routerLink="/customers/statement" [queryParams]="{ clientId }"
+              (click)="closeDetail()">فتح كشف حساب العميل ←</a>
+          }
+        </div>
+      </div>
+    }
   }
 
   <ng-container modal-footer>

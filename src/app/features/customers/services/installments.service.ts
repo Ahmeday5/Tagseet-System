@@ -8,13 +8,13 @@ import {
   withInlineHandling,
 } from '../../../core/http/http-context.tokens';
 import {
-  CancelInstallmentPaymentResponse,
+  InstallmentPaymentResult,
   PayInstallmentPayload,
-  PayInstallmentResponse,
+  UpdateInstallmentPaymentPayload,
 } from '../models/client-statement.model';
 
 /**
- * Cache patterns invalidated by a successful installment payment.
+ * Cache patterns invalidated by any installment-payment write.
  * A payment ripples across many widgets — keep this list explicit so any
  * future page that caches one of these slices auto-refreshes.
  */
@@ -24,6 +24,7 @@ const PAYMENT_INVALIDATE_KEYS = [
   'client',
   'payment',
   'treasur',
+  'vouchers',
   'home-summary',
   'financial-separation',
 ] as const;
@@ -35,39 +36,49 @@ export class InstallmentsService {
   /**
    * POST /installments/pay
    *
-   * Records a payment against an open contract. The caller surfaces the
-   * server-provided `message` to the user; on success, every cache key
-   * listed above is invalidated so dependent widgets (sidebar badges,
-   * dashboard summary, contract details modal) refetch automatically.
+   * Records ONE receipt voucher against an open contract; the backend spreads
+   * it across installments oldest-first and returns that split.
    */
-  pay(payload: PayInstallmentPayload): Observable<PayInstallmentResponse> {
-    return this.api.post<PayInstallmentResponse>(
+  pay(payload: PayInstallmentPayload): Observable<InstallmentPaymentResult> {
+    return this.api.post<InstallmentPaymentResult>(
       API_ENDPOINTS.installments.pay,
       payload,
-      {
-        context: withInlineHandling(
-          withCacheInvalidate([...PAYMENT_INVALIDATE_KEYS]),
-        ),
-      },
+      { context: this.writeContext() },
     );
   }
 
   /**
-   * POST /dashboard/installments/{id}/cancel-payment
+   * PUT /dashboard/installments/payments/{voucherId}
    *
-   * Reverts a paid/partial installment back to unpaid — no restriction on
-   * the installment's current status server-side. Invalidates the same
-   * cache scopes as `pay` so all downstream widgets refresh automatically.
+   * Edits a whole payment voucher (amount / treasury / date / notes). The
+   * backend re-allocates every payment afterwards, so installment statuses
+   * may change — callers must refetch the contract details.
    */
-  cancelPayment(installmentId: number): Observable<CancelInstallmentPaymentResponse> {
-    return this.api.post<CancelInstallmentPaymentResponse>(
-      API_ENDPOINTS.installments.cancelPayment(installmentId),
-      {},
-      {
-        context: withInlineHandling(
-          withCacheInvalidate([...PAYMENT_INVALIDATE_KEYS]),
-        ),
-      },
+  updatePayment(
+    voucherId: number,
+    payload: UpdateInstallmentPaymentPayload,
+  ): Observable<InstallmentPaymentResult> {
+    return this.api.put<InstallmentPaymentResult>(
+      API_ENDPOINTS.installments.paymentById(voucherId),
+      payload,
+      { context: this.writeContext() },
     );
+  }
+
+  /**
+   * DELETE /dashboard/installments/payments/{voucherId}
+   *
+   * Deletes a whole payment voucher, deducts it from its treasury, and
+   * re-allocates the remaining payments.
+   */
+  deletePayment(voucherId: number): Observable<void> {
+    return this.api.delete<void>(
+      API_ENDPOINTS.installments.paymentById(voucherId),
+      { context: this.writeContext() },
+    );
+  }
+
+  private writeContext() {
+    return withInlineHandling(withCacheInvalidate([...PAYMENT_INVALIDATE_KEYS]));
   }
 }

@@ -366,3 +366,61 @@
 .mb-0   { margin-bottom: 0 !important; }
 .ms-auto { margin-inline-start: auto; }
 .flex-wrap { flex-wrap: wrap; }
+
+/* ── Installment voucher allocations (detail modal) ── */
+.vd-alloc {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--brd);
+}
+
+.vd-alloc-title {
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.vd-alloc-table {
+  width: 100%;
+  font-size: 12px;
+  border: 1px solid var(--brd);
+  border-radius: var(--r);
+
+  th,
+  td {
+    padding: 6px 10px;
+    text-align: start;
+  }
+
+  th {
+    background: var(--bg3);
+    color: var(--txt2);
+    font-weight: 600;
+  }
+
+  tbody tr + tr td {
+    border-top: 1px solid var(--brd);
+  }
+}
+
+.vd-alloc-empty {
+  font-size: 11.5px;
+  color: var(--txt3);
+}
+
+.vd-alloc-hint {
+  margin-top: 10px;
+  font-size: 11px;
+  color: var(--txt2);
+  background: var(--am-l);
+  border-radius: var(--r);
+  padding: 8px 10px;
+}
+
+.vd-alloc-link {
+  display: inline-block;
+  margin-top: 4px;
+  font-weight: 700;
+  color: var(--bl);
+  text-decoration: none;
+}

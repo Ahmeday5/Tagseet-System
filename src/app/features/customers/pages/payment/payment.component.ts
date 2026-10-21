@@ -16,8 +16,13 @@ import { DashboardClient } from '../../models/dashboard-client.model';
 import {
   ClientContractRow,
   ContractDetails,
+  InstallmentPaymentResult,
   PayInstallmentPayload,
 } from '../../models/client-statement.model';
+import {
+  PaymentReceiptContext,
+  PaymentReceiptModalComponent,
+} from '../../components/payment-receipt-modal/payment-receipt-modal.component';
 import { LookupItem } from '../../../../core/models/lookup.model';
 import { PaymentRecord } from '../../models/customer.model';
 import { BadgeComponent } from '../../../../shared/components/badge/badge.component';
@@ -46,6 +51,7 @@ const CONTRACT_PAGE_SIZE = 100;
     BadgeComponent,
     CurrencyArPipe,
     SearchableSelectComponent,
+    PaymentReceiptModalComponent,
   ],
   templateUrl: './payment.component.html',
   styleUrl: './payment.component.scss',
@@ -87,6 +93,10 @@ export class PaymentComponent {
 
   protected readonly submitting = signal(false);
   protected readonly detailsLoading = signal(false);
+
+  // ── receipt shown after a successful payment ──
+  protected readonly receipt = signal<InstallmentPaymentResult | null>(null);
+  protected readonly receiptContext = signal<PaymentReceiptContext | null>(null);
 
   // ── derived ──
   protected readonly selectedClient = computed(() =>
@@ -261,9 +271,14 @@ export class PaymentComponent {
 
     this.submitting.set(true);
     this.installmentsService.pay(payload).subscribe({
-      next: () => {
+      next: (result) => {
         this.submitting.set(false);
-        this.toast.success('تم تسجيل الدفعة بنجاح');
+        this.receiptContext.set({
+          clientName: this.selectedClient()?.fullName ?? '',
+          contractId: contract.id,
+          treasuryName: this.treasuries().find((t) => t.id === treasuryId)?.name ?? null,
+        });
+        this.receipt.set(result);
         // Refresh this page's own data directly — don't rely solely on the
         // cache-invalidation cascade to eventually reach this instance.
         this.refreshAfterMutation();
@@ -277,6 +292,11 @@ export class PaymentComponent {
     });
   }
   
+  protected closeReceipt(): void {
+    this.receipt.set(null);
+    this.receiptContext.set(null);
+  }
+
   // ─────────── view helpers ───────────
 
   protected getStatusLabel(s: PaymentRecord['status']): string {

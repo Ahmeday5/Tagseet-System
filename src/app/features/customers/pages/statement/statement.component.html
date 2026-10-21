@@ -341,110 +341,26 @@
   </div>
   }
 
-  <!-- Installments schedule -->
+  <!-- Installments schedule — every payment part under its installment -->
   <div class="st-d-section">جدول الأقساط</div>
-  <div class="tw">
-    <table class="table">
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>تاريخ الاستحقاق</th>
-          <th>قيمة القسط</th>
-          <th>المسدد</th>
-          <th>المتبقي</th>
-          <th>تاريخ السداد</th>
-          <th>الحالة</th>
-          <th>إجراء</th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (it of d.installments; track $index) {
-        <tr [class.st-row-overdue]="it.isOverdue">
-          <td>{{ it.sequence }}</td>
-          <td>{{ formatDate(it.dueDate) }}</td>
-          <td>{{ it.dueAmount | currencyAr }}</td>
-          <td [style.color]="it.paidAmount > 0 ? 'var(--gr)' : ''">
-            {{ it.paidAmount | currencyAr : true }}
-          </td>
-          <td [style.color]="it.remaining > 0 ? 'var(--re)' : 'var(--gr)'" style="font-weight:600">
-            {{ it.remaining | currencyAr : true }}
-          </td>
-          <td>{{ formatDate(it.paidDate) }}</td>
-          <td>
-            <app-badge [text]="installmentLabel(it.status)" [type]="installmentBadge(it)" />
-          </td>
-          <td>
-            @if (it.status === 'Paid' || it.status === 'Partial') {
-              <button
-                class="btn btn-sm btn-re"
-                [disabled]="cancellingSequence() === it.sequence"
-                (click)="confirmCancelInstallment(it)"
-                title="إلغاء الدفعة"
-              >
-                @if (cancellingSequence() === it.sequence) {
-                  <span class="spinner-border spinner-border-sm"></span>
-                } @else {
-                  إلغاء
-                }
-              </button>
-            }
-          </td>
-        </tr>
-        }
-      </tbody>
-    </table>
-  </div>
+  <app-installment-schedule-table
+    [installments]="d.installments"
+    [payments]="d.payments"
+    [busyVoucherId]="busyVoucherId()"
+    (edit)="openEditPayment($event)"
+    (remove)="confirmDeletePayment($event)"
+  />
 
-  <!-- Payments log -->
-  @if (d.payments && d.payments.length) {
-  <div class="st-d-section">سندات القبض</div>
-  <div class="tw">
-    <table class="table">
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>تاريخ سداد القسط</th>
-          <th>المبلغ</th>
-          <th>النوع</th>
-          <th>ملاحظات</th>
-          <th>إجراء</th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (p of d.payments; track $index; let i = $index) {
-        <tr>
-          <td>{{ i + 1 }}</td>
-          <td>{{ formatDate(p.date) }}</td>
-          <td style="font-weight:700;color:var(--gr)">{{ p.amount | currencyAr : true }}</td>
-          <td>{{ paymentKindLabel(p.kind, paymentSequenceByIndex()[i]) }}</td>
-          <td class="st-notes" [class.st-notes-empty]="!p.notes?.trim()" [title]="paymentNoteText(p.notes)">
-            {{ paymentNoteText(p.notes) }}
-          </td>
-          <td>
-            <div class="d-flex gap-1">
-              <button type="button" class="btn btn-sm" (click)="openEditVoucher(p)">تعديل</button>
-              @if (p.kind === 'Installment') {
-                <button
-                  type="button"
-                  class="btn btn-sm btn-re"
-                  [disabled]="cancellingSequence() === paymentSequenceByIndex()[i]"
-                  (click)="confirmCancelPaymentVoucher(p, i)"
-                  title="إلغاء سداد القسط المرتبط بهذا السند"
-                >
-                  @if (cancellingSequence() !== null && cancellingSequence() === paymentSequenceByIndex()[i]) {
-                    <span class="spinner-border spinner-border-sm"></span>
-                  } @else {
-                    إلغاء
-                  }
-                </button>
-              }
-            </div>
-          </td>
-        </tr>
-        }
-      </tbody>
-    </table>
-  </div>
+  <!-- Receipt vouchers — one row per voucher -->
+  @if (d.payments.length) {
+  <div class="st-d-section">سندات القبض ({{ d.payments.length }})</div>
+  <app-contract-payments-table
+    [payments]="d.payments"
+    [installments]="d.installments"
+    [busyVoucherId]="busyVoucherId()"
+    (edit)="openEditPayment($event)"
+    (remove)="confirmDeletePayment($event)"
+  />
   }
   }
 
@@ -526,80 +442,23 @@
   </ng-container>
 </app-modal>
 
-<!-- ─────────────────────────── Edit Voucher Modal ─────────────────────────── -->
-<app-modal
-  [open]="editVoucherOpen()"
-  size="md"
-  title="تعديل السند"
-  [closeOnBackdrop]="!editVoucherSubmitting()"
-  [closeOnEsc]="!editVoucherSubmitting()"
-  (closed)="closeEditVoucher()"
->
-  @if (editVoucherTarget(); as p) {
-  <div class="st-pay-intro">
-    <span>{{ paymentKindLabel(p.kind) }}</span>
-    <span class="st-pay-intro-sep">|</span>
-    <span>{{ p.voucherNumber }}</span>
-  </div>
+<!-- ─────────────────────────── Edit payment voucher ─────────────────────────── -->
+<app-installment-payment-edit-modal
+  [open]="editPaymentTarget() !== null"
+  [payment]="editPaymentTarget()"
+  [treasuries]="treasuries()"
+  [installments]="details()?.installments ?? []"
+  (closed)="closeEditPayment()"
+  (saved)="onPaymentEdited()"
+/>
 
-  @if (editVoucherLoading()) {
-    <div class="st-loading">جارٍ تحميل بيانات السند...</div>
-  } @else {
-  <div class="row g-2">
-    <div class="col-12 col-sm-6">
-      <label class="form-label">المبلغ (ج.م)</label>
-      <input
-        type="number"
-        class="form-control"
-        min="0"
-        step="0.01"
-        [ngModel]="editVoucherForm().amount"
-        (ngModelChange)="updateEditVoucherForm('amount', +$event)"
-      />
-    </div>
-    <div class="col-12 col-sm-6">
-      <label class="form-label">التاريخ</label>
-      <input
-        type="date"
-        class="form-control"
-        [ngModel]="editVoucherForm().date"
-        (ngModelChange)="updateEditVoucherForm('date', $event)"
-      />
-    </div>
-    <div class="col-12 col-sm-6">
-      <label class="form-label">الخزينة <span class="text-danger">*</span></label>
-      <select
-        class="form-select"
-        [class.is-invalid]="editVoucherForm().treasuryId === null"
-        [ngModel]="editVoucherForm().treasuryId ?? ''"
-        (ngModelChange)="updateEditVoucherForm('treasuryId', $event ? +$event : null)"
-      >
-        <option value="">-- اختر الخزينة --</option>
-        @for (t of treasuries(); track t.id) {
-          <option [value]="t.id">{{ t.name }}</option>
-        }
-      </select>
-    </div>
-    <div class="col-12">
-      <label class="form-label">ملاحظات</label>
-      <textarea
-        class="form-control"
-        rows="2"
-        [ngModel]="editVoucherForm().notes"
-        (ngModelChange)="updateEditVoucherForm('notes', $event)"
-      ></textarea>
-    </div>
-  </div>
-  }
-  }
-
-  <ng-container modal-footer>
-    <button class="btn" (click)="closeEditVoucher()" [disabled]="editVoucherSubmitting()">إلغاء</button>
-    <button class="btn btn-bl" (click)="submitEditVoucher()" [disabled]="editVoucherSubmitting() || editVoucherLoading()">
-      {{ editVoucherSubmitting() ? 'جارٍ الحفظ...' : 'حفظ التعديلات' }}
-    </button>
-  </ng-container>
-</app-modal>
+<!-- ─────────────────────────── Payment receipt ─────────────────────────── -->
+<app-payment-receipt-modal
+  [open]="receipt() !== null"
+  [result]="receipt()"
+  [context]="receiptContext()"
+  (closed)="closeReceipt()"
+/>
 
 <!-- ─────────────────────────── Direct Contract Edit Modal ─────────────────────────── -->
 <app-direct-contract-modal

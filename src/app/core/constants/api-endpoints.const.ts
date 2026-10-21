@@ -158,11 +158,12 @@ export const API_ENDPOINTS = {
      */
     pay: 'installments/pay',
     /**
-     * POST: cancels a paid OR partially-paid installment and reverts it to
-     * unpaid — dashboard-scoped endpoint (no status restriction server-side).
+     * PUT edit / DELETE a single installment payment voucher. The backend
+     * re-applies every remaining payment to the installments oldest-first,
+     * so callers must refetch the contract details afterwards.
      */
-    cancelPayment: (id: number) =>
-      `dashboard/installments/${id}/cancel-payment`,
+    paymentById: (voucherId: number) =>
+      `dashboard/installments/payments/${voucherId}`,
   },
   clientOrders: {
     base: 'dashboard/client-orders',

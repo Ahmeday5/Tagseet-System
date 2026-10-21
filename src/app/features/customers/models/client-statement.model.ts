@@ -100,14 +100,33 @@ export interface ContractDetails {
   payments: ContractPaymentRow[];
 }
 
+/** How much of one voucher was applied to one installment. */
+export interface InstallmentAllocation {
+  installmentId: number;
+  sequence: number;
+  amount: number;
+}
+
+export type ContractPaymentKind = 'Installment' | 'DownPayment';
+
+/**
+ * One row per receipt voucher (reversal vouchers are excluded server-side).
+ * A single voucher may cover several installments — see `installments`.
+ */
 export interface ContractPaymentRow {
-  /** Voucher DB id — present when the API exposes it; `undefined` otherwise. */
-  id?: number;
+  /** Voucher id — the key for the edit/delete endpoints (never `voucherNumber`). */
+  id: number;
   voucherNumber: string;
   date: string;
   amount: number;
-  kind: string;
+  treasuryId: number | null;
+  treasuryName: string | null;
+  kind: ContractPaymentKind;
   notes: string | null;
+  installments: InstallmentAllocation[];
+  /** Always `false` for `DownPayment`. */
+  canEdit: boolean;
+  canDelete: boolean;
 }
 
 export interface ContractDetailsContract {
@@ -182,16 +201,29 @@ export interface ContractNextInstallment {
   dueDate: string;
 }
 
-export type ContractInstallmentStatus =
-  | 'Paid'
-  | 'Partial'
-  | 'Upcoming'
-  | 'Overdue'
-  | string;
+/**
+ * Installment status as sent on the wire — the numeric enum value
+ * (`Upcoming=1, Due=2, Partial=3, Paid=4, Late=5`) or, on older payloads,
+ * its name. Normalize with `toInstallmentStatus()` before using it.
+ */
+export type ContractInstallmentStatus = number | string;
+
+/** The slice of one payment voucher applied to one installment. */
+export interface InstallmentPart {
+  voucherId: number;
+  voucherNumber: string;
+  date: string;
+  /** Amount applied to THIS installment. */
+  amount: number;
+  /** Full voucher amount — greater than `amount` when it also covered other installments. */
+  voucherTotal: number;
+  treasuryId: number | null;
+  treasuryName: string | null;
+  notes: string | null;
+}
 
 export interface ContractInstallmentRow {
-  /** Installment's own DB id — present when the API exposes it; `undefined` otherwise. */
-  id?: number;
+  id: number;
   sequence: number;
   dueDate: string;
   dueAmount: number;
@@ -200,7 +232,8 @@ export interface ContractInstallmentRow {
   paidDate: string | null;
   status: ContractInstallmentStatus;
   isOverdue: boolean;
-  notes: string | null;
+  /** Payments applied to this installment, oldest first. */
+  parts: InstallmentPart[];
 }
 
 /** POST /installments/pay */
@@ -214,12 +247,24 @@ export interface PayInstallmentPayload {
   notes?: string;
 }
 
-export interface PayInstallmentResponse {
-  message: string;
+/**
+ * Result of `POST /installments/pay` and `PUT /dashboard/installments/payments/{id}`:
+ * the single voucher recorded and how its amount was spread across installments.
+ */
+export interface InstallmentPaymentResult {
+  voucherId: number;
+  voucherNumber: string;
+  amount: number;
+  date: string;
+  treasuryId: number;
+  allocations: InstallmentAllocation[];
 }
 
-/** POST /installments/{id}/cancel-payment */
-export interface CancelInstallmentPaymentResponse {
-  message: string;
+/** PUT /dashboard/installments/payments/{voucherId} — `null` keeps the current value. */
+export interface UpdateInstallmentPaymentPayload {
+  amount: number;
+  treasuryId: number;
+  paymentDate: string | null;
+  notes: string | null;
 }
 

@@ -1,0 +1,36 @@
+<app-modal [open]="open()" size="md" title="تم تسجيل الدفعة" (closed)="closed.emit()">
+  @if (result(); as r) {
+  <div class="prm-head">
+    <div class="prm-check" aria-hidden="true">✓</div>
+    <div>
+      <div class="prm-amount">{{ r.amount | currencyAr: true }}</div>
+      <div class="prm-sub">
+        سند رقم <span class="prm-voucher">{{ r.voucherNumber }}</span> — {{ r.date | dateAr: 'short' }}
+      </div>
+      @if (context(); as ctx) {
+      <div class="prm-sub">
+        {{ ctx.clientName }} — عقد #{{ ctx.contractId }}
+        @if (ctx.treasuryName) { — {{ ctx.treasuryName }} }
+      </div>
+      }
+    </div>
+  </div>
+
+  <div class="prm-section">توزيع المبلغ على الأقساط</div>
+  <div class="prm-split">
+    @for (a of r.allocations; track a.installmentId) {
+    <div class="prm-split-row">
+      <span>قسط {{ a.sequence }}</span>
+      <strong>{{ a.amount | currencyAr: true }}</strong>
+    </div>
+    } @empty {
+    <div class="prm-sub">لم يُوزَّع المبلغ على أي قسط.</div>
+    }
+  </div>
+  }
+
+  <ng-container modal-footer>
+    <button type="button" class="btn" (click)="closed.emit()">إغلاق</button>
+    <button type="button" class="btn btn-bl" [disabled]="!result()" (click)="print()">🖨 طباعة السند</button>
+  </ng-container>
+</app-modal>

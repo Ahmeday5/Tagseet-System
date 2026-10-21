@@ -8,6 +8,7 @@ import {
 } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 
 import { VouchersService } from '../../services/vouchers.service';
 import { VoucherDetailDto, VoucherDto, UpdateVoucherPayload } from '../../models/voucher.model';
@@ -66,6 +67,7 @@ const REFETCH_DEBOUNCE_MS = 200;
   imports: [
     DecimalPipe,
     FormsModule,
+    RouterLink,
     BadgeComponent,
     PaginationComponent,
     ModalComponent,
@@ -114,6 +116,9 @@ export class VouchersListComponent {
   // ── voucher-number detail modal ──
   protected readonly detailOpen = signal(false);
   protected readonly detailVoucher = signal<VoucherDto | null>(null);
+  /** Full record — loaded for installment vouchers (allocations + client link). */
+  protected readonly detailFull = signal<VoucherDetailDto | null>(null);
+  protected readonly detailFullLoading = signal(false);
 
   // ── derived ──
   protected readonly hasFilters = computed(
@@ -489,11 +494,35 @@ export class VouchersListComponent {
 
   protected openDetail(v: VoucherDto): void {
     this.detailVoucher.set(v);
+    this.detailFull.set(null);
     this.detailOpen.set(true);
+    if (!this.isInstallmentVoucher(v)) return;
+
+    this.detailFullLoading.set(true);
+    this.svc.getById(v.id).subscribe({
+      next: (detail) => {
+        // Ignore a late response for a voucher the user already navigated away from.
+        if (this.detailVoucher()?.id === v.id) this.detailFull.set(detail);
+        this.detailFullLoading.set(false);
+      },
+      error: (err: ApiError) => {
+        this.detailFullLoading.set(false);
+        this.toast.error(apiErrorToMessage(err, 'تعذّر تحميل توزيع السند على الأقساط'));
+      },
+    });
   }
 
   protected closeDetail(): void {
     this.detailOpen.set(false);
+    this.detailFull.set(null);
+  }
+
+  /**
+   * Installment vouchers are edited/deleted per contract (the backend
+   * re-allocates the installments) — the generic voucher endpoints reject them.
+   */
+  protected isInstallmentVoucher(v: VoucherDto): boolean {
+    return v.referenceType === ReferenceType.Installment;
   }
 
   // ─────────── view helpers ───────────

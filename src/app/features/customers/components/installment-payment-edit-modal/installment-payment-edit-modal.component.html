@@ -1,0 +1,60 @@
+<app-modal [open]="open()" size="md" title="تعديل سند القبض" [closeOnBackdrop]="!submitting()"
+  [closeOnEsc]="!submitting()" (closed)="close()">
+
+  @if (payment(); as p) {
+  <div class="ipe-intro">
+    <span>{{ p.voucherNumber }}</span>
+    <span class="ipe-sep">|</span>
+    <span>المبلغ الحالي: <strong>{{ p.amount | currencyAr: true }}</strong></span>
+    @if (p.treasuryName) {
+    <span class="ipe-sep">|</span>
+    <span>{{ p.treasuryName }}</span>
+    }
+  </div>
+
+  @if (p.installments.length > 1) {
+  <div class="alert alert-warning py-2 px-3 mb-3" style="font-size:11.5px">
+    هذا السند يغطي أكثر من قسط ({{ coverage() }}). التعديل يطبَّق على السند بالكامل،
+    ثم يُعاد توزيع الدفعات على الأقساط بالترتيب.
+  </div>
+  }
+
+  <div class="row g-2">
+    <div class="col-12 col-sm-6">
+      <label class="form-label">المبلغ (ج.م) <span class="text-danger">*</span></label>
+      <input type="number" class="form-control" min="0.01" step="0.01"
+        [class.is-invalid]="!(form().amount > 0)"
+        [ngModel]="form().amount" (ngModelChange)="update('amount', +$event)" />
+    </div>
+    <div class="col-12 col-sm-6">
+      <label class="form-label">تاريخ السداد</label>
+      <input type="date" class="form-control" [ngModel]="form().date" (ngModelChange)="update('date', $event)" />
+    </div>
+    <div class="col-12">
+      <label class="form-label">الخزينة <span class="text-danger">*</span></label>
+      <select class="form-select" [class.is-invalid]="form().treasuryId === null"
+        [ngModel]="form().treasuryId ?? ''" (ngModelChange)="update('treasuryId', $event ? +$event : null)">
+        <option value="">-- اختر الخزينة --</option>
+        @for (t of treasuryOptions(); track t.id) {
+        <option [value]="t.id">{{ t.name }}</option>
+        }
+      </select>
+    </div>
+    <div class="col-12">
+      <label class="form-label">ملاحظات</label>
+      <textarea class="form-control" rows="2" [ngModel]="form().notes"
+        (ngModelChange)="update('notes', $event)"></textarea>
+    </div>
+  </div>
+  }
+
+  <ng-container modal-footer>
+    <button type="button" class="btn" (click)="close()" [disabled]="submitting()">إلغاء</button>
+    <button type="button" class="btn btn-bl" (click)="submit()" [disabled]="submitting()">
+      @if (submitting()) {
+      <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+      }
+      {{ submitting() ? 'جارٍ الحفظ...' : 'حفظ التعديلات' }}
+    </button>
+  </ng-container>
+</app-modal>

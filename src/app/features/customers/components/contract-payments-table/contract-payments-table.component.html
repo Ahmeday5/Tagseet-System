@@ -1,0 +1,59 @@
+<div class="tw">
+  <table class="table cpt">
+    <thead>
+      <tr>
+        <th>التاريخ</th>
+        <th>المبلغ</th>
+        <th>الخزينة</th>
+        <th>الأقساط المغطاة</th>
+        <th>ملاحظات</th>
+        <th>إجراءات</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (p of payments(); track p.id) {
+      <tr>
+        <td>{{ p.date | dateAr: 'short' }}</td>
+        <td class="cpt-amount">{{ p.amount | currencyAr: true }}</td>
+        <td>{{ p.treasuryName || '—' }}</td>
+        <td>
+          @if (p.kind === 'DownPayment') {
+          <app-badge [text]="kindLabel(p.kind)" type="teal" />
+          } @else {
+          <div class="cpt-chips">
+            @for (a of p.installments; track a.installmentId) {
+            <span class="cpt-chip">{{ chipLabel(a) }}</span>
+            } @empty {
+            <span class="cpt-muted">—</span>
+            }
+          </div>
+          }
+        </td>
+        <td class="cpt-notes" [title]="noteText(p.notes)">{{ noteText(p.notes) }}</td>
+        <td>
+          @if (p.canEdit || p.canDelete) {
+          <div class="cpt-actions">
+            @if (p.canEdit) {
+            <button type="button" class="btn btn-sm" [disabled]="busyVoucherId() === p.id"
+              (click)="edit.emit(p)">تعديل</button>
+            }
+            @if (p.canDelete) {
+            <button type="button" class="btn btn-sm btn-re" [disabled]="busyVoucherId() === p.id"
+              (click)="remove.emit(p)">
+              @if (busyVoucherId() === p.id) {
+              <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+              } @else {
+              حذف
+              }
+            </button>
+            }
+          </div>
+          } @else {
+          <span class="cpt-muted">—</span>
+          }
+        </td>
+      </tr>
+      }
+    </tbody>
+  </table>
+</div>
