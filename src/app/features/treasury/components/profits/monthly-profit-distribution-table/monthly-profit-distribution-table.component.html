@@ -1,0 +1,50 @@
+<ng-template #figures let-v="view">
+  <td [class.ps-loss]="v.row.distributedProfit < 0">{{ v.row.distributedProfit | amountAr }}</td>
+  @if (showCompanyFigures()) {
+    <td [class.ps-loss]="v.row.companyProfit < 0">{{ v.row.companyProfit | amountAr }}</td>
+  }
+  <td [class.ps-loss]="v.row.representativesProfit < 0">{{ v.row.representativesProfit | amountAr }}</td>
+  @for (amount of v.repAmounts; track $index) {
+    <td [class.ps-loss]="amount < 0">{{ amount | amountAr }}</td>
+  }
+</ng-template>
+
+<section aria-labelledby="mpdt-title">
+  <h2 id="mpdt-title" class="ps-banner">توزيع الأرباح الشهرية</h2>
+
+  <div class="ps-scroll">
+    <table>
+      <thead>
+        <tr>
+          <th scope="col" class="ps-month">الشهر</th>
+          <th scope="col" [title]="hints.distributedProfits">الأرباح الموزعة</th>
+          @if (showCompanyFigures()) {
+            <th scope="col" [title]="hints.companyProfit">أرباح الشركة</th>
+          }
+          <th scope="col" [title]="hints.representativesProfit">أرباح إجمالي المناديب</th>
+          @for (rep of representatives(); track rep.representativeId) {
+            <th scope="col" [title]="hints.monthlyRepresentativeProfit">
+              أرباح المندوب {{ rep.representativeName }}
+            </th>
+          }
+        </tr>
+      </thead>
+
+      <tbody>
+        @for (v of months(); track v.row.month) {
+          <tr [class.ps-current]="v.row.isCurrentMonth">
+            <th scope="row" class="ps-month">{{ v.row.monthName }}</th>
+            <ng-container *ngTemplateOutlet="figures; context: { view: v }" />
+          </tr>
+        }
+      </tbody>
+
+      <tfoot>
+        <tr>
+          <th scope="row" class="ps-month">{{ total().row.monthName }}</th>
+          <ng-container *ngTemplateOutlet="figures; context: { view: total() }" />
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</section>

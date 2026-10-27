@@ -1,0 +1,58 @@
+@use '../profits-sheet' as ps;
+
+.ps-card {
+  border: 3px solid ps.$ps-frame;
+  background: ps.$ps-frame;
+  display: grid;
+  gap: 3px;
+  color: ps.$ps-ink;
+}
+
+.ps-head {
+  margin: 0;
+  padding: 26px 12px;
+  background: ps.$ps-green-light;
+  font-size: 14px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.ps-grid {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 3px;
+
+  @media (max-width: 575.98px) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.ps-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 3px;
+  cursor: help;
+
+  dt,
+  dd {
+    margin: 0;
+    padding: 14px 8px;
+    background: ps.$ps-green-pale;
+    text-align: center;
+    font-weight: 800;
+  }
+
+  dt {
+    font-size: 12.5px;
+  }
+
+  dd {
+    font-size: 14px;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.ps-loss {
+  color: ps.$ps-loss;
+}

@@ -1,0 +1,31 @@
+@let t = treasuries();
+
+<div class="pt-card" [class.pt-single]="t.representatives.length === 0">
+  <dl class="pt-col">
+    @if (showCompanyFigures()) {
+      <div class="pt-item" [title]="hints.profitsTreasury">
+        <dt>خزنة الأرباح</dt>
+        <dd [class.pt-loss]="t.profitsTreasury < 0">{{ t.profitsTreasury | amountAr }}</dd>
+      </div>
+      <div class="pt-item" [title]="hints.companyProfitsTreasury">
+        <dt>خزنة أرباح الشركة</dt>
+        <dd [class.pt-loss]="t.companyProfitsTreasury < 0">{{ t.companyProfitsTreasury | amountAr }}</dd>
+      </div>
+    }
+    <div class="pt-item" [title]="hints.representativesProfitsTotal">
+      <dt>خزنة إجمالي أرباح المناديب</dt>
+      <dd [class.pt-loss]="t.representativesProfitsTotal < 0">{{ t.representativesProfitsTotal | amountAr }}</dd>
+    </div>
+  </dl>
+
+  @if (t.representatives.length) {
+    <dl class="pt-col">
+      @for (rep of t.representatives; track rep.representativeId) {
+        <div class="pt-item" [title]="hints.representativeProfit">
+          <dt>أرباح المندوب {{ rep.representativeName }}</dt>
+          <dd [class.pt-loss]="rep.amount < 0">{{ rep.amount | amountAr }}</dd>
+        </div>
+      }
+    </dl>
+  }
+</div>

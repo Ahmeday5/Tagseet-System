@@ -53,6 +53,21 @@
             <td class="text-center">
               <div class="d-flex gap-1 justify-content-center">
                 <button class="btn btn-sm" (click)="openView(u)" title="عرض">عرض</button>
+                @if (isRepresentative(u)) {
+                  <button
+                    type="button"
+                    class="btn btn-sm d-inline-flex align-items-center gap-1"
+                    *appHasPermission="PERMS.treasuryView"
+                    [disabled]="resolvingStatementFor() === u.id"
+                    (click)="openRepStatement(u)"
+                    title="كشف الحساب"
+                  >
+                    @if (resolvingStatementFor() === u.id) {
+                      <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                    }
+                    <span>كشف الحساب</span>
+                  </button>
+                }
                 <button class="btn btn-sm btn-bl" (click)="openEdit(u)" title="تعديل">تعديل</button>
                 <button
                   class="btn btn-sm btn-re d-inline-flex align-items-center gap-1"
@@ -90,4 +105,11 @@
   [user]="modalUser()"
   (closed)="closeModal()"
   (saved)="onSaved($event)"
+/>
+
+<app-rep-statement-modal
+  [open]="statementOpen()"
+  [representativeId]="statementRepId()"
+  [representativeName]="statementRepName()"
+  (closed)="statementOpen.set(false)"
 />

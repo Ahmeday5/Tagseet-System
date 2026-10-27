@@ -16,6 +16,10 @@ import { ToastService } from '../../../../core/services/toast.service';
 import { ApiError } from '../../../../core/models/api-response.model';
 import { roleLabel } from '../../../../core/constants/user-roles.const';
 import { BadgeType } from '../../../../shared/components/badge/badge.component';
+import { PERMISSIONS } from '../../../../core/constants/permissions.const';
+import { HasPermissionDirective } from '../../../../shared/directives/has-permission.directive';
+import { RepsService } from '../../../reps/services/reps.service';
+import { RepStatementModalComponent } from '../../../reps/components/rep-statement-modal/rep-statement-modal.component';
 
 const ROLE_BADGE_MAP: Record<string, BadgeType> = {
   Admin: 'bad',
@@ -30,7 +34,12 @@ const ROLE_BADGE_MAP: Record<string, BadgeType> = {
   selector: 'app-users-list',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [BadgeComponent, AppUserFormModalComponent],
+  imports: [
+    BadgeComponent,
+    AppUserFormModalComponent,
+    RepStatementModalComponent,
+    HasPermissionDirective,
+  ],
   templateUrl: './users-list.component.html',
   styleUrl: './users-list.component.scss',
 })
@@ -38,6 +47,9 @@ export class UsersListComponent implements OnInit {
   private readonly service = inject(AppUsersService);
   private readonly dialog = inject(DialogService);
   private readonly toast = inject(ToastService);
+  private readonly reps = inject(RepsService);
+
+  protected readonly PERMS = PERMISSIONS;
 
   protected readonly users = signal<AppUser[]>([]);
   protected readonly loading = signal(false);
@@ -50,6 +62,13 @@ export class UsersListComponent implements OnInit {
 
   // Tracks which row is currently being deleted (for inline button-state).
   protected readonly deletingId = signal<string | null>(null);
+
+  // Representative statement modal (shared with the reps page).
+  protected readonly statementOpen = signal(false);
+  protected readonly statementRepId = signal<number | null>(null);
+  protected readonly statementRepName = signal('');
+  /** Row whose representative profile is being resolved. */
+  protected readonly resolvingStatementFor = signal<string | null>(null);
 
   protected readonly hasUsers = computed(() => this.users().length > 0);
 
@@ -132,6 +151,33 @@ export class UsersListComponent implements OnInit {
         this.toast.success('تم حذف المستخدم بنجاح');
       },
       error: (_err: ApiError) => this.deletingId.set(null),
+    });
+  }
+
+  protected isRepresentative(user: AppUser): boolean {
+    return user.role === 'Representative';
+  }
+
+  /**
+   * Users carry only the identity GUID, so the linked representative is
+   * resolved first, then the same statement modal as the reps page opens.
+   */
+  protected openRepStatement(user: AppUser): void {
+    if (this.resolvingStatementFor()) return;
+    this.resolvingStatementFor.set(user.id);
+
+    this.reps.findByAppUserId(user.id).subscribe({
+      next: (rep) => {
+        this.resolvingStatementFor.set(null);
+        if (!rep) {
+          this.toast.error('لا يوجد ملف مندوب مرتبط بهذا المستخدم');
+          return;
+        }
+        this.statementRepId.set(rep.id);
+        this.statementRepName.set(rep.fullName);
+        this.statementOpen.set(true);
+      },
+      error: () => this.resolvingStatementFor.set(null),
     });
   }
 

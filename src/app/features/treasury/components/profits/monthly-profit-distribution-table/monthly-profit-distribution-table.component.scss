@@ -1,0 +1,11 @@
+@use '../profits-sheet' as ps;
+
+:host {
+  display: block;
+  @include ps.ps-table(ps.$ps-gold);
+}
+
+.ps-banner {
+  @include ps.ps-banner(ps.$ps-orange);
+  margin-bottom: 0;
+}

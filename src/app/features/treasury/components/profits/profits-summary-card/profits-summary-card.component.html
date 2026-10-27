@@ -1,0 +1,20 @@
+@let s = summary();
+
+<section class="ps-card" aria-labelledby="ps-summary-title">
+  <h2 id="ps-summary-title" class="ps-head">الأرباح</h2>
+
+  <dl class="ps-grid">
+    <div class="ps-pair" [title]="hints.totalProfits">
+      <dt>الأرباح الكلية</dt>
+      <dd [class.ps-loss]="s.totalProfits < 0">{{ s.totalProfits | amountAr }}</dd>
+    </div>
+    <div class="ps-pair" [title]="hints.distributedProfits">
+      <dt>الأرباح الموزعة</dt>
+      <dd [class.ps-loss]="s.distributedProfits < 0">{{ s.distributedProfits | amountAr }}</dd>
+    </div>
+    <div class="ps-pair" [title]="hints.currentProfits">
+      <dt>الأرباح الحالية</dt>
+      <dd [class.ps-loss]="s.currentProfits < 0">{{ s.currentProfits | amountAr }}</dd>
+    </div>
+  </dl>
+</section>

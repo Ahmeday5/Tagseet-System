@@ -1,5 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { ApiService } from '../../../core/services/api.service';
 import { API_ENDPOINTS } from '../../../core/constants/api-endpoints.const';
 import {
@@ -8,7 +9,11 @@ import {
   withCacheInvalidate,
   withInlineHandling,
 } from '../../../core/http/http-context.tokens';
-import { toList, toPaged } from '../../../core/utils/api-list.util';
+import {
+  fetchAllPages,
+  toList,
+  toPaged,
+} from '../../../core/utils/api-list.util';
 import { LookupItem } from '../../../core/models/lookup.model';
 import { PagedResponse } from '../../../core/models/api-response.model';
 import {
@@ -79,6 +84,20 @@ export class RepsService {
     return this.api.get<Representative>(
       API_ENDPOINTS.representatives.byId(id),
       { context: withCache({ ttlMs: REPS_TTL_MS }) },
+    );
+  }
+
+  /**
+   * Resolves the representative profile linked to an identity `AppUser`.
+   * The users endpoint only exposes the identity GUID, so we match it
+   * against `representative.appUser.id` over the full (cached) list.
+   * Emits `null` when no representative is linked to that user.
+   */
+  findByAppUserId(appUserId: string): Observable<Representative | null> {
+    return fetchAllPages<Representative>((pageIndex, pageSize) =>
+      this.list({ pageIndex, pageSize }),
+    ).pipe(
+      map((reps) => reps.find((r) => r.appUser?.id === appUserId) ?? null),
     );
   }
 

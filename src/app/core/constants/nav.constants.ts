@@ -136,12 +136,11 @@ export const NAV_SECTIONS: NavSection[] = [
       },
       {
         id: 'monthly-profits',
-        label: 'الأرباح الشهرية',
+        label: 'شاشة الأرباح',
         route: '/treasury/monthly-profits',
         icon: 'trending-up',
+        // Representatives see it too — the backend scopes them to their own data.
         requiredAnyPermission: [PERMISSIONS.treasuryView],
-        // Owners-only — mirrors the card it was extracted from.
-        hideForRoles: ['Representative'],
       },
       {
         id: 'sub-accounts',

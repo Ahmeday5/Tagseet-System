@@ -177,16 +177,79 @@ export interface TreasuryOperationsQuery {
 }
 
 /* ════════════════════════════════════════════════════════════════
-   Monthly profits (revenue, expenses, profit analysis)
+   Profits screen — GET dashboard/treasuries/monthly-profits
    ════════════════════════════════════════════════════════════════ */
 
-export interface MonthlyProfit {
-  year: number;
+/** Query for the profits screen. Omitted fields fall back server-side. */
+export interface ProfitsScreenQuery {
+  /** Defaults to the current year on the backend. */
+  year?: number;
+  /**
+   * Admin-only filter. Must never be sent for a Representative — the
+   * backend scopes them to themselves and answers 403 for anyone else.
+   */
+  representativeId?: number;
+}
+
+export interface RepresentativeProfit {
+  representativeId: number;
+  representativeName: string;
+  amount: number;
+}
+
+export interface ProfitTreasuries {
+  /** Shareholders' profits not yet distributed. */
+  profitsTreasury: number;
+  companyProfitsTreasury: number;
+  representativesProfitsTotal: number;
+  /** Unpaid commission per representative — also drives the dynamic columns. */
+  representatives: RepresentativeProfit[];
+}
+
+export interface ProfitsSummary {
+  /** Sales profits + direct revenues for the year. */
+  totalProfits: number;
+  /** Company + representatives share. */
+  distributedProfits: number;
+  /** totalProfits − distributedProfits; may be negative. */
+  currentProfits: number;
+}
+
+/** Common to every monthly row; `month` is 0 on the yearly total row. */
+interface MonthlyRowBase {
   month: number;
   monthName: string;
-  revenue: number;
-  expenses: number;
-  profit: number;
-  marginPercent: number;
   isCurrentMonth: boolean;
+}
+
+export interface MonthlySalesProfit extends MonthlyRowBase {
+  cashProfit: number;
+  installmentProfit: number;
+  /** cashProfit + installmentProfit. */
+  salesProfit: number;
+  collectedProfit: number;
+  directRevenues: number;
+}
+
+export interface MonthlyProfitDistribution extends MonthlyRowBase {
+  /** companyProfit + representativesProfit. */
+  distributedProfit: number;
+  companyProfit: number;
+  representativesProfit: number;
+  representatives: RepresentativeProfit[];
+}
+
+export interface MonthlyTable<T> {
+  /** Always 12 rows, January → December. */
+  months: T[];
+  /** "إجمالي أرباح العام" row. */
+  total: T;
+}
+
+export interface ProfitsScreen {
+  year: number;
+  treasuries: ProfitTreasuries;
+  summary: ProfitsSummary;
+  monthlySalesProfits: MonthlyTable<MonthlySalesProfit>;
+  monthlyProfitDistribution: MonthlyTable<MonthlyProfitDistribution>;
 }
