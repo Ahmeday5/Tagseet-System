@@ -2,13 +2,17 @@ export type StatementTransactionType =
   | 'CapitalDeposit'
   | 'CapitalWithdrawal'
   | 'ProfitCapitalization'
-  | 'ProfitDistribution';
+  | 'ProfitDistribution'
+  | 'DistributedProfitReinvestment'
+  | 'DistributedProfitWithdrawal';
 
 export interface StatementEntry {
   id: number;
   voucherNumber: string;
   date: string;
   transactionType: StatementTransactionType;
+  /** Server-side Arabic label — preferred over the local label map. */
+  transactionTypeAr: string | null;
   amount: number;
   companyShare: number | null;
   shareholderShare: number | null;
@@ -54,4 +58,5 @@ export interface StatementQuery {
   pageSize?: number;
   fromDate?: string;
   toDate?: string;
+  transactionType?: StatementTransactionType;
 }

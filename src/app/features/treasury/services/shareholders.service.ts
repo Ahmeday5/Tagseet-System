@@ -381,6 +381,7 @@ export class ShareholdersService {
       PageSize: query.pageSize ?? 10,
       ...(query.fromDate ? { fromDate: query.fromDate } : {}),
       ...(query.toDate ? { toDate: query.toDate } : {}),
+      ...(query.transactionType ? { transactionType: query.transactionType } : {}),
     };
   }
 

@@ -8,7 +8,7 @@ export const PROFITS_HINTS = {
   representativesProfitsTotal: 'إجمالي العمولات المستحقة للمناديب ولم تُصرف بعد',
   representativeProfit: 'العمولة المستحقة للمندوب واللي لسه ما اتصرفتلوش',
   totalProfits: 'أرباح المبيعات + الإيرادات المباشرة للسنة',
-  distributedProfits: 'أرباح الشركة + أرباح المناديب',
+  distributedProfits: 'أرباح الشركة + أرباح المساهمين + أرباح المناديب',
   currentProfits: 'الأرباح الكلية − الأرباح الموزعة',
   cashProfit: 'سعر الكاش ناقص تكلفة البضاعة، للعقود اللي اتباعت في الشهر',
   installmentProfit: 'الزيادة اللي جاية من التقسيط فوق سعر الكاش',
@@ -16,6 +16,7 @@ export const PROFITS_HINTS = {
   collectedProfit: 'نصيب الربح من الفلوس اللي اتحصلت فعلاً في الشهر من الأقساط',
   directRevenues: 'الإيرادات اللي اتسجلت يدوياً بره العقود',
   companyProfit: 'نصيب الشركة اللي اتوزع في الشهر',
+  shareholdersProfit: 'نصيب المساهمين اللي اتوزع في الشهر',
   representativesProfit: 'إجمالي عمولات المناديب المستحقة في الشهر',
   monthlyRepresentativeProfit: 'العمولة اللي استحقها المندوب في الشهر',
 } as const;

@@ -19,6 +19,7 @@ import { resolveApiMessage } from '../../../../core/constants/api-messages.const
 import { TreasuryOperation } from '../../models/treasury.model';
 import { TreasuryService } from '../../services/treasury.service';
 import { operationMutationError } from '../../constants/operation-party-labels';
+import { cairoIsoDate } from '../../../../shared/utils/date-iso.util';
 
 /**
  * Edits a manual treasury operation's amount, date and notes. Treasury and
@@ -70,7 +71,8 @@ export class TreasuryOperationModalComponent {
           this.submitting.set(false);
           this.form.reset({
             amount: op.amount,
-            date: (op.date ?? '').slice(0, 10),
+            // Cairo calendar day of the original operation — never today.
+            date: cairoIsoDate(op.date),
             notes: op.description ?? '',
           });
         });
@@ -97,7 +99,7 @@ export class TreasuryOperationModalComponent {
     this.service
       .updateOperation(op.id, {
         amount: Number(raw.amount),
-        ...(raw.date ? { date: raw.date } : {}),
+        date: raw.date || null,
         notes: notes || null,
       })
       .subscribe({

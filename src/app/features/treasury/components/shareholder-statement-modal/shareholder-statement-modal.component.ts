@@ -28,6 +28,7 @@ import {
 import {
   STATEMENT_TX_BADGE,
   STATEMENT_TX_LABELS,
+  STATEMENT_TX_OPTIONS,
   isStatementInflow,
 } from '../../constants/statement-transaction-labels';
 
@@ -64,6 +65,9 @@ export class ShareholderStatementModalComponent {
   // ── date filters (UI state — applied on explicit click) ──
   protected readonly fromDate = signal('');
   protected readonly toDate = signal('');
+  /** Type filter — applied immediately on change. */
+  protected readonly txType = signal<StatementTransactionType | ''>('');
+  protected readonly txOptions = STATEMENT_TX_OPTIONS;
 
   // ── pagination ──
   protected readonly pageIndex = signal(1);
@@ -82,7 +86,7 @@ export class ShareholderStatementModalComponent {
   );
 
   protected readonly hasFilters = computed(
-    () => !!this.fromDate() || !!this.toDate(),
+    () => !!this.fromDate() || !!this.toDate() || !!this.txType(),
   );
 
   private lastShId: number | null = null;
@@ -98,6 +102,7 @@ export class ShareholderStatementModalComponent {
         this.error.set(null);
         this.fromDate.set('');
         this.toDate.set('');
+        this.txType.set('');
         this.pageIndex.set(1);
         this.fetch(sh.id, 1, this.pageSize(), false);
       },
@@ -122,9 +127,15 @@ export class ShareholderStatementModalComponent {
     this.fetch(sh.id, 1, this.pageSize(), true);
   }
 
+  protected onTxTypeChange(value: string): void {
+    this.txType.set(value as StatementTransactionType | '');
+    this.applyDates();
+  }
+
   protected clearDates(): void {
     this.fromDate.set('');
     this.toDate.set('');
+    this.txType.set('');
     const sh = this.shareholder();
     if (!sh) return;
     this.pageIndex.set(1);
@@ -177,6 +188,7 @@ export class ShareholderStatementModalComponent {
       pageSize,
       fromDate: this.fromDate() || undefined,
       toDate: this.toDate() || undefined,
+      transactionType: this.txType() || undefined,
     };
 
     const stream$ = force

@@ -37,6 +37,7 @@ import { AuthService } from '../../../../core/services/auth.service';
 import { PrintService } from '../../../../core/services/print.service';
 import { onInvalidate } from '../../../../core/utils/auto-refresh.util';
 import { fetchAllPages } from '../../../../core/utils/api-list.util';
+import { formatCairoDateTime } from '../../../../shared/utils/date-iso.util';
 import { ApiError } from '../../../../core/models/api-response.model';
 import { resolveApiMessage } from '../../../../core/constants/api-messages.const';
 import { TreasuryType } from '../../enums/treasury-type.enum';
@@ -756,7 +757,7 @@ export class TreasuryHomeComponent implements OnInit {
               key: 'date',
               header: 'التاريخ',
               align: 'center',
-              format: 'shortDate',
+              format: (v) => formatCairoDateTime(v as string),
             },
           ],
           rows,

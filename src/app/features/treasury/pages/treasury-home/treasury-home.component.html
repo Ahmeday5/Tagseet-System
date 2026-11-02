@@ -490,27 +490,30 @@
                     {{ op.balanceAfter | currencyAr: true }}
                   </td>
                   <td style="font-size:10.5px;color:var(--txt2)">{{ op.userName }}</td>
-                  <td class="trf-date">{{ op.date | dateAr: 'short' }}</td>
+                  <td class="trf-date">{{ op.date | dateAr: 'dateTime' }}</td>
                   <td *appHasPermission="PERMS.treasuryFullAccess" class="text-center">
+                    @if (op.canEdit || op.canDelete) {
                     <div class="d-flex gap-1 justify-content-center">
-                      <!-- Wrapper spans carry the tooltip: disabled buttons don't fire hover events. -->
-                      <span [title]="op.canEdit ? 'تعديل' : OPERATION_LOCKED_HINT">
-                        <button type="button" class="btn btn-sm btn-bl"
-                          [disabled]="!op.canEdit || deletingOperationId() === op.id" (click)="openEditOperation(op)">
-                          تعديل
-                        </button>
-                      </span>
-                      <span [title]="op.canDelete ? 'حذف' : OPERATION_LOCKED_HINT">
-                        <button type="button" class="btn btn-sm btn-re d-inline-flex align-items-center gap-1"
-                          [disabled]="!op.canDelete || deletingOperationId() !== null"
-                          (click)="confirmDeleteOperation(op)">
-                          @if (deletingOperationId() === op.id) {
-                          <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                          }
-                          <span>حذف</span>
-                        </button>
-                      </span>
+                      @if (op.canEdit) {
+                      <button type="button" class="btn btn-sm btn-bl"
+                        [disabled]="deletingOperationId() === op.id" (click)="openEditOperation(op)">
+                        تعديل
+                      </button>
+                      }
+                      @if (op.canDelete) {
+                      <button type="button" class="btn btn-sm btn-re d-inline-flex align-items-center gap-1"
+                        [disabled]="deletingOperationId() !== null"
+                        (click)="confirmDeleteOperation(op)">
+                        @if (deletingOperationId() === op.id) {
+                        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                        }
+                        <span>حذف</span>
+                      </button>
+                      }
                     </div>
+                    } @else {
+                    <span style="color:var(--txt3)" [title]="OPERATION_LOCKED_HINT">—</span>
+                    }
                   </td>
                 </tr>
                 } @empty {

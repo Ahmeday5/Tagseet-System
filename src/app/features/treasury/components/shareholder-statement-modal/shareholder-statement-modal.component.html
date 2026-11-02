@@ -90,6 +90,20 @@
         (change)="toDate.set($any($event.target).value)"
       />
     </div>
+    <div class="shst-filter-group">
+      <label class="shst-filter-label">النوع</label>
+      <select
+        class="form-select form-select-sm"
+        [value]="txType()"
+        [disabled]="loading()"
+        (change)="onTxTypeChange($any($event.target).value)"
+      >
+        <option value="">الكل</option>
+        @for (t of txOptions; track t) {
+          <option [value]="t">{{ txLabel(t) }}</option>
+        }
+      </select>
+    </div>
     <div class="shst-filter-actions">
       <button
         type="button"
@@ -147,7 +161,7 @@
               {{ (pageIndex() - 1) * pageSize() + $index + 1 }}
             </td>
             <td>
-              <app-badge [text]="txLabel(e.transactionType)" [type]="txBadge(e.transactionType)" />
+              <app-badge [text]="e.transactionTypeAr || txLabel(e.transactionType)" [type]="txBadge(e.transactionType)" />
             </td>
             <td
               class="shst-amount"

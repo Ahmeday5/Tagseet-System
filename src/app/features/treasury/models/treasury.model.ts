@@ -139,8 +139,9 @@ export interface TreasuryOperation {
   amount: number;
   signedAmount: number; // positive for Receipt, negative for Payment
   direction: 'Payment' | 'Receipt';
-  date: string; // ISO datetime
+  date: string; // ISO datetime, UTC
   userName: string;
+  /** Computed server-side at request time; shifts when sibling operations change. */
   balanceAfter: number;
   treasuryId: number;
   treasuryName: string;
@@ -156,12 +157,13 @@ export interface TreasuryOperation {
 }
 
 /**
- * PUT /dashboard/treasuries/operations/{id} body. Omitting `date` keeps the
- * stored date; `notes` replaces the stored description as sent.
+ * PUT /dashboard/treasuries/operations/{id} body. `date` (`YYYY-MM-DD`) equal
+ * to the original or `null` keeps the stored date and time; `notes` replaces
+ * the stored description as sent.
  */
 export interface UpdateTreasuryOperationPayload {
   amount: number;
-  date?: string;
+  date: string | null;
   notes: string | null;
 }
 
@@ -232,9 +234,12 @@ export interface MonthlySalesProfit extends MonthlyRowBase {
 }
 
 export interface MonthlyProfitDistribution extends MonthlyRowBase {
-  /** companyProfit + representativesProfit. */
+  /** companyProfit + shareholdersProfit + representativesProfit. */
   distributedProfit: number;
+  /** 0 for representatives or when filtered by a representative. */
   companyProfit: number;
+  /** 0 for representatives or when filtered by a representative. */
+  shareholdersProfit: number;
   representativesProfit: number;
   representatives: RepresentativeProfit[];
 }
