@@ -1,19 +1,76 @@
 @let s = summary();
 
+<ng-template #term let-label="label" let-value="value" let-field="field" let-hint="hint" let-strong="strong">
+  <div class="ps-term" [class.ps-term-strong]="strong">
+    <span class="ps-term-label">
+      {{ label }}
+      <app-profit-info [field]="field" [fallback]="hint" />
+    </span>
+    <span class="ps-term-value" [class.ps-loss]="value < 0">{{ value | amountAr }}</span>
+  </div>
+</ng-template>
+
 <section class="ps-card" aria-labelledby="ps-summary-title">
   <h2 id="ps-summary-title" class="ps-head">الأرباح</h2>
 
+  <div class="ps-equation" role="group" aria-label="معادلة صافي الأرباح">
+    <ng-container
+      *ngTemplateOutlet="term; context: {
+        label: 'الأرباح المحصلة', value: s.collectedProfits,
+        field: 'Summary.CollectedProfits', hint: hints.collectedProfits }"
+    />
+    <span class="ps-op" aria-label="زائد">+</span>
+    <ng-container
+      *ngTemplateOutlet="term; context: {
+        label: 'الإيرادات المباشرة', value: s.directRevenues,
+        field: 'Summary.DirectRevenues', hint: hints.summaryDirectRevenues }"
+    />
+    <span class="ps-op" aria-label="ناقص">−</span>
+    <div class="ps-term ps-term-expense">
+      <span class="ps-term-label">
+        المصروفات
+        <app-profit-info field="Summary.Expenses" [fallback]="hints.summaryExpenses" />
+      </span>
+      <span class="ps-term-value ps-loss">{{ s.expenses | amountAr }}</span>
+    </div>
+    <span class="ps-op" aria-label="يساوي">=</span>
+    <ng-container
+      *ngTemplateOutlet="term; context: {
+        label: 'صافي الأرباح', value: s.netProfits,
+        field: 'Summary.NetProfits', hint: hints.netProfits, strong: true }"
+    />
+    @if (showCompanyFigures()) {
+      <span class="ps-op" aria-label="يساوي">=</span>
+      <ng-container
+        *ngTemplateOutlet="term; context: {
+          label: 'الأرباح الموزعة', value: s.distributedProfits,
+          field: 'Summary.DistributedProfits', hint: hints.distributedProfits, strong: true }"
+      />
+    }
+  </div>
+
   <dl class="ps-grid">
-    <div class="ps-pair" [title]="hints.totalProfits">
-      <dt>الأرباح الكلية</dt>
+    <div class="ps-pair">
+      <dt>
+        الأرباح الكلية
+        <app-profit-info field="Summary.TotalProfits" [fallback]="hints.totalProfits" />
+      </dt>
       <dd [class.ps-loss]="s.totalProfits < 0">{{ s.totalProfits | amountAr }}</dd>
     </div>
-    <div class="ps-pair" [title]="hints.distributedProfits">
-      <dt>الأرباح الموزعة</dt>
-      <dd [class.ps-loss]="s.distributedProfits < 0">{{ s.distributedProfits | amountAr }}</dd>
-    </div>
-    <div class="ps-pair" [title]="hints.currentProfits">
-      <dt>الأرباح الحالية</dt>
+    @if (!showCompanyFigures()) {
+      <div class="ps-pair">
+        <dt>
+          الأرباح الموزعة
+          <app-profit-info field="Summary.DistributedProfits" [fallback]="hints.distributedProfits" />
+        </dt>
+        <dd [class.ps-loss]="s.distributedProfits < 0">{{ s.distributedProfits | amountAr }}</dd>
+      </div>
+    }
+    <div class="ps-pair">
+      <dt>
+        الأرباح الحالية
+        <app-profit-info field="Summary.CurrentProfits" [fallback]="hints.currentProfits" />
+      </dt>
       <dd [class.ps-loss]="s.currentProfits < 0">{{ s.currentProfits | amountAr }}</dd>
     </div>
   </dl>

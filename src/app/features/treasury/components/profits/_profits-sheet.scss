@@ -108,4 +108,71 @@ $ps-loss: #c00000;
   .ps-loss {
     color: $ps-loss;
   }
+
+  .ps-net {
+    font-weight: 800;
+    font-size: 13px;
+  }
+
+  thead .ps-net {
+    font-size: 12.5px;
+  }
+
+  // Breakdown columns revealed by an expand toggle.
+  .ps-sub {
+    background: #f3f8fd;
+    font-size: 11.5px;
+  }
+
+  thead .ps-sub {
+    background: $ps-blue-pale;
+    font-weight: 700;
+  }
+
+  .ps-expand {
+    display: inline-grid;
+    place-items: center;
+    width: 18px;
+    height: 18px;
+    margin-inline-end: 4px;
+    padding: 0;
+    border: 1px solid $ps-ink;
+    border-radius: 4px;
+    background: #fff;
+    color: $ps-ink;
+    font: 800 13px/1 sans-serif;
+    vertical-align: middle;
+    cursor: pointer;
+
+    &:focus-visible {
+      outline: 2px solid var(--bl);
+      outline-offset: 1px;
+    }
+  }
+}
+
+@mixin ps-check {
+  .ps-check {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin: 8px 0 0;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12.5px;
+    font-weight: 700;
+  }
+
+  .ps-check-ok {
+    background: #e7f6ea;
+    color: #1e6b2c;
+    border: 1px solid #a8dbb2;
+  }
+
+  .ps-check-warn {
+    background: #fff4e0;
+    color: #8a4b00;
+    border: 1px solid #f2c27a;
+  }
 }

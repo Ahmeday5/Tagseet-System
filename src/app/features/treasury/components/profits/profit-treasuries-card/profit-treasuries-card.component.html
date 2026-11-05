@@ -3,29 +3,107 @@
 <div class="pt-card" [class.pt-single]="t.representatives.length === 0">
   <dl class="pt-col">
     @if (showCompanyFigures()) {
-      <div class="pt-item" [title]="hints.profitsTreasury">
-        <dt>خزنة الأرباح</dt>
-        <dd [class.pt-loss]="t.profitsTreasury < 0">{{ t.profitsTreasury | amountAr }}</dd>
+      <div class="pt-group">
+        <div class="pt-item">
+          <dt>
+            خزنة الأرباح
+            <app-profit-info field="Treasuries.ProfitsTreasury" [fallback]="hints.profitsTreasury" />
+          </dt>
+          <dd [class.pt-loss]="t.profitsTreasury < 0">{{ t.profitsTreasury | amountAr }}</dd>
+        </div>
+        <div class="pt-item pt-sub">
+          <dt>
+            ↳ منها حصة الشركة (لم تُسوَّ بعد)
+            <app-profit-info field="Treasuries.CompanyPendingShare" [fallback]="hints.companyPendingShare" />
+          </dt>
+          <dd [class.pt-loss]="t.companyPendingShare < 0">{{ t.companyPendingShare | amountAr }}</dd>
+        </div>
+        <div class="pt-item pt-sub">
+          <dt>
+            ↳ منها حصة المساهمين (لم تُسوَّ بعد)
+            <app-profit-info
+              field="Treasuries.ShareholdersPendingShare"
+              [fallback]="hints.shareholdersPendingShare"
+            />
+          </dt>
+          <dd [class.pt-loss]="t.shareholdersPendingShare < 0">
+            {{ t.shareholdersPendingShare | amountAr }}
+          </dd>
+        </div>
+        <button type="button" class="pt-details" (click)="detailsOpen.set(true)">
+          عرض التفاصيل
+          <span class="pt-details-count">({{ t.shareholders.length }} مساهم)</span>
+        </button>
       </div>
-      <div class="pt-item" [title]="hints.companyProfitsTreasury">
-        <dt>خزنة أرباح الشركة</dt>
-        <dd [class.pt-loss]="t.companyProfitsTreasury < 0">{{ t.companyProfitsTreasury | amountAr }}</dd>
+
+      <div class="pt-group">
+        <div class="pt-item">
+          <dt>
+            خزنة أرباح الشركة
+            <app-profit-info
+              field="Treasuries.CompanyProfitsTreasury"
+              [fallback]="hints.companyProfitsTreasury"
+            />
+          </dt>
+          <dd [class.pt-loss]="t.companyProfitsTreasury < 0">{{ t.companyProfitsTreasury | amountAr }}</dd>
+        </div>
+        <p class="pt-note">
+          لا تشمل حصة الشركة من الأرباح التي لم تُسوَّ بعد — راجع إجمالي أرباح الشركة
+        </p>
+      </div>
+
+      <div class="pt-item">
+        <dt>
+          إجمالي أرباح الشركة
+          <app-profit-info field="Treasuries.CompanyTotalProfit" [fallback]="hints.companyTotalProfit" />
+        </dt>
+        <dd [class.pt-loss]="t.companyTotalProfit < 0">{{ t.companyTotalProfit | amountAr }}</dd>
       </div>
     }
-    <div class="pt-item" [title]="hints.representativesProfitsTotal">
-      <dt>خزنة إجمالي أرباح المناديب</dt>
-      <dd [class.pt-loss]="t.representativesProfitsTotal < 0">{{ t.representativesProfitsTotal | amountAr }}</dd>
+
+    <div class="pt-item">
+      <dt>
+        إجمالي أرباح المناديب
+        <app-profit-info
+          field="Treasuries.RepresentativesProfitsTotal"
+          [fallback]="hints.representativesProfitsTotal"
+        />
+      </dt>
+      <dd [class.pt-loss]="t.representativesProfitsTotal < 0">
+        {{ t.representativesProfitsTotal | amountAr }}
+      </dd>
     </div>
   </dl>
 
   @if (t.representatives.length) {
     <dl class="pt-col">
-      @for (rep of t.representatives; track rep.representativeId) {
-        <div class="pt-item" [title]="hints.representativeProfit">
-          <dt>أرباح المندوب {{ rep.representativeName }}</dt>
+      @for (rep of t.representatives; track rep.representativeId; let first = $first) {
+        <div class="pt-item">
+          <dt>
+            أرباح المندوب {{ rep.representativeName }}
+            @if (first) {
+              <app-profit-info
+                field="Treasuries.Representatives.Amount"
+                [fallback]="hints.representativeProfit"
+              />
+            }
+          </dt>
           <dd [class.pt-loss]="rep.amount < 0">{{ rep.amount | amountAr }}</dd>
         </div>
       }
     </dl>
   }
 </div>
+
+@if (showCompanyFigures()) {
+  <app-modal
+    [open]="detailsOpen()"
+    title="تفاصيل خزنة الأرباح — الأرباح المستحقة للمساهمين"
+    size="xl"
+    (closed)="detailsOpen.set(false)"
+  >
+    @if (detailsOpen()) {
+      <app-profit-shareholders-table [rows]="t.shareholders" [columns]="shareholderColumns" />
+    }
+  </app-modal>
+}

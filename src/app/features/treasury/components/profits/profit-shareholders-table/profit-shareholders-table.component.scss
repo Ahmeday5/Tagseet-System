@@ -1,0 +1,149 @@
+@use '../profits-sheet' as ps;
+
+:host {
+  display: block;
+}
+
+.st-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.st-search {
+  flex: 1 1 220px;
+  max-width: 320px;
+  font: inherit;
+  font-size: 12px;
+  padding: 7px 10px;
+  border-radius: var(--r);
+  border: 1px solid var(--brd2);
+  background: var(--bg2);
+  color: var(--txt);
+
+  &:focus {
+    outline: none;
+    border-color: var(--bl);
+    box-shadow: 0 0 0 3px rgba(27, 95, 168, 0.12);
+  }
+}
+
+.st-count {
+  font-size: 11.5px;
+  color: var(--txt2);
+}
+
+// Both axes scroll inside the box; header/footer/name column stay pinned.
+.st-scroll {
+  max-height: 55vh;
+  overflow: auto;
+  border: 2px solid ps.$ps-frame;
+  background: #fff;
+}
+
+table {
+  width: 100%;
+  min-width: 620px;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 12px;
+  color: ps.$ps-ink;
+}
+
+th,
+td {
+  border-inline-start: 1px solid ps.$ps-grid;
+  border-bottom: 1px solid ps.$ps-grid;
+  padding: 6px 10px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+td {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: ps.$ps-gold;
+  font-weight: 800;
+  border-bottom: 2px solid ps.$ps-frame;
+}
+
+tfoot th,
+tfoot td {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  background: ps.$ps-blue;
+  font-weight: 800;
+  border-top: 2px solid ps.$ps-frame;
+
+  small {
+    font-weight: 600;
+    font-size: 10.5px;
+  }
+}
+
+.st-name {
+  position: sticky;
+  inset-inline-start: 0;
+  z-index: 1;
+  background: ps.$ps-blue-pale;
+  text-align: start;
+  font-weight: 700;
+}
+
+thead .st-name,
+tfoot .st-name {
+  z-index: 3;
+}
+
+thead .st-name {
+  background: ps.$ps-gold;
+}
+
+tfoot .st-name {
+  background: ps.$ps-pink;
+}
+
+tbody tr:hover td {
+  background: #f6f9fc;
+}
+
+.st-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--bl);
+    outline-offset: 2px;
+  }
+}
+
+.st-arrow {
+  font-size: 10px;
+  opacity: 0.7;
+}
+
+.st-loss {
+  color: ps.$ps-loss;
+}
+
+.st-empty {
+  padding: 18px;
+  color: var(--txt3);
+  font-weight: 500;
+}

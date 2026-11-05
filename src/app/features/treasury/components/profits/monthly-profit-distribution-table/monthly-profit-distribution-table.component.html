@@ -1,32 +1,52 @@
 <ng-template #figures let-v="view">
-  <td [class.ps-loss]="v.row.distributedProfit < 0">{{ v.row.distributedProfit | amountAr }}</td>
-  @if (showCompanyFigures()) {
-    <td [class.ps-loss]="v.row.companyProfit < 0">{{ v.row.companyProfit | amountAr }}</td>
-    <td [class.ps-loss]="v.row.shareholdersProfit < 0">{{ v.row.shareholdersProfit | amountAr }}</td>
+  @for (col of columns(); track col.key) {
+    <td [class.ps-loss]="v.row[col.key] < 0" [class.ps-net]="col.strong">
+      {{ v.row[col.key] | amountAr }}
+    </td>
   }
-  <td [class.ps-loss]="v.row.representativesProfit < 0">{{ v.row.representativesProfit | amountAr }}</td>
   @for (amount of v.repAmounts; track $index) {
     <td [class.ps-loss]="amount < 0">{{ amount | amountAr }}</td>
   }
 </ng-template>
 
+<ng-template #monthCell let-v="view">
+  <th scope="row" class="ps-month">
+    <button
+      type="button"
+      class="ps-row-btn"
+      [attr.aria-label]="'عرض تفاصيل توزيع ' + v.row.monthName"
+      (click)="selected.set(v.row); $event.stopPropagation()"
+    >
+      {{ v.row.monthName }}
+      <span class="ps-row-chevron" aria-hidden="true">‹</span>
+    </button>
+  </th>
+</ng-template>
+
 <section aria-labelledby="mpdt-title">
   <h2 id="mpdt-title" class="ps-banner">توزيع الأرباح الشهرية</h2>
+  <p class="ps-hint">اضغط على أي شهر لعرض تفاصيل توزيعه على المناديب والشركة والمساهمين.</p>
 
   <div class="ps-scroll">
     <table>
       <thead>
         <tr>
           <th scope="col" class="ps-month">الشهر</th>
-          <th scope="col" [title]="hints.distributedProfits">الأرباح الموزعة</th>
-          @if (showCompanyFigures()) {
-            <th scope="col" [title]="hints.companyProfit">أرباح الشركة</th>
-            <th scope="col" [title]="hints.shareholdersProfit">أرباح المساهمين</th>
+          @for (col of columns(); track col.key) {
+            <th scope="col" [class.ps-net]="col.strong">
+              {{ col.label }}
+              <app-profit-info [field]="field(col.key)" [fallback]="col.hint" />
+            </th>
           }
-          <th scope="col" [title]="hints.representativesProfit">أرباح إجمالي المناديب</th>
-          @for (rep of representatives(); track rep.representativeId) {
-            <th scope="col" [title]="hints.monthlyRepresentativeProfit">
+          @for (rep of representatives(); track rep.representativeId; let first = $first) {
+            <th scope="col">
               أرباح المندوب {{ rep.representativeName }}
+              @if (first) {
+                <app-profit-info
+                  field="MonthlyProfitDistribution.Representatives.Amount"
+                  [fallback]="hints.monthlyRepresentativeProfit"
+                />
+              }
             </th>
           }
         </tr>
@@ -34,19 +54,56 @@
 
       <tbody>
         @for (v of months(); track v.row.month) {
-          <tr [class.ps-current]="v.row.isCurrentMonth">
-            <th scope="row" class="ps-month">{{ v.row.monthName }}</th>
+          <tr
+            class="ps-row"
+            [class.ps-current]="v.row.isCurrentMonth"
+            [attr.aria-current]="v.row.isCurrentMonth ? 'date' : null"
+            (click)="selected.set(v.row)"
+          >
+            <ng-container *ngTemplateOutlet="monthCell; context: { view: v }" />
             <ng-container *ngTemplateOutlet="figures; context: { view: v }" />
           </tr>
         }
       </tbody>
 
       <tfoot>
-        <tr>
-          <th scope="row" class="ps-month">{{ total().row.monthName }}</th>
+        <tr class="ps-row" (click)="selected.set(total().row)">
+          <ng-container *ngTemplateOutlet="monthCell; context: { view: total() }" />
           <ng-container *ngTemplateOutlet="figures; context: { view: total() }" />
         </tr>
       </tfoot>
     </table>
   </div>
+
+  @if (showCompanyFigures()) {
+    @if (balanced()) {
+      <p class="ps-check ps-check-ok" role="status">
+        <span aria-hidden="true">✓</span> الأرباح الموزعة = صافي الأرباح
+      </p>
+    } @else {
+      <p class="ps-check ps-check-warn" role="alert">
+        <span aria-hidden="true">⚠</span>
+        تحذير: إجمالي الأرباح الموزعة
+        <strong [class.ps-loss]="total().row.distributedProfit < 0">{{ total().row.distributedProfit | amountAr }}</strong>
+        لا يساوي صافي الأرباح
+        <strong [class.ps-loss]="expectedNetProfit() < 0">{{ expectedNetProfit() | amountAr }}</strong>
+        — برجاء مراجعة البيانات.
+      </p>
+    }
+  }
 </section>
+
+<app-modal
+  [open]="selected() !== null"
+  [title]="detailsTitle()"
+  size="xl"
+  (closed)="selected.set(null)"
+>
+  @if (selected(); as row) {
+    <app-profit-month-details
+      [row]="row"
+      [representatives]="representatives()"
+      [showCompanyFigures]="showCompanyFigures()"
+    />
+  }
+</app-modal>

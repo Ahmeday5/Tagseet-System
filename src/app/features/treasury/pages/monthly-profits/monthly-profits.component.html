@@ -57,13 +57,28 @@
         [treasuries]="s.treasuries"
         [showCompanyFigures]="showCompanyFigures()"
       />
-      <app-profits-summary-card [summary]="s.summary" />
+      <app-profits-summary-card [summary]="s.summary" [showCompanyFigures]="showCompanyFigures()" />
       <app-monthly-sales-profits-table [table]="s.monthlySalesProfits" />
       <app-monthly-profit-distribution-table
         [table]="s.monthlyProfitDistribution"
         [representatives]="s.treasuries.representatives"
         [showCompanyFigures]="showCompanyFigures()"
+        [expectedNetProfit]="s.monthlySalesProfits.total.netProfit"
       />
+
+      @if (explanations.all().length) {
+        <details class="pf-glossary">
+          <summary>طريقة حساب كل رقم</summary>
+          <dl>
+            @for (e of explanations.all(); track e.field) {
+              <div class="pf-glossary-item">
+                <dt>{{ e.title }}</dt>
+                <dd>{{ e.formula }}</dd>
+              </div>
+            }
+          </dl>
+        </details>
+      }
     </div>
   }
 </div>

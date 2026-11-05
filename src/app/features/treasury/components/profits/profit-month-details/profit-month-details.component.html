@@ -1,0 +1,99 @@
+@let r = row();
+
+<ng-template #amt let-v>
+  <span class="md-num" [class.md-loss]="v < 0">{{ v | amountAr }}</span>
+</ng-template>
+
+@if (showCompanyFigures()) {
+  <p class="md-story">
+    صافي الربح <span class="md-num" [class.md-loss]="r.netProfit < 0">{{ r.netProfit | amountAr }}</span>
+    − أرباح المناديب
+    <span class="md-num" [class.md-loss]="r.representativesProfit < 0">{{ r.representativesProfit | amountAr }}</span>
+    = ربح المساهمين
+    <span class="md-num" [class.md-loss]="r.shareholdersPool < 0">{{ r.shareholdersPool | amountAr }}</span>،
+    اتقسم: للشركة
+    <span class="md-num" [class.md-loss]="r.companyProfit < 0">{{ r.companyProfit | amountAr }}</span>
+    وللمساهمين
+    <span class="md-num" [class.md-loss]="r.shareholdersProfit < 0">{{ r.shareholdersProfit | amountAr }}</span>
+  </p>
+}
+
+<!-- ── (أ) representatives ── -->
+<section class="md-section" aria-labelledby="md-reps-title">
+  <h3 id="md-reps-title" class="md-heading">
+    أرباح المناديب
+    <app-profit-info
+      field="MonthlyProfitDistribution.RepresentativesProfit"
+      [fallback]="hints.representativesProfit"
+    />
+  </h3>
+
+  @if (reps().length) {
+    <div class="md-scroll">
+      <table class="md-table">
+        <thead>
+          <tr>
+            <th scope="col" class="md-name">المندوب</th>
+            <th scope="col">
+              عمولة العقود
+              <app-profit-info field="MonthlyProfitDistribution.Representatives.FromContracts" />
+            </th>
+            <th scope="col">
+              <span class="md-op">+</span> نسبته من الإيرادات
+              <app-profit-info field="MonthlyProfitDistribution.Representatives.FromRevenues" />
+            </th>
+            <th scope="col">
+              <span class="md-op">−</span> نسبته من المصروفات
+              <app-profit-info field="MonthlyProfitDistribution.Representatives.FromExpenses" />
+            </th>
+            <th scope="col" class="md-strong">
+              <span class="md-op">=</span> الإجمالي
+              <app-profit-info field="MonthlyProfitDistribution.Representatives.Amount" />
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (rep of reps(); track rep.representativeId) {
+            <tr>
+              <th scope="row" class="md-name">{{ rep.representativeName }}</th>
+              <td><ng-container *ngTemplateOutlet="amt; context: { $implicit: rep.fromContracts }" /></td>
+              <td><ng-container *ngTemplateOutlet="amt; context: { $implicit: rep.fromRevenues }" /></td>
+              <td><ng-container *ngTemplateOutlet="amt; context: { $implicit: rep.fromExpenses }" /></td>
+              <td class="md-strong"><ng-container *ngTemplateOutlet="amt; context: { $implicit: rep.amount }" /></td>
+            </tr>
+          }
+        </tbody>
+        @if (reps().length > 1) {
+          <tfoot>
+            <tr>
+              <th scope="row" class="md-name">الإجمالي</th>
+              <td><ng-container *ngTemplateOutlet="amt; context: { $implicit: repTotals().fromContracts }" /></td>
+              <td><ng-container *ngTemplateOutlet="amt; context: { $implicit: repTotals().fromRevenues }" /></td>
+              <td><ng-container *ngTemplateOutlet="amt; context: { $implicit: repTotals().fromExpenses }" /></td>
+              <td class="md-strong">
+                <ng-container *ngTemplateOutlet="amt; context: { $implicit: r.representativesProfit }" />
+              </td>
+            </tr>
+          </tfoot>
+        }
+      </table>
+    </div>
+  } @else {
+    <p class="md-empty">لا توجد أرباح مناديب في هذه الفترة.</p>
+  }
+</section>
+
+<!-- ── (ب) shareholders ── -->
+@if (showCompanyFigures()) {
+  <section class="md-section" aria-labelledby="md-sh-title">
+    <h3 id="md-sh-title" class="md-heading">
+      توزيع ربح المساهمين
+      <app-profit-info field="MonthlyProfitDistribution.ShareholdersPool" [fallback]="hints.shareholdersPool" />
+    </h3>
+    <app-profit-shareholders-table
+      [rows]="r.shareholders"
+      [columns]="shareholderColumns"
+      [totals]="shareholderTotals()"
+    />
+  </section>
+}

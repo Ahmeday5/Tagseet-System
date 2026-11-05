@@ -10,29 +10,95 @@
 
 .ps-head {
   margin: 0;
-  padding: 26px 12px;
+  padding: 18px 12px;
   background: ps.$ps-green-light;
   font-size: 14px;
   font-weight: 800;
   text-align: center;
 }
 
+/* ── equation row ── */
+.ps-equation {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 12px;
+  background: #fff;
+}
+
+.ps-term {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 130px;
+  padding: 10px 12px;
+  border: 1px solid ps.$ps-grid;
+  border-radius: 6px;
+  background: ps.$ps-green-pale;
+  text-align: center;
+}
+
+.ps-term-strong {
+  border: 2px solid ps.$ps-frame;
+  background: ps.$ps-gold;
+
+  .ps-term-value {
+    font-size: 16px;
+  }
+}
+
+.ps-term-expense {
+  background: #fde2e2;
+}
+
+.ps-term-label {
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.ps-term-value {
+  font-size: 14.5px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.ps-op {
+  align-self: center;
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1;
+  color: ps.$ps-frame;
+}
+
+@media (max-width: 575.98px) {
+  .ps-equation {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .ps-op {
+    text-align: center;
+  }
+}
+
+/* ── secondary figures ── */
 .ps-grid {
   margin: 0;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 3px;
-
-  @media (max-width: 575.98px) {
-    grid-template-columns: minmax(0, 1fr);
-  }
 }
 
 .ps-pair {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 3px;
-  cursor: help;
 
   dt,
   dd {

@@ -1,5 +1,15 @@
 @let t = table();
 
+<ng-template #cell let-row="row" let-col="col">
+  <td
+    [class.ps-loss]="col.tone === 'expense' || row[col.key] < 0"
+    [class.ps-net]="col.tone === 'net'"
+    [class.ps-sub]="col.tone === 'sub'"
+  >
+    {{ row[col.key] | amountAr }}
+  </td>
+</ng-template>
+
 <section aria-labelledby="mspt-title">
   <h2 id="mspt-title" class="ps-banner">أرباح المبيعات الشهرية</h2>
 
@@ -8,18 +18,34 @@
       <thead>
         <tr>
           <th scope="col" class="ps-month">الشهر</th>
-          @for (col of columns; track col.key) {
-            <th scope="col" [title]="hints[col.key]">{{ col.label }}</th>
+          @for (col of columns(); track col.key) {
+            <th
+              scope="col"
+              [class.ps-sub]="col.tone === 'sub'"
+              [class.ps-net]="col.tone === 'net'"
+            >
+              @if (col.key === 'collectedProfit') {
+                <button
+                  type="button"
+                  class="ps-expand"
+                  [attr.aria-expanded]="collectedExpanded()"
+                  [attr.aria-label]="(collectedExpanded() ? 'إخفاء' : 'عرض') + ' تفاصيل الأرباح المحصلة'"
+                  (click)="collectedExpanded.set(!collectedExpanded())"
+                >{{ collectedExpanded() ? '−' : '+' }}</button>
+              }
+              {{ col.label }}
+              <app-profit-info [field]="field(col.key)" [fallback]="col.hint" />
+            </th>
           }
         </tr>
       </thead>
 
       <tbody>
         @for (row of t.months; track row.month) {
-          <tr [class.ps-current]="row.isCurrentMonth">
+          <tr [class.ps-current]="row.isCurrentMonth" [attr.aria-current]="row.isCurrentMonth ? 'date' : null">
             <th scope="row" class="ps-month">{{ row.monthName }}</th>
-            @for (col of columns; track col.key) {
-              <td [class.ps-loss]="row[col.key] < 0">{{ row[col.key] | amountAr }}</td>
+            @for (col of columns(); track col.key) {
+              <ng-container *ngTemplateOutlet="cell; context: { row, col }" />
             }
           </tr>
         }
@@ -28,8 +54,8 @@
       <tfoot>
         <tr>
           <th scope="row" class="ps-month">{{ t.total.monthName }}</th>
-          @for (col of columns; track col.key) {
-            <td [class.ps-loss]="t.total[col.key] < 0">{{ t.total[col.key] | amountAr }}</td>
+          @for (col of columns(); track col.key) {
+            <ng-container *ngTemplateOutlet="cell; context: { row: t.total, col }" />
           }
         </tr>
       </tfoot>

@@ -28,6 +28,7 @@ import { ProfitTreasuriesCardComponent } from '../../components/profits/profit-t
 import { ProfitsSummaryCardComponent } from '../../components/profits/profits-summary-card/profits-summary-card.component';
 import { MonthlySalesProfitsTableComponent } from '../../components/profits/monthly-sales-profits-table/monthly-sales-profits-table.component';
 import { MonthlyProfitDistributionTableComponent } from '../../components/profits/monthly-profit-distribution-table/monthly-profit-distribution-table.component';
+import { ProfitExplanationsStore } from '../../components/profits/profit-explanations.store';
 
 /** How many years (ending with the current one) the year picker offers. */
 const YEAR_SPAN = 6;
@@ -53,10 +54,12 @@ const FORBIDDEN_MESSAGE = 'غير مصرح لك بعرض هذه البيانات
     MonthlySalesProfitsTableComponent,
     MonthlyProfitDistributionTableComponent,
   ],
+  providers: [ProfitExplanationsStore],
   templateUrl: './monthly-profits.component.html',
   styleUrl: './monthly-profits.component.scss',
 })
 export class MonthlyProfitsComponent implements OnInit {
+  protected readonly explanations = inject(ProfitExplanationsStore);
   private readonly treasuryService = inject(TreasuryService);
   private readonly repsService = inject(RepsService);
   private readonly auth = inject(AuthService);
@@ -122,6 +125,7 @@ export class MonthlyProfitsComponent implements OnInit {
       )
       .subscribe(({ data, error }) => {
         this.screen.set(data);
+        this.explanations.set(data?.explanations);
         this.errorMessage.set(error ? this.toMessage(error) : null);
         this.loading.set(false);
       });

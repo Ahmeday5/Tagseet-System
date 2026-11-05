@@ -193,28 +193,83 @@ export interface ProfitsScreenQuery {
   representativeId?: number;
 }
 
+/*
+ * Every money figure below may be negative (expenses exceeding profits) —
+ * render it as-is, never clamp to zero.
+ */
+
 export interface RepresentativeProfit {
   representativeId: number;
   representativeName: string;
   amount: number;
 }
 
+/** A representative's monthly share, broken down by source. */
+export interface RepresentativeProfitBreakdown extends RepresentativeProfit {
+  /** Commission earned on contracts. */
+  fromContracts: number;
+  /** Their share of direct revenues (added). */
+  fromRevenues: number;
+  /** Their share of expenses (subtracted). */
+  fromExpenses: number;
+}
+
+/** Profits accrued to a shareholder but not yet settled. */
+export interface ShareholderPendingProfit {
+  shareholderId?: number;
+  shareholderName: string;
+  accruedProfit: number;
+  companyPercentage: number;
+  companyShare: number;
+  shareholderShare: number;
+}
+
+/** A shareholder's slice of one month's (or the year's) shareholders pool. */
+export interface ShareholderProfitShare {
+  shareholderId?: number;
+  shareholderName: string;
+  contributionPercentage: number;
+  poolShare: number;
+  companyPercentage: number;
+  companyShare: number;
+  shareholderShare: number;
+}
+
 export interface ProfitTreasuries {
-  /** Shareholders' profits not yet distributed. */
+  /** Profits not yet settled — company + shareholders pending shares. */
   profitsTreasury: number;
+  companyPendingShare: number;
+  shareholdersPendingShare: number;
+  /** Settled company profits only — excludes `companyPendingShare`. */
   companyProfitsTreasury: number;
+  /** companyProfitsTreasury + companyPendingShare. */
+  companyTotalProfit: number;
   representativesProfitsTotal: number;
   /** Unpaid commission per representative — also drives the dynamic columns. */
   representatives: RepresentativeProfit[];
+  /** Breakdown of `profitsTreasury`; empty when scoped to a representative. */
+  shareholders: ShareholderPendingProfit[];
 }
 
 export interface ProfitsSummary {
   /** Sales profits + direct revenues for the year. */
   totalProfits: number;
-  /** Company + representatives share. */
   distributedProfits: number;
-  /** totalProfits − distributedProfits; may be negative. */
+  /** totalProfits − distributedProfits. */
   currentProfits: number;
+  collectedProfits: number;
+  directRevenues: number;
+  expenses: number;
+  /** collectedProfits + directRevenues − expenses. */
+  netProfits: number;
+}
+
+/** Arabic description of how a figure is computed. */
+export interface ProfitExplanation {
+  /** PascalCase dotted path, e.g. `MonthlySalesProfits.NetProfit`. */
+  field: string;
+  title: string;
+  formula: string;
 }
 
 /** Common to every monthly row; `month` is 0 on the yearly total row. */
@@ -229,19 +284,30 @@ export interface MonthlySalesProfit extends MonthlyRowBase {
   installmentProfit: number;
   /** cashProfit + installmentProfit. */
   salesProfit: number;
+  /** collectedFromInstallments + collectedFromCashSales. */
   collectedProfit: number;
+  collectedFromInstallments: number;
+  collectedFromCashSales: number;
   directRevenues: number;
+  expenses: number;
+  /** collectedProfit + directRevenues − expenses. */
+  netProfit: number;
 }
 
 export interface MonthlyProfitDistribution extends MonthlyRowBase {
-  /** companyProfit + shareholdersProfit + representativesProfit. */
-  distributedProfit: number;
-  /** 0 for representatives or when filtered by a representative. */
-  companyProfit: number;
-  /** 0 for representatives or when filtered by a representative. */
-  shareholdersProfit: number;
+  netProfit: number;
   representativesProfit: number;
-  representatives: RepresentativeProfit[];
+  /** netProfit − representativesProfit. 0 when scoped to a representative. */
+  shareholdersPool: number;
+  /** Company's cut of the pool. 0 when scoped to a representative. */
+  companyProfit: number;
+  /** 0 when scoped to a representative. */
+  shareholdersProfit: number;
+  /** companyProfit + shareholdersProfit + representativesProfit (= netProfit company-wide). */
+  distributedProfit: number;
+  representatives: RepresentativeProfitBreakdown[];
+  /** Empty when scoped to a representative. */
+  shareholders: ShareholderProfitShare[];
 }
 
 export interface MonthlyTable<T> {
@@ -257,4 +323,5 @@ export interface ProfitsScreen {
   summary: ProfitsSummary;
   monthlySalesProfits: MonthlyTable<MonthlySalesProfit>;
   monthlyProfitDistribution: MonthlyTable<MonthlyProfitDistribution>;
+  explanations: ProfitExplanation[];
 }

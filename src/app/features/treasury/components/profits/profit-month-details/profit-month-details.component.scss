@@ -1,0 +1,100 @@
+@use '../profits-sheet' as ps;
+
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  color: ps.$ps-ink;
+}
+
+.md-story {
+  margin: 0;
+  padding: 10px 14px;
+  border-inline-start: 4px solid ps.$ps-orange;
+  border-radius: 6px;
+  background: #fff6ee;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 2;
+}
+
+.md-num {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.md-loss {
+  color: ps.$ps-loss;
+}
+
+.md-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.md-heading {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.md-scroll {
+  overflow-x: auto;
+  border: 2px solid ps.$ps-frame;
+  background: #fff;
+}
+
+.md-table {
+  width: 100%;
+  min-width: 560px;
+  border-collapse: collapse;
+  font-size: 12px;
+
+  th,
+  td {
+    border: 1px solid ps.$ps-grid;
+    padding: 6px 10px;
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  thead th {
+    background: ps.$ps-gold;
+    font-weight: 800;
+  }
+
+  tfoot th,
+  tfoot td {
+    background: ps.$ps-blue;
+    font-weight: 800;
+  }
+
+  .md-name {
+    text-align: start;
+    font-weight: 700;
+  }
+
+  tbody .md-name {
+    background: ps.$ps-blue-pale;
+  }
+
+  .md-strong {
+    font-weight: 800;
+  }
+}
+
+.md-op {
+  font-weight: 800;
+  color: ps.$ps-frame;
+}
+
+.md-empty {
+  margin: 0;
+  padding: 12px;
+  border: 1px dashed var(--brd2);
+  border-radius: 6px;
+  color: var(--txt3);
+  text-align: center;
+}

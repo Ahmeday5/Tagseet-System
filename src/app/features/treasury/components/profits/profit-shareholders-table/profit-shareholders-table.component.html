@@ -1,0 +1,82 @@
+<div class="st-bar">
+  <input
+    type="search"
+    class="st-search"
+    placeholder="ابحث باسم المساهم…"
+    aria-label="ابحث باسم المساهم"
+    [value]="query()"
+    (input)="query.set($any($event.target).value)"
+  />
+  <span class="st-count">{{ visible().length }} من {{ rows().length }} مساهم</span>
+</div>
+
+<div class="st-scroll">
+  <table>
+    <thead>
+      <tr>
+        <th scope="col" class="st-name" [attr.aria-sort]="ariaSort('shareholderName')">
+          <button type="button" class="st-sort" (click)="sortBy('shareholderName')">
+            المساهم
+            <span class="st-arrow" aria-hidden="true">
+              {{ sortKey() === 'shareholderName' ? (sortDir() === 1 ? '▲' : '▼') : '⇅' }}
+            </span>
+          </button>
+        </th>
+        @for (col of columns(); track col.key) {
+          <th scope="col" [attr.aria-sort]="ariaSort(col.key)">
+            <button type="button" class="st-sort" (click)="sortBy(col.key)">
+              {{ col.label }}
+              <span class="st-arrow" aria-hidden="true">
+                {{ sortKey() === col.key ? (sortDir() === 1 ? '▲' : '▼') : '⇅' }}
+              </span>
+            </button>
+            @if (col.field) {
+              <app-profit-info [field]="col.field" [fallback]="col.hint ?? ''" />
+            }
+          </th>
+        }
+      </tr>
+    </thead>
+
+    <tbody>
+      @for (row of visible(); track $index) {
+        <tr>
+          <th scope="row" class="st-name">{{ row.shareholderName }}</th>
+          @for (col of columns(); track col.key) {
+            @let v = num(row, col.key);
+            <td [class.st-loss]="v < 0">
+              {{ col.kind === 'percent' ? (v | percentAr) : (v | amountAr) }}
+            </td>
+          }
+        </tr>
+      } @empty {
+        <tr>
+          <td class="st-empty" [attr.colspan]="columns().length + 1">
+            {{ rows().length ? 'لا يوجد مساهم بهذا الاسم' : 'لا توجد بيانات مساهمين' }}
+          </td>
+        </tr>
+      }
+    </tbody>
+
+    @if (rows().length) {
+      <tfoot>
+        <tr>
+          <th scope="row" class="st-name">
+            الإجمالي
+            @if (visible().length !== rows().length) {
+              <small>(كل المساهمين)</small>
+            }
+          </th>
+          @for (col of columns(); track col.key) {
+            @let t = footer().get(col.key);
+            <td [class.st-loss]="(t ?? 0) < 0">
+              @if (t != null) {
+                {{ col.kind === 'percent' ? (t | percentAr) : (t | amountAr) }}
+              }
+            </td>
+          }
+        </tr>
+      </tfoot>
+    }
+  </table>
+</div>
