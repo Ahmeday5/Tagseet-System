@@ -32,6 +32,35 @@
 .cps-sc-paid .cps-sc-val { color: var(--re, #c0392b); }
 .cps-sc-bal  .cps-sc-val { color: var(--bl); }
 
+// ── unexplained balance difference ──
+
+.cps-diff-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 14px;
+  padding: 10px 14px;
+  border: 1px solid #f2d27a;
+  border-inline-start-width: 4px;
+  border-radius: var(--r, 8px);
+  background: #fff8db;
+  color: #7a5200;
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.7;
+}
+
+.cps-diff-icon {
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.cps-diff-amount {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 // ── date filter ──
 
 .cps-filter {
@@ -83,11 +112,18 @@
   color: var(--txt);
 }
 
+.cps-treasury {
+  color: var(--bl);
+}
+
 .cps-amount {
   text-align: end;
   font-weight: 700;
   font-size: 13px;
 }
+
+.cps-in  { color: var(--gr); }
+.cps-out { color: var(--re, #c0392b); }
 
 .cps-notes {
   font-size: 10.5px;
