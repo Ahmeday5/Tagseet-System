@@ -15,13 +15,8 @@ import {
   Shareholder,
   ShareholdersSummary,
 } from '../../models/shareholder.model';
-import {
-  ProfitSettlement,
-  ProfitSettlementPreview,
-} from '../../models/profit-settlement.model';
+import { ProfitSettlementPreview } from '../../models/profit-settlement.model';
 import { ShareholderFormModalComponent } from '../../components/shareholder-form-modal/shareholder-form-modal.component';
-import { ProfitDistributionModalComponent } from '../../components/profit-distribution-modal/profit-distribution-modal.component';
-import { ProfitSettlementDetailsModalComponent } from '../../components/profit-settlement-details-modal/profit-settlement-details-modal.component';
 import { ShareholderCapitalModalComponent } from '../../components/shareholder-capital-modal/shareholder-capital-modal.component';
 import { CapitalizeAllProfitsModalComponent } from '../../components/capitalize-all-profits-modal/capitalize-all-profits-modal.component';
 import { ShareholderStatementModalComponent } from '../../components/shareholder-statement-modal/shareholder-statement-modal.component';
@@ -58,8 +53,6 @@ const RECONCILE_DONE_KEY = 'shareholders.company-reconcile-done';
   imports: [
     DecimalPipe,
     ShareholderFormModalComponent,
-    ProfitDistributionModalComponent,
-    ProfitSettlementDetailsModalComponent,
     ShareholderCapitalModalComponent,
     CapitalizeAllProfitsModalComponent,
     ShareholderStatementModalComponent,
@@ -152,11 +145,6 @@ export class ShareholdersComponent {
     pageIndex: this.previewPageIndex(),
     pageSize: this.previewPageSize(),
   }));
-
-  // ── profit-settlement modals ──
-  protected readonly distributeOpen = signal(false);
-  protected readonly detailsOpen = signal(false);
-  protected readonly detailsId = signal<number | null>(null);
 
   // ── per-shareholder capital modal ──
   protected readonly capitalOpen = signal(false);
@@ -521,32 +509,6 @@ export class ShareholdersComponent {
         this.toast.error(err.message || 'تعذّر حذف المساهم');
       },
     });
-  }
-
-  // ─────────── profit-settlement modals ───────────
-
-  protected openDistribute(): void {
-    this.distributeOpen.set(true);
-  }
-
-  protected closeDistribute(): void {
-    this.distributeOpen.set(false);
-  }
-
-  protected onSettled(settlement: ProfitSettlement): void {
-    this.distributeOpen.set(false);
-    // Service invalidation triggers refreshAll(); open the new settlement's
-    // breakdown immediately.
-    this.openDetails(settlement.id);
-  }
-
-  protected openDetails(id: number): void {
-    this.detailsId.set(id);
-    this.detailsOpen.set(true);
-  }
-
-  protected closeDetails(): void {
-    this.detailsOpen.set(false);
   }
 
   // ─────────── capital modal ───────────

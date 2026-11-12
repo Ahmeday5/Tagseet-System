@@ -113,7 +113,7 @@ const MESSAGE_PATTERNS: readonly MessagePattern[] = [
   },
   {
     test: /no\s+(?:accrued\s+)?profits?\s+to\s+capitaliz|nothing\s+to\s+capitaliz|capitaliz.*zero|zero.*capitaliz/i,
-    ar: () => 'لا توجد أرباح مستحقة للرسملة حاليًا.',
+    ar: () => 'لا توجد أرباح مستحقة للترحيل حاليًا.',
   },
   {
     test: /(?:profits?|representative|delegate)\s+treasur(?:y|ies)|treasury\s+(?:type\s+)?(?:is\s+)?not\s+(?:allowed|permitted|valid)|cannot\s+(?:use|select)\s+(?:this\s+)?treasury/i,

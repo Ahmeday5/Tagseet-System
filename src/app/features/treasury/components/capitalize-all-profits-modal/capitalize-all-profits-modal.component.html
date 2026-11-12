@@ -1,6 +1,6 @@
 <app-modal
   [open]="open()"
-  title="رسملة الأرباح الكلية"
+  title="ترحيل الأرباح إلى رأس المال"
   size="lg"
   [closeOnBackdrop]="!submitting()"
   [closeOnEsc]="!submitting()"
@@ -10,7 +10,7 @@
     <!-- summary -->
     <div class="cap-all-summary">
       <div class="cap-all-summary-item">
-        <span class="cap-all-label">خزينة الأرباح</span>
+        <span class="cap-all-label">خزينة الأرباح (استعلامية)</span>
         <span class="cap-all-value">{{ p.profitsTreasuryName }}</span>
       </div>
       <div class="cap-all-summary-item">
@@ -40,7 +40,7 @@
             <path d="M12 8v4M12 16h.01" />
           </svg>
         </div>
-        <div class="cap-all-empty-title">لا توجد أرباح مستحقة للرسملة حاليًا</div>
+        <div class="cap-all-empty-title">لا توجد أرباح مستحقة للترحيل حاليًا</div>
         <div class="cap-all-empty-sub">لا يوجد مساهمون لديهم أرباح متراكمة غير مُسوَّاة.</div>
       </div>
     } @else {
@@ -80,14 +80,14 @@
       <form [formGroup]="form" (ngSubmit)="onSubmit()" novalidate autocomplete="off" class="cap-all-form">
         <div class="row g-3">
           <div class="col-12 col-md-6">
-            <label class="form-label">تاريخ الرسملة</label>
+            <label class="form-label">تاريخ الترحيل</label>
             <input
               type="date"
               class="form-control"
               formControlName="date"
               [class.is-invalid]="isInvalid('date')"
             />
-            <app-form-error [control]="form.controls.date" label="تاريخ الرسملة" />
+            <app-form-error [control]="form.controls.date" label="تاريخ الترحيل" />
           </div>
           <div class="col-12 col-md-6">
             <label class="form-label">ملاحظات</label>
@@ -136,7 +136,7 @@
       @if (submitting()) {
         <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
       }
-      <span>{{ submitting() ? 'جاري الرسملة...' : 'رسملة الأرباح' }}</span>
+      <span>{{ submitting() ? 'جاري الترحيل...' : 'ترحيل إلى رأس المال' }}</span>
     </button>
   </ng-container>
 </app-modal>
