@@ -180,6 +180,11 @@
   font-family: monospace;
 }
 
+// Awaiting activation — tinted so admins spot app self-registrations.
+.cl-row-inactive {
+  background-color: color-mix(in srgb, var(--am, #f59e0b) 8%, transparent);
+}
+
 .cl-row-clickable {
   cursor: pointer;
   transition: background-color 0.12s ease;

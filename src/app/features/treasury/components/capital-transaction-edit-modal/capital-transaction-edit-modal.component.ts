@@ -50,6 +50,7 @@ export class CapitalTransactionEditModalComponent {
   readonly shareholderId = input<number | null>(null);
   readonly transaction = input<CapitalTransaction | null>(null);
   readonly treasuries = input<SearchableSelectOption[]>([]);
+  readonly classifications = input<SearchableSelectOption[]>([]);
 
   readonly closed = output<void>();
   readonly saved = output<CapitalTransaction>();
@@ -63,6 +64,7 @@ export class CapitalTransactionEditModalComponent {
     treasuryId: this.fb.control<number | null>(null, [Validators.required]),
     date: ['', [Validators.required]],
     notes: [''],
+    capitalClassificationId: this.fb.control<number | null>(null),
   });
 
   constructor() {
@@ -78,6 +80,7 @@ export class CapitalTransactionEditModalComponent {
           treasuryId: tx.treasuryId,
           date: tx.date.slice(0, 10),
           notes: tx.notes ?? '',
+          capitalClassificationId: tx.capitalClassificationId ?? null,
         });
       },
       { allowSignalWrites: true },
@@ -103,6 +106,9 @@ export class CapitalTransactionEditModalComponent {
         treasuryId: Number(raw.treasuryId),
         date: raw.date,
         notes: raw.notes.trim(),
+        capitalClassificationId: raw.capitalClassificationId
+          ? Number(raw.capitalClassificationId)
+          : null,
       })
       .subscribe({
         next: (res) => {

@@ -341,3 +341,15 @@
 .cv-ltr { direction: ltr; unicode-bidi: isolate; }
 .fs-10  { font-size: 10px; }
 .mb-0   { margin-bottom: 0 !important; }
+
+// ── synthetic company row (read-only) ──
+.sh-company-row {
+  background: var(--bg2, rgba(0, 0, 0, 0.03));
+
+  td { border-bottom: 2px solid var(--brd, #e5e7eb); }
+}
+
+.sh-avatar-company {
+  background: var(--te-l, var(--bl-l));
+  font-size: 14px;
+}

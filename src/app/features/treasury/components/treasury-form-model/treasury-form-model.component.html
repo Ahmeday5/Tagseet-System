@@ -84,6 +84,20 @@
         </div>
       </div>
 
+      <div class="col-12">
+        <div class="form-check form-switch">
+          <input
+            id="treasury-shared-reps"
+            type="checkbox"
+            class="form-check-input"
+            formControlName="sharedWithAllRepresentatives"
+          />
+          <label class="form-check-label" for="treasury-shared-reps">
+            تظهر لكل المناديب
+          </label>
+        </div>
+      </div>
+
       @if (isSubRepresentative()) {
         <div class="col-12">
           <label class="form-label">المندوب</label>

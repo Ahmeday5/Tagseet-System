@@ -58,6 +58,8 @@ export interface DashboardClient {
 
   rating: DashboardClientRating | null;
   status: DashboardClientStatus;
+  /** App self-registrations arrive `false` and need an admin to activate them. */
+  isActive: boolean;
 }
 
 /** Query params accepted by `GET /dashboard/clients`. */
@@ -67,6 +69,8 @@ export interface DashboardClientsQuery {
   search?: string;
   /** When true, restrict the result set to overdue clients only. */
   onlyOverdue?: boolean;
+  /** `false` → only clients awaiting activation. */
+  isActive?: boolean;
 }
 
 /**
@@ -138,6 +142,7 @@ export interface ClientProfileClient {
   building: string | null;
   floor: string | null;
   department: string | null;
+  isActive: boolean;
 }
 
 /** Full response of `GET /dashboard/clients/{id}`. */
@@ -145,6 +150,12 @@ export interface ClientProfileResponse {
   client: ClientProfileClient;
   totalContractsCount: number;
   overdueContractsCount: number;
+}
+
+/** `PUT clients/{id}/toggle-active` → data. */
+export interface ToggleClientActiveResult {
+  id: number;
+  isActive: boolean;
 }
 
 /** POST /dashboard/clients/{id}/password body. */

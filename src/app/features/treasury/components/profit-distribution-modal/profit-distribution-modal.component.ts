@@ -13,10 +13,6 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';
 import { FormErrorComponent } from '../../../../shared/components/form-error/form-error.component';
-import {
-  SearchableSelectComponent,
-  SearchableSelectOption,
-} from '../../../../shared/components/searchable-select/searchable-select.component';
 import { CurrencyArPipe } from '../../../../shared/pipes/currency-ar.pipe';
 import { ApiError } from '../../../../core/models/api-response.model';
 import { ToastService } from '../../../../core/services/toast.service';
@@ -26,7 +22,6 @@ import {
   ProfitSettlement,
   ProfitSettlementPreview,
 } from '../../models/profit-settlement.model';
-import { ShareholderTreasuryLookup } from '../../models/shareholder-treasury-lookup.model';
 import { FETCH_ALL_PAGE_SIZE } from '../../../../core/utils/api-list.util';
 
 @Component({
@@ -38,7 +33,6 @@ import { FETCH_ALL_PAGE_SIZE } from '../../../../core/utils/api-list.util';
     DecimalPipe,
     ModalComponent,
     FormErrorComponent,
-    SearchableSelectComponent,
     CurrencyArPipe,
   ],
   templateUrl: './profit-distribution-modal.component.html',
@@ -63,8 +57,6 @@ export class ProfitDistributionModalComponent {
   protected readonly previewError = signal<string | null>(null);
   protected readonly submitting = signal(false);
   protected readonly serverError = signal<string | null>(null);
-  protected readonly treasuries = signal<ShareholderTreasuryLookup[]>([]);
-  protected readonly loadingTreasuries = signal(false);
 
   // ── derived ──
   protected readonly lines = computed(() => this.preview()?.lines?.data ?? []);
@@ -78,17 +70,9 @@ export class ProfitDistributionModalComponent {
     () => this.preview()?.totalCompanyShare ?? 0,
   );
   protected readonly canDistribute = computed(() => this.totalAmount() > 0);
-  protected readonly operationalTreasuryOptions = computed<SearchableSelectOption[]>(() =>
-    this.treasuries().map((t) => ({
-      value: t.id,
-      label: t.name,
-      hint: t.representativeName ?? undefined,
-    })),
-  );
 
-  // ── form ──
+  // ── form ── (ledger-only settlement: no source treasury)
   protected readonly form = this.fb.nonNullable.group({
-    treasuryId: this.fb.control<number | null>(null, [Validators.required]),
     date: [this.todayISO(), [Validators.required]],
     notes: [''],
   });
@@ -99,9 +83,8 @@ export class ProfitDistributionModalComponent {
         if (!this.open()) return;
         this.serverError.set(null);
         this.submitting.set(false);
-        this.form.reset({ treasuryId: null, date: this.todayISO(), notes: '' });
+        this.form.reset({ date: this.todayISO(), notes: '' });
         this.loadPreview();
-        if (!this.treasuries().length) this.loadTreasuries();
       },
       { allowSignalWrites: true },
     );
@@ -117,15 +100,11 @@ export class ProfitDistributionModalComponent {
     }
 
     const raw = this.form.getRawValue();
-    const treasuryId = Number(raw.treasuryId);
-    if (!treasuryId) return;
-
     this.serverError.set(null);
     this.submitting.set(true);
 
     this.service
       .settleProfits({
-        treasuryId,
         date: raw.date,
         notes: (raw.notes ?? '').trim(),
       })
@@ -166,20 +145,6 @@ export class ProfitDistributionModalComponent {
       error: (err: ApiError) => {
         this.loadingPreview.set(false);
         this.previewError.set(err.message || 'تعذّر تحميل بيانات التوزيع');
-      },
-    });
-  }
-
-  private loadTreasuries(): void {
-    this.loadingTreasuries.set(true);
-    this.service.treasuriesLookup().subscribe({
-      next: (list) => {
-        this.treasuries.set(list ?? []);
-        this.loadingTreasuries.set(false);
-      },
-      error: () => {
-        this.treasuries.set([]);
-        this.loadingTreasuries.set(false);
       },
     });
   }

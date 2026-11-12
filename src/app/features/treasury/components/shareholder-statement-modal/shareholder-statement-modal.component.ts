@@ -19,6 +19,8 @@ import { ApiError } from '../../../../core/models/api-response.model';
 import { ToastService } from '../../../../core/services/toast.service';
 
 import { ShareholdersService } from '../../services/shareholders.service';
+import { CapitalClassificationsService } from '../../services/capital-classifications.service';
+import { CapitalClassification } from '../../models/capital-classification.model';
 import { Shareholder } from '../../models/shareholder.model';
 import {
   ShareholderStatement,
@@ -57,6 +59,7 @@ export class ShareholderStatementModalComponent {
 
   private readonly service = inject(ShareholdersService);
   private readonly toast = inject(ToastService);
+  private readonly classificationsService = inject(CapitalClassificationsService);
 
   protected readonly statement = signal<ShareholderStatement | null>(null);
   protected readonly loading = signal(false);
@@ -68,6 +71,9 @@ export class ShareholderStatementModalComponent {
   /** Type filter — applied immediately on change. */
   protected readonly txType = signal<StatementTransactionType | ''>('');
   protected readonly txOptions = STATEMENT_TX_OPTIONS;
+  /** Capital-classification filter — applied immediately on change. */
+  protected readonly classificationId = signal<number | null>(null);
+  protected readonly classifications = signal<CapitalClassification[]>([]);
 
   // ── pagination ──
   protected readonly pageIndex = signal(1);
@@ -86,7 +92,11 @@ export class ShareholderStatementModalComponent {
   );
 
   protected readonly hasFilters = computed(
-    () => !!this.fromDate() || !!this.toDate() || !!this.txType(),
+    () =>
+      !!this.fromDate() ||
+      !!this.toDate() ||
+      !!this.txType() ||
+      this.classificationId() !== null,
   );
 
   private lastShId: number | null = null;
@@ -103,8 +113,10 @@ export class ShareholderStatementModalComponent {
         this.fromDate.set('');
         this.toDate.set('');
         this.txType.set('');
+        this.classificationId.set(null);
         this.pageIndex.set(1);
         this.fetch(sh.id, 1, this.pageSize(), false);
+        if (!this.classifications().length) this.loadClassifications();
       },
       { allowSignalWrites: true },
     );
@@ -132,10 +144,16 @@ export class ShareholderStatementModalComponent {
     this.applyDates();
   }
 
+  protected onClassificationChange(value: string): void {
+    this.classificationId.set(value ? Number(value) : null);
+    this.applyDates();
+  }
+
   protected clearDates(): void {
     this.fromDate.set('');
     this.toDate.set('');
     this.txType.set('');
+    this.classificationId.set(null);
     const sh = this.shareholder();
     if (!sh) return;
     this.pageIndex.set(1);
@@ -174,6 +192,13 @@ export class ShareholderStatementModalComponent {
       : value;
   }
 
+  private loadClassifications(): void {
+    this.classificationsService.listAll().subscribe({
+      next: (list) => this.classifications.set(list ?? []),
+      error: () => this.classifications.set([]),
+    });
+  }
+
   private fetch(
     shId: number,
     pageIndex: number,
@@ -189,6 +214,7 @@ export class ShareholderStatementModalComponent {
       fromDate: this.fromDate() || undefined,
       toDate: this.toDate() || undefined,
       transactionType: this.txType() || undefined,
+      classificationId: this.classificationId(),
     };
 
     const stream$ = force

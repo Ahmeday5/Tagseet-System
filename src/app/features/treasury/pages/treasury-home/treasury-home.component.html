@@ -100,11 +100,18 @@
                     👤 {{ rep }}
                   </span>
                   }
+                  @if (t.sharedWithAllRepresentatives) {
+                  <span style="display:block;font-size:10px;font-weight:500;color:var(--txt3)">
+                    👥 تظهر لكل المناديب
+                  </span>
+                  }
                 </td>
                 <td>
                   <app-badge [text]="typeLabel(t.type)" [type]="typeBadge(t.type)" />
                 </td>
-                <td style="color:var(--te);font-weight:700">{{ t.currentBalance | currencyAr: true }}</td>
+                <td style="font-weight:700" [style.color]="t.currentBalance < 0 ? 'var(--re,#c0392b)' : 'var(--te)'">
+                  {{ t.currentBalance | currencyAr: true }}
+                </td>
                 <td>
                   @if (t.isActive) {
                   <app-badge text="فعّالة" type="ok" />
@@ -332,7 +339,7 @@
               <tr>
                 <td style="font-weight:600">{{ s.representativeName }}</td>
                 <td>{{ s.treasuryName }}</td>
-                <td class="trf-amount">{{ s.balance | currencyAr: true }}</td>
+                <td class="trf-amount" [class.trf-amount-negative]="s.balance < 0">{{ s.balance | currencyAr: true }}</td>
                 <td>{{ s.totalSales | currencyAr: true }}</td>
                 <td>{{ s.totalCost | currencyAr: true }}</td>
                 <td style="color:var(--gr);font-weight:600">
@@ -486,7 +493,7 @@
                   <td [ngClass]="signedAmountClass(op.signedAmount)">
                     {{ op.signedAmount | currencyAr: true }}
                   </td>
-                  <td style="color:var(--bl);font-weight:700">
+                  <td style="font-weight:700" [style.color]="op.balanceAfter < 0 ? 'var(--re,#c0392b)' : 'var(--bl)'">
                     {{ op.balanceAfter | currencyAr: true }}
                   </td>
                   <td style="font-size:10.5px;color:var(--txt2)">{{ op.userName }}</td>

@@ -1,0 +1,93 @@
+<div class="pgh">
+  <div>
+    <div class="pgt">تصنيفات رأس المال</div>
+    <div class="pgs">تصنيف إيداعات وسحوبات رأس مال المساهمين ومتابعة كشف حساب كل تصنيف</div>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    <a class="btn btn-sm" routerLink="/treasury/shareholders">← المساهمون</a>
+    <button *appHasPermission="PERMS.treasuryFullAccess" class="btn btn-sm btn-bl" (click)="openCreate()">
+      + تصنيف جديد
+    </button>
+  </div>
+</div>
+
+<div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+  <div class="position-relative" style="flex:1 1 260px;max-width:420px">
+    <input type="text" class="form-control form-control-sm" placeholder="بحث باسم التصنيف..."
+      [value]="searchTerm()" (input)="onSearch($any($event.target).value)" />
+  </div>
+  @if (searchTerm()) {
+  <button type="button" class="btn btn-sm" (click)="clearSearch()">مسح</button>
+  }
+  <button type="button" class="btn btn-sm d-inline-flex align-items-center gap-1" [disabled]="loading()"
+    (click)="refresh()">
+    @if (loading()) {
+    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+    }
+    <span>تحديث</span>
+  </button>
+</div>
+
+<div class="card">
+  <div class="tw mb-0">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:60px">#</th>
+          <th>التصنيف</th>
+          <th>ملاحظات</th>
+          <th class="text-center">عدد العمليات</th>
+          <th>تاريخ الإنشاء</th>
+          <th class="text-center">الإجراءات</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (c of rows(); track c.id) {
+        <tr>
+          <td class="fs-10">#{{ c.id }}</td>
+          <td class="fw-600">{{ c.name }}</td>
+          <td class="fs-10" [title]="c.notes ?? ''">{{ c.notes || '—' }}</td>
+          <td class="text-center">{{ c.transactionsCount | number }}</td>
+          <td class="fs-10">{{ c.createdAt | dateAr: 'short' }}</td>
+          <td>
+            <div class="d-flex gap-1 justify-content-center">
+              <button type="button" class="btn btn-sm" (click)="openStatement(c)">كشف حساب</button>
+              <ng-container *appHasPermission="PERMS.treasuryFullAccess">
+                <button type="button" class="btn btn-sm btn-bl" (click)="openEdit(c)">تعديل</button>
+                <button type="button" class="btn btn-sm btn-re d-inline-flex align-items-center gap-1"
+                  [disabled]="deletingId() !== null"
+                  [title]="c.transactionsCount > 0 ? 'التصنيف مستخدم في عمليات — سيرفض الخادم الحذف' : 'حذف'"
+                  (click)="confirmDelete(c)">
+                  @if (deletingId() === c.id) {
+                  <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                  }
+                  <span>حذف</span>
+                </button>
+              </ng-container>
+            </div>
+          </td>
+        </tr>
+        } @empty {
+        <tr>
+          <td colspan="6" class="text-center py-4" style="color:var(--txt3);font-size:12px">
+            @if (loading()) { جاري التحميل... }
+            @else if (searchTerm()) { لا توجد تصنيفات مطابقة لـ "{{ searchTerm() }}". }
+            @else { لا توجد تصنيفات بعد — أضف أول تصنيف لرأس المال. }
+          </td>
+        </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+
+  @if (count() > 0) {
+  <app-pagination [pageIndex]="pageIndex()" [pageSize]="pageSize()" [count]="count()" [totalPages]="totalPages()"
+    [disabled]="loading()" (pageChange)="onPageChange($event)" (pageSizeChange)="onPageSizeChange($event)" />
+  }
+</div>
+
+<app-capital-classification-form-modal [open]="formOpen()" [classification]="editing()" (closed)="closeForm()"
+  (saved)="onSaved()" />
+
+<app-capital-classification-statement-modal [open]="statementOpen()" [classification]="statementTarget()"
+  (closed)="closeStatement()" />

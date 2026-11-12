@@ -61,11 +61,10 @@ export interface ProfitSettlementPreviewQuery {
 }
 
 /**
- * `POST /profit-settlement` body. `treasuryId` is the profits treasury taken
- * from the preview — the user picks the date and an optional note only.
+ * `POST /profit-settlement` body. The settlement is a ledger-only entry — no
+ * cash moves, so no treasury is sent.
  */
 export interface CreateProfitSettlementPayload {
-  treasuryId: number;
   /** `yyyy-MM-dd` — calendar date, not a timestamp. */
   date: string;
   notes: string;

@@ -17,6 +17,40 @@ export interface Shareholder {
   capitalTreasuryName: string;
   notes: string | null;
   createdAt: string;
+  /** True only for the synthetic "الشركة" row (id 0) the list prepends to page 1 — read-only. */
+  isCompany?: boolean;
+}
+
+/** `GET shareholders/summary`. */
+export interface ShareholdersSummary {
+  shareholdersCount: number;
+  totalShareholdersCapital: number;
+  companyBalance: number;
+  totalIncludingCompany: number;
+}
+
+/** `POST shareholders/company-balance/transactions` — Receipt = إيداع, Payment = سحب. */
+export interface CompanyBalanceTransactionPayload {
+  type: 'Receipt' | 'Payment';
+  amount: number;
+  /** `yyyy-MM-dd`. */
+  date: string;
+  notes: string | null;
+}
+
+export interface ReconcileTreasuryLine {
+  treasuryId?: number;
+  treasuryName?: string;
+  amount?: number;
+  [key: string]: unknown;
+}
+
+/** `POST shareholders/company-balance/reconcile-historical` report. */
+export interface ReconcileHistoricalReport {
+  vouchersReversed: number;
+  transactionsRemoved: number;
+  totalRestored: number;
+  treasuries: ReconcileTreasuryLine[];
 }
 
 export interface CreateShareholderPayload {

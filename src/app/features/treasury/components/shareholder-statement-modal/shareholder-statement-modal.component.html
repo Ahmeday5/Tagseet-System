@@ -67,6 +67,12 @@
         <div class="shst-sc-label">أرباح مستحقة</div>
         <div class="shst-sc-val">{{ st.accruedProfit | currencyAr: true }}</div>
       </div>
+      <div class="shst-sc shst-sc-net">
+        <div class="shst-sc-label">صافي رصيد رأس المال</div>
+        <div class="shst-sc-val" [class.text-danger]="st.netCapitalBalance < 0">
+          {{ st.netCapitalBalance | currencyAr: true }}
+        </div>
+      </div>
     </div>
   }
 
@@ -101,6 +107,20 @@
         <option value="">الكل</option>
         @for (t of txOptions; track t) {
           <option [value]="t">{{ txLabel(t) }}</option>
+        }
+      </select>
+    </div>
+    <div class="shst-filter-group">
+      <label class="shst-filter-label">التصنيف</label>
+      <select
+        class="form-select form-select-sm"
+        [value]="classificationId() ?? ''"
+        [disabled]="loading()"
+        (change)="onClassificationChange($any($event.target).value)"
+      >
+        <option value="">الكل</option>
+        @for (c of classifications(); track c.id) {
+          <option [value]="c.id">{{ c.name }}</option>
         }
       </select>
     </div>

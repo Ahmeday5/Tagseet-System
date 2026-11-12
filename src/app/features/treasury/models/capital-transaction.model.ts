@@ -24,6 +24,8 @@ export interface CapitalTransaction {
   treasuryName: string;
   notes: string | null;
   userName: string;
+  capitalClassificationId: number | null;
+  capitalClassificationName: string | null;
 }
 
 export interface CreateCapitalTransactionPayload {
@@ -33,6 +35,7 @@ export interface CreateCapitalTransactionPayload {
   /** `yyyy-MM-dd` — calendar date, not a timestamp. */
   date: string;
   notes: string;
+  capitalClassificationId: number | null;
 }
 
 /** PUT /shareholders/{id}/capital-transactions/{txId} — edits a deposit/withdrawal in place. */
@@ -43,10 +46,11 @@ export interface UpdateCapitalTransactionPayload {
   /** `yyyy-MM-dd` — calendar date, not a timestamp. */
   date: string;
   notes: string;
+  capitalClassificationId: number | null;
 }
 
+/** Ledger-only entry (no cash moves) — the backend no longer takes a source treasury. */
 export interface CapitalizeProfitPayload {
-  profitsTreasuryId: number;
   amount: number;
   /** `yyyy-MM-dd` — calendar date, not a timestamp. */
   date: string;
@@ -55,7 +59,6 @@ export interface CapitalizeProfitPayload {
 
 /** POST /shareholders/capitalize-all-profits — rolls every shareholder's AccruedProfit into capital. */
 export interface CapitalizeAllProfitsPayload {
-  profitsTreasuryId: number;
   /** `yyyy-MM-dd` — calendar date, not a timestamp. */
   date: string;
   notes: string;
@@ -65,4 +68,5 @@ export interface CapitalizeAllProfitsPayload {
 export interface CapitalTransactionsQuery {
   pageIndex?: number;
   pageSize?: number;
+  classificationId?: number | null;
 }

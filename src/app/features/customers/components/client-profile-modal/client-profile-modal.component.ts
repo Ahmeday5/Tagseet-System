@@ -10,6 +10,7 @@ import {
 import { DatePipe } from '@angular/common';
 
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';
+import { BadgeComponent } from '../../../../shared/components/badge/badge.component';
 import { CustomersService } from '../../services/customers.service';
 import { ClientProfileClient, ClientProfileResponse } from '../../models/dashboard-client.model';
 import { StatementComponent } from '../../pages/statement/statement.component';
@@ -18,7 +19,7 @@ import { StatementComponent } from '../../pages/statement/statement.component';
   selector: 'app-client-profile-modal',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ModalComponent, DatePipe, StatementComponent],
+  imports: [ModalComponent, BadgeComponent, DatePipe, StatementComponent],
   templateUrl: './client-profile-modal.component.html',
   styleUrl: './client-profile-modal.component.scss',
 })

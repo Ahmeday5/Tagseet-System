@@ -10,6 +10,7 @@ import {
   DashboardClient,
   DashboardClientsQuery,
   DashboardClientsResponse,
+  ToggleClientActiveResult,
   UpdateClientPayload,
 } from '../models/dashboard-client.model';
 import {
@@ -19,6 +20,7 @@ import {
 } from '../models/client-statement.model';
 import { ApiService } from '../../../core/services/api.service';
 import { API_ENDPOINTS } from '../../../core/constants/api-endpoints.const';
+import { ApiResult } from '../../../core/models/api-response.model';
 import {
   withCache,
   withCacheBypass,
@@ -191,6 +193,15 @@ export class CustomersService {
     });
   }
 
+  /** Activates / deactivates a client — keeps the server message for the toast. */
+  toggleActive(id: number): Observable<ApiResult<ToggleClientActiveResult>> {
+    return this.api.putWithMessage<ToggleClientActiveResult>(
+      API_ENDPOINTS.clients.toggleActive(id),
+      {},
+      { context: withInlineHandling(withCacheInvalidate([CLIENTS_CACHE_KEY])) },
+    );
+  }
+
   private toClientsParams(
     query: DashboardClientsQuery,
   ): Record<string, unknown> {
@@ -199,6 +210,7 @@ export class CustomersService {
       PageSize: query.pageSize ?? 10,
       search: query.search?.trim() || undefined,
       onlyOverdue: query.onlyOverdue ? true : undefined,
+      isActive: query.isActive ?? undefined,
     };
   }
 

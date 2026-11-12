@@ -5,8 +5,21 @@
     <div class="pgs">إدارة الشركاء ونسب الملكية وتوزيع الأرباح</div>
   </div>
   <div class="d-flex gap-2 flex-wrap">
+    <a class="btn btn-sm" routerLink="/treasury/capital-classifications"
+      title="إدارة تصنيفات رأس المال وكشوف حساباتها">تصنيفات رأس المال</a>
     <button class="btn btn-sm" title="كشف حساب أرباح الشركة"
       (click)="openCompanyStatement()">كشف حساب الشركة</button>
+    <button *appHasPermission="PERMS.treasuryFullAccess" class="btn btn-sm btn-te"
+      title="إيداع أو سحب مباشر على رصيد الشركة" (click)="openCompanyBalance()">رصيد الشركة</button>
+    @if (isAdmin() && !reconcileDone()) {
+    <button class="btn btn-sm btn-re d-inline-flex align-items-center gap-1" [disabled]="reconciling()"
+      title="تُنفَّذ مرة واحدة فقط: إرجاع كاش الشركة القديم للخزائن التشغيلية" (click)="runReconcile()">
+      @if (reconciling()) {
+      <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+      }
+      <span>معالجة تاريخية لرصيد الشركة</span>
+    </button>
+    }
     <button *appHasPermission="PERMS.treasuryFullAccess" class="btn btn-sm btn-te" [disabled]="!hasPendingProfits()"
       (click)="openCapitalizeAll()" title="ترحيل أرباح جميع المساهمين إلى رأس مالهم دفعةً واحدة">رسملة الأرباح
       الكلية</button>
@@ -23,10 +36,22 @@
 <!-- ── HERO ── -->
 <div class="sh-hero">
   <div class="sh-hero-main">
-    <div class="sh-hero-label">إجمالي المساهمين</div>
-    <div class="sh-hero-value">{{ count() | number }} مساهم</div>
+    <div class="sh-hero-label">إجمالي رصيد المساهمين (شامل الشركة)</div>
+    <div class="sh-hero-value">{{ (summary()?.totalIncludingCompany ?? 0) | currencyAr: true }}</div>
 
     <div class="sh-hero-stats">
+      <div>
+        <div class="sh-hero-stat-label">عدد المساهمين</div>
+        <div class="sh-hero-stat-val">{{ (summary()?.shareholdersCount ?? 0) | number }}</div>
+      </div>
+      <div>
+        <div class="sh-hero-stat-label">رأس مال المساهمين</div>
+        <div class="sh-hero-stat-val">{{ (summary()?.totalShareholdersCapital ?? 0) | currencyAr: true }}</div>
+      </div>
+      <div>
+        <div class="sh-hero-stat-label">رصيد الشركة</div>
+        <div class="sh-hero-stat-val">{{ companyBalance() | currencyAr: true }}</div>
+      </div>
       <div>
         <div class="sh-hero-stat-label">الصفحة الحالية</div>
         <div class="sh-hero-stat-val">{{ pageIndex() }} / {{ totalPages() || 1 }}</div>
@@ -120,6 +145,31 @@
       </thead>
       <tbody>
         @for (s of shareholders(); track s.id) {
+        @if (s.isCompany) {
+        <!-- Synthetic company row — read-only: no edit / delete / details. -->
+        <tr class="sh-company-row">
+          <td class="sh-id">—</td>
+          <td>
+            <div class="sh-row-name">
+              <div class="sh-avatar sh-avatar-company" aria-hidden="true">🏢</div>
+              <div class="sh-row-name-text">
+                <span class="fw-600">{{ s.name || 'الشركة' }}</span>
+                <span class="sh-row-note">رصيد الشركة</span>
+              </div>
+            </div>
+          </td>
+          <td>—</td>
+          <td>—</td>
+          <td class="sh-amount" [class.text-danger]="companyBalance() < 0">{{ companyBalance() | currencyAr: true }}</td>
+          <td colspan="6" class="text-muted fs-10">يُدار رصيد الشركة بالإيداع والسحب المباشر — لا يمكن تعديله أو حذفه</td>
+          <td>
+            <div class="d-flex gap-1 justify-content-center">
+              <button *appHasPermission="PERMS.treasuryFullAccess" type="button" class="btn btn-sm btn-te"
+                (click)="openCompanyBalance()">إيداع / سحب</button>
+            </div>
+          </td>
+        </tr>
+        } @else {
         <tr>
           <td class="sh-id">#{{ s.id }}</td>
           <td>
@@ -177,9 +227,10 @@
             </div>
           </td>
         </tr>
+        }
         } @empty {
         <tr>
-          <td colspan="11" class="sh-empty">
+          <td colspan="12" class="sh-empty">
             @if (loading()) {
             <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
             <span>جاري تحميل المساهمين...</span>
@@ -372,6 +423,56 @@
 <!-- ── SHAREHOLDER STATEMENT MODAL ── -->
 <app-shareholder-statement-modal [open]="statementOpen()" [shareholder]="statementShareholder()"
   (closed)="closeStatement()" />
+
+<!-- ── COMPANY BALANCE (deposit / withdraw) ── -->
+<app-company-balance-modal [open]="companyBalanceOpen()" [balance]="companyBalance()"
+  (closed)="closeCompanyBalance()" (saved)="onCompanyBalanceSaved()" />
+
+<!-- ── HISTORICAL RECONCILE REPORT ── -->
+<app-modal [open]="reconcileReport() !== null" title="تقرير المعالجة التاريخية لرصيد الشركة" size="md"
+  (closed)="closeReconcileReport()">
+  @if (reconcileReport(); as r) {
+  <div class="sh-summary" style="margin-bottom:12px">
+    <div class="sc">
+      <div class="sc-l">سندات تم عكسها</div>
+      <div class="sc-v">{{ r.vouchersReversed | number }}</div>
+    </div>
+    <div class="sc">
+      <div class="sc-l">حركات تم حذفها</div>
+      <div class="sc-v">{{ r.transactionsRemoved | number }}</div>
+    </div>
+    <div class="sc">
+      <div class="sc-l">إجمالي المبلغ المُعاد</div>
+      <div class="sc-v sh-stat-pos">{{ r.totalRestored | currencyAr: true }}</div>
+    </div>
+  </div>
+  <div class="tw mb-0">
+    <table>
+      <thead>
+        <tr>
+          <th>الخزينة</th>
+          <th class="text-end">المبلغ المُعاد</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (line of r.treasuries; track $index) {
+        <tr>
+          <td class="fw-600">{{ reconcileLineName(line) }}</td>
+          <td class="text-end">{{ reconcileLineAmount(line) | currencyAr: true }}</td>
+        </tr>
+        } @empty {
+        <tr>
+          <td colspan="2" class="text-center text-muted py-3">لم تتأثر أي خزينة.</td>
+        </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  }
+  <ng-container modal-footer>
+    <button type="button" class="btn" (click)="closeReconcileReport()">إغلاق</button>
+  </ng-container>
+</app-modal>
 
 <!-- ── COMPANY PROFIT STATEMENT MODAL ── -->
 <app-company-profit-statement-modal [open]="companyStatementOpen()"

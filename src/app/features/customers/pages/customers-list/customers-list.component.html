@@ -9,6 +9,12 @@
         <div class="cl-hero-stat-label">عملاء متأخرون</div>
         <div class="cl-hero-stat-val cl-hero-overdue">{{ overdueClientsCount() }}</div>
       </div>
+      @if (inactiveOnPage() > 0) {
+      <div>
+        <div class="cl-hero-stat-label">بانتظار التفعيل (الصفحة)</div>
+        <div class="cl-hero-stat-val cl-hero-overdue">{{ inactiveOnPage() }}</div>
+      </div>
+      }
       <div>
         <div class="cl-hero-stat-label">الصفحة الحالية</div>
         <div class="cl-hero-stat-val">{{ pageIndex() }} / {{ totalPages() || 1 }}</div>
@@ -49,6 +55,14 @@
       <span class="cl-toggle-thumb"></span>
     </span>
     <span class="cl-toggle-label">المتأخرون فقط</span>
+  </label>
+
+  <label class="cl-toggle" [class.cl-toggle-active]="onlyInactive()">
+    <input type="checkbox" [checked]="onlyInactive()" (change)="toggleOnlyInactive($any($event.target).checked)" />
+    <span class="cl-toggle-track" aria-hidden="true">
+      <span class="cl-toggle-thumb"></span>
+    </span>
+    <span class="cl-toggle-label">غير المفعّلين فقط</span>
   </label>
 
   <button type="button" class="btn btn-sm d-inline-flex align-items-center gap-1" [disabled]="loading()"
@@ -113,12 +127,13 @@
           <th class="cl-w-status">الحالة</th>
           <th class="cl-w-status">الأقساط المتأخرة</th>
           <th class="cl-w-amount">مبلغ التأخير</th>
+          <th class="cl-w-status">الحساب</th>
           <th class="cl-w-actions text-center">الإجراءات</th>
         </tr>
       </thead>
       <tbody>
-        @for (c of clients(); track c.id) {
-        <tr class="cl-row-clickable" (click)="openProfile(c.id)">
+        @for (c of visibleClients(); track c.id) {
+        <tr class="cl-row-clickable" [class.cl-row-inactive]="!c.isActive" (click)="openProfile(c.id)">
           <td class="cl-id">#{{ c.id }}</td>
           <td>
             <div class="cl-row-name">
@@ -190,8 +205,32 @@
             <span class="text-muted">—</span>
             }
           </td>
+          <td>
+            @if (c.isActive) {
+            <app-badge text="مفعّل" type="ok" />
+            } @else {
+            <app-badge text="غير مفعّل" type="warn" />
+            }
+          </td>
           <td (click)="$event.stopPropagation()">
             <div class="d-flex gap-1 justify-content-center">
+              <button
+                *appHasPermission="PERMS.clientsFullAccess"
+                type="button"
+                class="btn btn-sm"
+                [class.btn-gr]="!c.isActive"
+                [class.btn-outline-secondary]="c.isActive"
+                [title]="c.isActive ? 'تعطيل حساب العميل' : 'تفعيل حساب العميل'"
+                [attr.aria-label]="c.isActive ? 'تعطيل حساب العميل' : 'تفعيل حساب العميل'"
+                [disabled]="togglingId() === c.id"
+                (click)="toggleActive(c)"
+              >
+                @if (togglingId() === c.id) {
+                  <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                } @else {
+                  {{ c.isActive ? 'تعطيل' : 'تفعيل' }}
+                }
+              </button>
               <button
                 type="button"
                 class="btn btn-sm btn-outline-secondary"
@@ -268,7 +307,7 @@
         </tr>
         } @empty {
         <tr>
-          <td colspan="13" class="cl-empty">
+          <td colspan="15" class="cl-empty">
             @if (loading()) {
             <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
             <span>جاري تحميل العملاء...</span>
@@ -282,8 +321,8 @@
                 </svg>
               </div>
               <div class="cl-empty-title">لا توجد نتائج</div>
-              <div class="cl-empty-sub">جرّب تعديل البحث أو إلغاء فلتر المتأخرين.</div>
-              <button class="btn btn-sm mt-2" (click)="clearSearch(); toggleOnlyOverdue(false)">مسح الفلاتر</button>
+              <div class="cl-empty-sub">جرّب تعديل البحث أو إلغاء الفلاتر.</div>
+              <button class="btn btn-sm mt-2" (click)="clearFilters()">مسح الفلاتر</button>
             </div>
             } @else {
             <div class="cl-empty-block">

@@ -12,9 +12,12 @@ import {
 } from '../../../core/http/http-context.tokens';
 import { toList, toPaged } from '../../../core/utils/api-list.util';
 import {
+  CompanyBalanceTransactionPayload,
   CreateShareholderPayload,
+  ReconcileHistoricalReport,
   Shareholder,
   ShareholdersQuery,
+  ShareholdersSummary,
   UpdateShareholderPayload,
 } from '../models/shareholder.model';
 import {
@@ -121,6 +124,47 @@ export class ShareholdersService {
     );
   }
 
+  // ─────────────── summary + company balance ───────────────
+
+  /** Headline totals — `totalIncludingCompany` drives the list header. */
+  summary(force = false): Observable<ShareholdersSummary> {
+    const cache = withCache({ ttlMs: SHAREHOLDERS_TTL_MS });
+    return this.api.get<ShareholdersSummary>(API_ENDPOINTS.shareholders.summary, {
+      context: force ? withCacheBypass(cache) : cache,
+    });
+  }
+
+  /**
+   * Direct deposit/withdrawal on the company balance. Surfaces as an ordinary
+   * treasury operation, so both scopes are invalidated.
+   */
+  createCompanyBalanceTransaction(
+    payload: CompanyBalanceTransactionPayload,
+  ): Observable<unknown> {
+    return this.api.post<unknown>(
+      API_ENDPOINTS.shareholders.companyBalanceTransactions,
+      payload,
+      {
+        context: withInlineHandling(
+          withCacheInvalidate([SHAREHOLDERS_CACHE_KEY, TREASURY_CACHE_KEY]),
+        ),
+      },
+    );
+  }
+
+  /** One-time admin migration: returns legacy company cash to the operating treasuries. */
+  reconcileHistoricalCompanyBalance(): Observable<ReconcileHistoricalReport> {
+    return this.api.post<ReconcileHistoricalReport>(
+      API_ENDPOINTS.shareholders.companyBalanceReconcile,
+      {},
+      {
+        context: withInlineHandling(
+          withCacheInvalidate([SHAREHOLDERS_CACHE_KEY, TREASURY_CACHE_KEY]),
+        ),
+      },
+    );
+  }
+
   private toParams(query: ShareholdersQuery): Record<string, unknown> {
     return {
       PageIndex: query.pageIndex ?? 1,
@@ -160,9 +204,8 @@ export class ShareholdersService {
   }
 
   /**
-   * Executes the distribution: drains the profits treasury and issues a
-   * payment voucher per shareholder. Invalidates shareholders (profit totals)
-   * and treasury (balances + vouchers) scopes.
+   * Executes the distribution as a ledger-only entry (no cash leaves any
+   * treasury). Invalidates shareholders (profit totals) and treasury scopes.
    */
   settleProfits(
     payload: CreateProfitSettlementPayload,
@@ -219,9 +262,9 @@ export class ShareholdersService {
   // ─────────────── capital movements ───────────────
 
   /**
-   * Rolls part of a shareholder's accrued profit into their capital, drawn from
-   * the profits treasury. Changes both the partner's capital/profit figures and
-   * the profits-treasury balance, so it invalidates both scopes.
+   * Rolls part of a shareholder's accrued profit into their capital. A
+   * ledger-only entry (no cash moves) that still shifts capital/profit figures
+   * everywhere, so it invalidates both scopes.
    */
   capitalizeProfit(
     shareholderId: number,
@@ -344,6 +387,7 @@ export class ShareholdersService {
     return {
       PageIndex: query.pageIndex ?? 1,
       PageSize: query.pageSize ?? 10,
+      classificationId: query.classificationId ?? undefined,
     };
   }
 
@@ -382,6 +426,7 @@ export class ShareholdersService {
       ...(query.fromDate ? { fromDate: query.fromDate } : {}),
       ...(query.toDate ? { toDate: query.toDate } : {}),
       ...(query.transactionType ? { transactionType: query.transactionType } : {}),
+      ...(query.classificationId ? { classificationId: query.classificationId } : {}),
     };
   }
 

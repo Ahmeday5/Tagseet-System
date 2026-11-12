@@ -7,9 +7,14 @@ import {
   signal,
 } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
+import { RouterLink } from '@angular/router';
 
 import { ShareholdersService } from '../../services/shareholders.service';
-import { Shareholder } from '../../models/shareholder.model';
+import {
+  ReconcileHistoricalReport,
+  Shareholder,
+  ShareholdersSummary,
+} from '../../models/shareholder.model';
 import {
   ProfitSettlement,
   ProfitSettlementPreview,
@@ -21,7 +26,9 @@ import { ShareholderCapitalModalComponent } from '../../components/shareholder-c
 import { CapitalizeAllProfitsModalComponent } from '../../components/capitalize-all-profits-modal/capitalize-all-profits-modal.component';
 import { ShareholderStatementModalComponent } from '../../components/shareholder-statement-modal/shareholder-statement-modal.component';
 import { CompanyProfitStatementModalComponent } from '../../components/company-profit-statement-modal/company-profit-statement-modal.component';
+import { CompanyBalanceModalComponent } from '../../components/company-balance-modal/company-balance-modal.component';
 
+import { ModalComponent } from '../../../../shared/components/modal/modal.component';
 import { PaginationComponent } from '../../../../shared/components/pagination/pagination.component';
 import { CurrencyArPipe } from '../../../../shared/pipes/currency-ar.pipe';
 import { DateArPipe } from '../../../../shared/pipes/date-ar.pipe';
@@ -30,6 +37,9 @@ import { FormMode } from '../../../../shared/models/form-mode.model';
 import { PERMISSIONS } from '../../../../core/constants/permissions.const';
 import { DialogService } from '../../../../core/services/dialog.service';
 import { ToastService } from '../../../../core/services/toast.service';
+import { AuthService } from '../../../../core/services/auth.service';
+import { StorageService } from '../../../../core/services/storage.service';
+import { apiErrorToMessage } from '../../../../core/utils/api-error.util';
 import { HttpCacheService } from '../../../../core/services/http-cache.service';
 import { PrintService } from '../../../../core/services/print.service';
 import { onInvalidate } from '../../../../core/utils/auto-refresh.util';
@@ -38,6 +48,8 @@ import { ApiError } from '../../../../core/models/api-response.model';
 
 const DEFAULT_PAGE_SIZE = 10;
 const REFETCH_DEBOUNCE_MS = 300;
+/** Remembers (per browser) that the one-time historical reconcile already ran. */
+const RECONCILE_DONE_KEY = 'shareholders.company-reconcile-done';
 
 @Component({
   selector: 'app-shareholders',
@@ -52,6 +64,9 @@ const REFETCH_DEBOUNCE_MS = 300;
     CapitalizeAllProfitsModalComponent,
     ShareholderStatementModalComponent,
     CompanyProfitStatementModalComponent,
+    CompanyBalanceModalComponent,
+    ModalComponent,
+    RouterLink,
     PaginationComponent,
     CurrencyArPipe,
     DateArPipe,
@@ -66,14 +81,28 @@ export class ShareholdersComponent {
   private readonly toast = inject(ToastService);
   private readonly cache = inject(HttpCacheService);
   private readonly printer = inject(PrintService);
+  private readonly auth = inject(AuthService);
+  private readonly storage = inject(StorageService);
 
   /** Exposed so the template can gate write actions with `*appHasPermission`. */
   protected readonly PERMS = PERMISSIONS;
 
+  protected readonly isAdmin = computed(() => this.auth.currentUser()?.role === 'Admin');
+
   // ── data ──
+  /** Raw page — page 1 is prefixed by the synthetic read-only company row (`isCompany`). */
   protected readonly shareholders = signal<Shareholder[]>([]);
   protected readonly loading = signal(false);
   protected readonly isPrinting = signal(false);
+
+  // ── headline totals (whole population, incl. the company balance) ──
+  protected readonly summary = signal<ShareholdersSummary | null>(null);
+
+  // ── company balance ──
+  protected readonly companyBalanceOpen = signal(false);
+  protected readonly reconciling = signal(false);
+  protected readonly reconcileDone = signal(this.storage.get(RECONCILE_DONE_KEY) === '1');
+  protected readonly reconcileReport = signal<ReconcileHistoricalReport | null>(null);
 
   // ── filters ──
   protected readonly searchTerm = signal('');
@@ -146,18 +175,31 @@ export class ShareholdersComponent {
   // ── derived ──
   protected readonly hasFilters = computed(() => this.searchTerm().length > 0);
 
+  /** Real partners only — the company row is excluded from per-page aggregates. */
+  private readonly partners = computed(() =>
+    this.shareholders().filter((s) => !s.isCompany),
+  );
+
+  /** Company balance: summary is authoritative; the row is a fallback before it loads. */
+  protected readonly companyBalance = computed(
+    () =>
+      this.summary()?.companyBalance ??
+      this.shareholders().find((s) => s.isCompany)?.contributedAmount ??
+      0,
+  );
+
   /** Page-level aggregates for the summary cards. */
   protected readonly pageContributed = computed(() =>
-    this.shareholders().reduce((s, sh) => s + (sh.contributedAmount ?? 0), 0),
+    this.partners().reduce((s, sh) => s + (sh.contributedAmount ?? 0), 0),
   );
   protected readonly pageProfit = computed(() =>
-    this.shareholders().reduce((s, sh) => s + (sh.totalProfitReceived ?? 0), 0),
+    this.partners().reduce((s, sh) => s + (sh.totalProfitReceived ?? 0), 0),
   );
   protected readonly pageOwnership = computed(() =>
-    this.shareholders().reduce((s, sh) => s + (sh.ownedPercentage ?? 0), 0),
+    this.partners().reduce((s, sh) => s + (sh.ownedPercentage ?? 0), 0),
   );
   protected readonly pageAccruedProfit = computed(() =>
-    this.shareholders().reduce((s, sh) => s + (sh.accruedProfit ?? 0), 0),
+    this.partners().reduce((s, sh) => s + (sh.accruedProfit ?? 0), 0),
   );
 
   /** Combined trigger — any filter / page change refetches. */
@@ -195,11 +237,20 @@ export class ShareholdersComponent {
     // either scope.
     onInvalidate(this.cache, 'shareholder', () => this.refreshAll());
     onInvalidate(this.cache, 'treasur', () => this.refreshAll());
+
+    this.loadSummary(false);
   }
 
   private refreshAll(): void {
     this.refresh();
     this.loadPreview(this.previewTrigger());
+  }
+
+  private loadSummary(force: boolean): void {
+    this.service.summary(force).subscribe({
+      next: (s) => this.summary.set(s),
+      error: () => this.summary.set(null),
+    });
   }
 
   // ─────────── pending-distribution preview ───────────
@@ -277,6 +328,7 @@ export class ShareholdersComponent {
 
   protected refresh(): void {
     this.fetch(this.fetchTrigger(), true);
+    this.loadSummary(true);
   }
 
   /** Exports every shareholder matching the active search to a PDF. */
@@ -288,7 +340,8 @@ export class ShareholdersComponent {
     fetchAllPages<Shareholder>((pageIndex, pageSize) =>
       this.service.refresh({ search, pageIndex, pageSize }),
     ).subscribe({
-      next: (rows) => {
+      next: (all) => {
+        const rows = all.filter((r) => !r.isCompany);
         this.isPrinting.set(false);
         const totalContributed = rows.reduce(
           (s, r) => s + (r.contributedAmount ?? 0),
@@ -299,10 +352,24 @@ export class ShareholdersComponent {
           0,
         );
 
+        const summary = this.summary();
+        const meta = [
+          ...(search ? [{ label: 'بحث', value: search }] : []),
+          ...(summary
+            ? [
+                { label: 'رصيد الشركة', value: this.formatCurrency(summary.companyBalance) },
+                {
+                  label: 'إجمالي رصيد المساهمين (شامل الشركة)',
+                  value: this.formatCurrency(summary.totalIncludingCompany),
+                },
+              ]
+            : []),
+        ];
+
         this.printer.print<Shareholder>({
           title: 'قائمة المساهمين',
           subtitle: 'الشركاء ونسب الملكية والأرباح الموزّعة',
-          meta: search ? [{ label: 'بحث', value: search }] : undefined,
+          meta: meta.length ? meta : undefined,
           orientation: 'landscape',
           columns: [
             {
@@ -520,6 +587,71 @@ export class ShareholdersComponent {
 
   protected closeStatement(): void {
     this.statementOpen.set(false);
+  }
+
+  // ─────────── company balance ───────────
+
+  protected openCompanyBalance(): void {
+    this.companyBalanceOpen.set(true);
+  }
+
+  protected closeCompanyBalance(): void {
+    this.companyBalanceOpen.set(false);
+  }
+
+  protected onCompanyBalanceSaved(): void {
+    // Service invalidation refreshes the list + summary.
+    this.companyBalanceOpen.set(false);
+  }
+
+  /** One-time admin migration — guarded by a strong confirm and a local "done" flag. */
+  protected async runReconcile(): Promise<void> {
+    if (this.reconciling() || this.reconcileDone()) return;
+    const ok = await this.dialog.confirm({
+      title: 'معالجة تاريخية لرصيد الشركة',
+      message:
+        'سيتم إرجاع كاش الشركة القديم إلى الخزائن التشغيلية وعكس السندات المرتبطة به. هذه العملية تُنفَّذ مرة واحدة فقط ولا يمكن التراجع عنها. هل تريد المتابعة؟',
+      confirmText: 'تنفيذ المعالجة',
+      cancelText: 'إلغاء',
+      type: 'danger',
+    });
+    if (!ok) return;
+
+    this.reconciling.set(true);
+    this.service.reconcileHistoricalCompanyBalance().subscribe({
+      next: (report) => {
+        this.reconciling.set(false);
+        this.markReconcileDone();
+        this.reconcileReport.set(report);
+        this.toast.success('تمت المعالجة التاريخية لرصيد الشركة بنجاح');
+      },
+      error: (err: ApiError) => {
+        this.reconciling.set(false);
+        this.toast.error(apiErrorToMessage(err, 'تعذّر تنفيذ المعالجة التاريخية'));
+      },
+    });
+  }
+
+  protected closeReconcileReport(): void {
+    this.reconcileReport.set(null);
+  }
+
+  /** Report lines arrive loosely typed — read the name/amount defensively. */
+  protected reconcileLineName(line: Record<string, unknown>): string {
+    return String(line['treasuryName'] ?? line['name'] ?? `#${line['treasuryId'] ?? '—'}`);
+  }
+
+  protected reconcileLineAmount(line: Record<string, unknown>): number {
+    return Number(line['amount'] ?? line['restored'] ?? line['totalRestored'] ?? 0);
+  }
+
+  private markReconcileDone(): void {
+    this.reconcileDone.set(true);
+    this.storage.set(RECONCILE_DONE_KEY, '1');
+  }
+
+  private formatCurrency(value: number): string {
+    return `${Math.round(value ?? 0).toLocaleString('ar-EG')} ج.م`;
   }
 
   // ─────────── company profit statement ───────────

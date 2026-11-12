@@ -1,0 +1,74 @@
+<app-modal
+  [open]="open()"
+  title="رصيد الشركة — إيداع / سحب"
+  size="md"
+  [closeOnBackdrop]="!submitting()"
+  [closeOnEsc]="!submitting()"
+  (closed)="close()"
+>
+  <form [formGroup]="form" (ngSubmit)="submit()" novalidate autocomplete="off">
+    <div class="row g-3">
+      <div class="col-12 col-md-6">
+        <label class="form-label">نوع العملية <span class="text-danger">*</span></label>
+        <select class="form-select" formControlName="type" (change)="onTypeChange($any($event.target).value)">
+          @for (opt of typeOptions; track opt.value) {
+            <option [value]="opt.value">{{ opt.label }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="col-12 col-md-6">
+        <label class="form-label">المبلغ <span class="text-danger">*</span></label>
+        <input
+          type="number"
+          class="form-control"
+          formControlName="amount"
+          min="0"
+          step="0.01"
+          dir="ltr"
+          (input)="onAmountChange($any($event.target).value)"
+        />
+        <app-form-error [control]="form.controls.amount" label="المبلغ" />
+      </div>
+
+      <div class="col-12 col-md-6">
+        <label class="form-label">التاريخ <span class="text-danger">*</span></label>
+        <input type="date" class="form-control" formControlName="date" dir="ltr" />
+        <app-form-error [control]="form.controls.date" label="التاريخ" />
+      </div>
+
+      <div class="col-12 col-md-6">
+        <label class="form-label">ملاحظات</label>
+        <input type="text" class="form-control" formControlName="notes" placeholder="(اختياري)" />
+      </div>
+    </div>
+
+    <div class="d-flex justify-content-between flex-wrap gap-2 mt-3" style="font-size:12px">
+      <span>الرصيد الحالي: <strong [class.text-danger]="balance() < 0">{{ balance() | currencyAr: true }}</strong></span>
+      <span>الرصيد بعد العملية: <strong [class.text-danger]="projected() < 0">{{ projected() | currencyAr: true }}</strong></span>
+    </div>
+
+    <div class="alert alert-info mt-2 mb-0 py-2" role="note" style="font-size:11px">
+      تظهر العملية في سجل عمليات الخزينة ويمكن تعديلها أو حذفها من هناك.
+    </div>
+
+    @if (serverError(); as msg) {
+      <div class="alert alert-danger mt-2 mb-0" role="alert" style="font-size:11px">{{ msg }}</div>
+    }
+  </form>
+
+  <ng-container modal-footer>
+    <button type="button" class="btn" [disabled]="submitting()" (click)="close()">إلغاء</button>
+    <button
+      type="button"
+      class="btn btn-bl d-inline-flex align-items-center gap-2"
+      [disabled]="submitting() || form.invalid"
+      (click)="submit()"
+    >
+      @if (submitting()) {
+        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+      }
+      <span>{{ submitting() ? 'جاري الحفظ...' : (draftType() === 'Receipt' ? 'تسجيل إيداع' : 'تسجيل سحب') }}</span>
+    </button>
+  </ng-container>
+</app-modal>

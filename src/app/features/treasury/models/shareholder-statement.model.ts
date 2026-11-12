@@ -44,6 +44,8 @@ export interface ShareholderStatement {
   totalProfitCapitalized: number;
   totalProfitDistributed: number;
   accruedProfit: number;
+  /** Deposits − withdrawals (+ capitalised profit) — the partner's net capital. */
+  netCapitalBalance: number;
   entries: {
     pageIndex: number;
     pageSize: number;
@@ -59,4 +61,5 @@ export interface StatementQuery {
   fromDate?: string;
   toDate?: string;
   transactionType?: StatementTransactionType;
+  classificationId?: number | null;
 }

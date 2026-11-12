@@ -183,6 +183,14 @@ export const NAV_SECTIONS: NavSection[] = [
         // Owners-only — never shown to a Representative.
         hideForRoles: ['Representative'],
       },
+      {
+        id: 'capital-classifications',
+        label: 'تصنيفات رأس المال',
+        route: '/treasury/capital-classifications',
+        icon: 'hand-coin',
+        requiredAnyPermission: [PERMISSIONS.treasuryView],
+        hideForRoles: ['Representative'],
+      },
     ],
   },
   {

@@ -41,4 +41,12 @@ export const treasuryRoutes: Routes = [
         (m) => m.ShareholdersComponent
       ),
   },
+  {
+    path: 'capital-classifications',
+    canActivate: [denyRolesGuard(['Representative'])],
+    loadComponent: () =>
+      import('./pages/capital-classifications/capital-classifications.component').then(
+        (m) => m.CapitalClassificationsComponent
+      ),
+  },
 ];

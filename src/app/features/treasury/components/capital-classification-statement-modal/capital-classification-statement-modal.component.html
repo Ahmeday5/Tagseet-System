@@ -1,0 +1,103 @@
+<app-modal [open]="open()" [title]="title()" size="xl" (closed)="close()">
+  @if (statement(); as st) {
+  <div class="d-flex flex-wrap gap-2 mb-3">
+    <div class="sc flex-fill">
+      <div class="sc-l">إجمالي الإيداعات</div>
+      <div class="sc-v" style="color:var(--gr)">{{ st.totalDeposits | currencyAr: true }}</div>
+    </div>
+    <div class="sc flex-fill">
+      <div class="sc-l">إجمالي السحوبات</div>
+      <div class="sc-v" style="color:var(--re)">{{ st.totalWithdrawals | currencyAr: true }}</div>
+    </div>
+    <div class="sc flex-fill">
+      <div class="sc-l">صافي الرصيد</div>
+      <div class="sc-v" [style.color]="st.netBalance < 0 ? 'var(--re)' : 'var(--bl)'">
+        {{ st.netBalance | currencyAr: true }}
+      </div>
+    </div>
+  </div>
+  }
+
+  <div class="d-flex flex-wrap align-items-end gap-2 mb-2">
+    <div>
+      <label class="form-label mb-1" style="font-size:11px">من تاريخ</label>
+      <input type="date" class="form-control form-control-sm" [value]="fromDate()"
+        (change)="fromDate.set($any($event.target).value)" />
+    </div>
+    <div>
+      <label class="form-label mb-1" style="font-size:11px">إلى تاريخ</label>
+      <input type="date" class="form-control form-control-sm" [value]="toDate()"
+        (change)="toDate.set($any($event.target).value)" />
+    </div>
+    <button type="button" class="btn btn-sm btn-bl" [disabled]="loading()" (click)="apply()">تطبيق</button>
+    @if (hasDates()) {
+    <button type="button" class="btn btn-sm" [disabled]="loading()" (click)="clearDates()">مسح</button>
+    }
+    <button type="button" class="btn btn-sm d-inline-flex align-items-center gap-1" [disabled]="loading()"
+      (click)="refresh()">
+      @if (loading()) {
+      <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+      }
+      <span>تحديث</span>
+    </button>
+  </div>
+
+  @if (error(); as msg) {
+  <div class="alert alert-danger my-2" role="alert" style="font-size:12px">{{ msg }}</div>
+  }
+
+  <div class="tw mb-0">
+    <table>
+      <thead>
+        <tr>
+          <th>التاريخ</th>
+          <th>رقم السند</th>
+          <th>المساهم</th>
+          <th>النوع</th>
+          <th class="text-end">المبلغ</th>
+          <th class="text-end">الرصيد التراكمي</th>
+          <th>الخزينة</th>
+          <th>ملاحظات</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (e of entries(); track e.id) {
+        <tr>
+          <td class="fs-10">{{ e.date | dateAr: 'short' }}</td>
+          <td class="fs-10">{{ e.voucherNumber || '—' }}</td>
+          <td class="fw-600">{{ e.shareholderName }}</td>
+          <td>
+            <app-badge [text]="e.transactionTypeAr || (isDeposit(e) ? 'إيداع' : 'سحب')"
+              [type]="isDeposit(e) ? 'ok' : 'bad'" />
+          </td>
+          <td class="text-end fw-600" [style.color]="isDeposit(e) ? 'var(--gr)' : 'var(--re)'">
+            {{ e.signedAmount | currencyAr: true }}
+          </td>
+          <td class="text-end fw-600" [style.color]="e.runningBalance < 0 ? 'var(--re)' : 'var(--bl)'">
+            {{ e.runningBalance | currencyAr: true }}
+          </td>
+          <td>{{ e.treasuryName || '—' }}</td>
+          <td class="fs-10" [title]="e.notes ?? ''">{{ e.notes || '—' }}</td>
+        </tr>
+        } @empty {
+        <tr>
+          <td colspan="8" class="text-center py-4" style="color:var(--txt3);font-size:12px">
+            @if (loading()) { جاري التحميل... }
+            @else if (hasDates()) { لا توجد حركات في هذه الفترة. }
+            @else { لا توجد حركات على هذا التصنيف بعد. }
+          </td>
+        </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+
+  @if (count() > 0) {
+  <app-pagination [pageIndex]="pageIndex()" [pageSize]="pageSize()" [count]="count()" [totalPages]="totalPages()"
+    [disabled]="loading()" (pageChange)="onPageChange($event)" (pageSizeChange)="onPageSizeChange($event)" />
+  }
+
+  <ng-container modal-footer>
+    <button type="button" class="btn" (click)="close()">إغلاق</button>
+  </ng-container>
+</app-modal>

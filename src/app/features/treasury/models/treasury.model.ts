@@ -20,6 +20,8 @@ export interface Treasury {
   representativeId?: number | null;
   /** Display name of the linked representative (sub-rep treasuries only). */
   representative?: string | null;
+  /** Visible to every representative, not just the linked one. */
+  sharedWithAllRepresentatives?: boolean;
   transactions?: TreasuryTransaction[];
   vouchers?: TreasurySummary[];
 }
@@ -35,6 +37,7 @@ export interface CreateTreasuryPayload {
   type: TreasuryType;
   isActive: boolean;
   representativeId: number | null;
+  sharedWithAllRepresentatives: boolean;
 }
 
 /**
@@ -46,6 +49,7 @@ export interface UpdateTreasuryPayload {
   type: TreasuryType;
   isActive: boolean;
   representativeId: number | null;
+  sharedWithAllRepresentatives: boolean;
 }
 
 export interface TreasuryTransaction {

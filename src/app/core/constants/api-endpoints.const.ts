@@ -75,6 +75,19 @@ export const API_ENDPOINTS = {
     companyProfitStatement: 'dashboard/company-profit-statement',
     /** GET: every treasury (incl. profit/representative ones) for the shareholder-area treasury pickers. */
     treasuriesLookup: 'dashboard/shareholders/treasuries-lookup',
+    /** GET: shareholders count + total capital + company balance. */
+    summary: 'dashboard/shareholders/summary',
+    /** GET (paged) / POST capital classifications (تصنيفات رأس المال). */
+    capitalClassifications: 'dashboard/shareholders/capital-classifications',
+    capitalClassificationById: (id: number) =>
+      `dashboard/shareholders/capital-classifications/${id}`,
+    /** GET: company-wide ledger of every capital movement tagged with this classification. */
+    capitalClassificationStatement: (id: number) =>
+      `dashboard/shareholders/capital-classifications/${id}/statement`,
+    /** POST: direct deposit/withdrawal on the company balance. */
+    companyBalanceTransactions: 'dashboard/shareholders/company-balance/transactions',
+    /** POST (Admin, one-time): move legacy company cash back to the operating treasuries. */
+    companyBalanceReconcile: 'dashboard/shareholders/company-balance/reconcile-historical',
   },
   warehouses: {
     base: 'dashboard/warehouses',
@@ -180,6 +193,8 @@ export const API_ENDPOINTS = {
     contracts: (id: number) => `dashboard/clients/${id}/contracts`,
     /** POST: sets a new password for the client's linked AppUser account. */
     password: (id: number) => `dashboard/clients/${id}/password`,
+    /** PUT: flips the client's `isActive` flag → `{ id, isActive }`. */
+    toggleActive: (id: number) => `dashboard/clients/${id}/toggle-active`,
   },
   inventory: {
     alerts: 'dashboard/inventory/alerts',

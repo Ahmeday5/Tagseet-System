@@ -121,6 +121,20 @@ const MESSAGE_PATTERNS: readonly MessagePattern[] = [
       'لا يمكن استخدام هذه الخزينة في حركة رأس المال؛ اختر خزينة نقدية عادية (ليست خزينة أرباح أو خزينة مندوبين).',
   },
 
+  // ── capital classifications ──
+  {
+    test: /classification.*(?:in\s+use|used|linked|has\s+(?:capital\s+)?transactions)|cannot\s+delete.*classification/i,
+    ar: () => 'لا يمكن حذف التصنيف لأنه مستخدم في عمليات رأس مال.',
+  },
+  {
+    test: /classification.*(?:already\s+exists|duplicate)|(?:already\s+exists|duplicate).*classification/i,
+    ar: () => 'يوجد تصنيف بنفس الاسم بالفعل.',
+  },
+  {
+    test: /(?:already\s+)?reconcil(?:ed|iation).*(?:already|before|done)|already\s+reconcil/i,
+    ar: () => 'تمت المعالجة التاريخية لرصيد الشركة من قبل.',
+  },
+
   // ── balances / amounts ──
   {
     test: /amount\s+exceeds\s+the\s+remaining\s+balance/i,

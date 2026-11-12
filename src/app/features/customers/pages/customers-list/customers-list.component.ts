@@ -21,6 +21,7 @@ import { PaginationComponent } from '../../../../shared/components/pagination/pa
 import { CurrencyArPipe } from '../../../../shared/pipes/currency-ar.pipe';
 import { ApiError } from '../../../../core/models/api-response.model';
 import { apiErrorToMessage } from '../../../../core/utils/api-error.util';
+import { resolveApiMessage } from '../../../../core/constants/api-messages.const';
 import { ToastService } from '../../../../core/services/toast.service';
 import { DialogService } from '../../../../core/services/dialog.service';
 import { HttpCacheService } from '../../../../core/services/http-cache.service';
@@ -75,6 +76,8 @@ export class CustomersListComponent {
   // ── filters ──
   protected readonly searchTerm = signal('');
   protected readonly onlyOverdue = signal(false);
+  /** App self-registrations land inactive — this narrows the list to those awaiting activation. */
+  protected readonly onlyInactive = signal(false);
   protected readonly pageIndex = signal(1);
   protected readonly pageSize = signal(DEFAULT_PAGE_SIZE);
 
@@ -98,18 +101,34 @@ export class CustomersListComponent {
   protected readonly showPassword = signal(false);
   protected readonly passwordTarget = signal<DashboardClient | null>(null);
 
-  // ── delete ──
+  // ── delete / activation ──
   protected readonly deletingId = signal<number | null>(null);
+  protected readonly togglingId = signal<number | null>(null);
 
   // ── derived ──
   protected readonly hasFilters = computed(
-    () => this.searchTerm().length > 0 || this.onlyOverdue(),
+    () => this.searchTerm().length > 0 || this.onlyOverdue() || this.onlyInactive(),
+  );
+
+  /**
+   * Rows shown. With the inactive filter on we also filter client-side, so the
+   * view stays correct even if the API ignores the `isActive` query param.
+   */
+  protected readonly visibleClients = computed(() =>
+    this.onlyInactive()
+      ? this.clients().filter((c) => c.isActive === false)
+      : this.clients(),
+  );
+
+  protected readonly inactiveOnPage = computed(
+    () => this.clients().filter((c) => c.isActive === false).length,
   );
 
   // Single observed tuple; any change triggers a debounced refetch.
   private readonly fetchTrigger = computed(() => ({
     search: this.searchTerm().trim(),
     onlyOverdue: this.onlyOverdue(),
+    isActive: this.onlyInactive() ? false : undefined,
     pageIndex: this.pageIndex(),
     pageSize: this.pageSize(),
   }));
@@ -134,12 +153,7 @@ export class CustomersListComponent {
   // ─────────── data loaders ───────────
 
   private fetch(
-    trigger: {
-      search: string;
-      onlyOverdue: boolean;
-      pageIndex: number;
-      pageSize: number;
-    },
+    trigger: ReturnType<typeof this.fetchTrigger>,
     force = false,
   ): void {
     this.loading.set(true);
@@ -181,17 +195,26 @@ export class CustomersListComponent {
     this.isPrinting.set(true);
     const search = this.searchTerm().trim();
     const onlyOverdue = this.onlyOverdue();
+    const onlyInactive = this.onlyInactive();
 
     fetchAllPages<DashboardClient>((pageIndex, pageSize) =>
       this.service
-        .refreshDashboard({ search, onlyOverdue, pageIndex, pageSize })
+        .refreshDashboard({
+          search,
+          onlyOverdue,
+          isActive: onlyInactive ? false : undefined,
+          pageIndex,
+          pageSize,
+        })
         .pipe(map((r) => r.clients)),
     ).subscribe({
-      next: (rows) => {
+      next: (all) => {
         this.isPrinting.set(false);
+        const rows = onlyInactive ? all.filter((c) => c.isActive === false) : all;
         const meta: Array<{ label: string; value: string }> = [];
         if (search) meta.push({ label: 'بحث', value: search });
         if (onlyOverdue) meta.push({ label: 'الفلتر', value: 'المتأخرون فقط' });
+        if (onlyInactive) meta.push({ label: 'الحساب', value: 'غير المفعّلين فقط' });
 
         this.printer.print<DashboardClient>({
           title: 'قائمة العملاء',
@@ -232,6 +255,12 @@ export class CustomersListComponent {
               align: 'end',
               format: 'currency',
             },
+            {
+              key: 'isActive',
+              header: 'الحساب',
+              align: 'center',
+              format: (v) => (v === false ? 'غير مفعّل' : 'مفعّل'),
+            },
           ],
           rows,
         });
@@ -259,6 +288,52 @@ export class CustomersListComponent {
   protected toggleOnlyOverdue(value: boolean): void {
     this.onlyOverdue.set(value);
     if (this.pageIndex() !== 1) this.pageIndex.set(1);
+  }
+
+  protected toggleOnlyInactive(value: boolean): void {
+    this.onlyInactive.set(value);
+    if (this.pageIndex() !== 1) this.pageIndex.set(1);
+  }
+
+  protected clearFilters(): void {
+    this.searchTerm.set('');
+    this.onlyOverdue.set(false);
+    this.onlyInactive.set(false);
+    if (this.pageIndex() !== 1) this.pageIndex.set(1);
+  }
+
+  // ─────────── activation ───────────
+
+  protected async toggleActive(client: DashboardClient): Promise<void> {
+    if (this.togglingId() !== null) return;
+    if (client.isActive) {
+      const ok = await this.dialog.confirm({
+        title: 'تعطيل عميل',
+        message: `هل تريد تعطيل حساب "${client.fullName}"؟ لن يتمكن من استخدام التطبيق حتى يتم تفعيله مرة أخرى.`,
+        confirmText: 'تعطيل',
+        cancelText: 'إلغاء',
+        type: 'danger',
+      });
+      if (!ok) return;
+    }
+
+    this.togglingId.set(client.id);
+    this.service.toggleActive(client.id).subscribe({
+      next: ({ data, message }) => {
+        this.togglingId.set(null);
+        const isActive = data?.isActive ?? !client.isActive;
+        this.clients.update((list) =>
+          list.map((c) => (c.id === client.id ? { ...c, isActive } : c)),
+        );
+        this.toast.success(
+          resolveApiMessage(message, isActive ? 'تم تفعيل العميل بنجاح' : 'تم تعطيل العميل بنجاح'),
+        );
+      },
+      error: (err: ApiError) => {
+        this.togglingId.set(null);
+        this.toast.error(apiErrorToMessage(err, 'تعذّر تغيير حالة العميل'));
+      },
+    });
   }
 
   protected onPageChange(page: number): void {
