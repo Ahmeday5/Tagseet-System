@@ -463,4 +463,4 @@
 
 <!-- ── COMPANY PROFIT STATEMENT MODAL ── -->
 <app-company-profit-statement-modal [open]="companyStatementOpen()"
-  (closed)="closeCompanyStatement()" />
+  (closed)="closeCompanyStatement()" (changed)="onCompanyStatementChanged()" />

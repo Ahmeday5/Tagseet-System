@@ -33,6 +33,7 @@ import {
   STATEMENT_TX_OPTIONS,
   isStatementInflow,
 } from '../../constants/statement-transaction-labels';
+import { periodTitle } from '../../constants/period-title.util';
 
 const DEFAULT_PAGE_SIZE = 10;
 const VOUCHER_PREFIX_LEN = 18;
@@ -68,6 +69,9 @@ export class ShareholderStatementModalComponent {
   // ── date filters (UI state — applied on explicit click) ──
   protected readonly fromDate = signal('');
   protected readonly toDate = signal('');
+  /** The dates the currently-shown totals cover (applied, not draft). */
+  protected readonly appliedFrom = signal('');
+  protected readonly appliedTo = signal('');
   /** Type filter — applied immediately on change. */
   protected readonly txType = signal<StatementTransactionType | ''>('');
   protected readonly txOptions = STATEMENT_TX_OPTIONS;
@@ -97,6 +101,11 @@ export class ShareholderStatementModalComponent {
       !!this.toDate() ||
       !!this.txType() ||
       this.classificationId() !== null,
+  );
+
+  /** Net-balance card title — reflects the period the totals actually cover. */
+  protected readonly netBalanceTitle = computed(() =>
+    periodTitle('صافي رصيد رأس المال', this.appliedFrom(), this.appliedTo()),
   );
 
   private lastShId: number | null = null;
@@ -226,6 +235,8 @@ export class ShareholderStatementModalComponent {
         this.statement.set(res);
         this.count.set(res.entries.count ?? 0);
         this.totalPages.set(res.entries.totalPages ?? 0);
+        this.appliedFrom.set(query.fromDate ?? '');
+        this.appliedTo.set(query.toDate ?? '');
         this.loading.set(false);
       },
       error: (err: ApiError) => {

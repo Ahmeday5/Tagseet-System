@@ -625,4 +625,10 @@ export class ShareholdersComponent {
   protected closeCompanyStatement(): void {
     this.companyStatementOpen.set(false);
   }
+
+  /** An edit/delete inside the statement shifted the company balance — refresh totals. */
+  protected onCompanyStatementChanged(): void {
+    this.refresh();
+    this.loadPreview();
+  }
 }

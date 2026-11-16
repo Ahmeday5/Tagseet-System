@@ -12,6 +12,7 @@ import {
 } from '../../../core/http/http-context.tokens';
 import { toList, toPaged } from '../../../core/utils/api-list.util';
 import {
+  CompanyBalanceTransactionDto,
   CompanyBalanceTransactionPayload,
   CreateShareholderPayload,
   ReconcileHistoricalReport,
@@ -140,10 +141,45 @@ export class ShareholdersService {
    */
   createCompanyBalanceTransaction(
     payload: CompanyBalanceTransactionPayload,
-  ): Observable<unknown> {
-    return this.api.post<unknown>(
+  ): Observable<CompanyBalanceTransactionDto> {
+    return this.api.post<CompanyBalanceTransactionDto>(
       API_ENDPOINTS.shareholders.companyBalanceTransactions,
       payload,
+      {
+        context: withInlineHandling(
+          withCacheInvalidate([SHAREHOLDERS_CACHE_KEY, TREASURY_CACHE_KEY]),
+        ),
+      },
+    );
+  }
+
+  /**
+   * Edits a company-balance deposit/withdrawal in place. A null `treasuryId`
+   * keeps the current treasury; a null `capitalClassificationId` clears the tag.
+   * Reverses and re-applies the cash movement, so both scopes are invalidated.
+   */
+  updateCompanyBalanceTransaction(
+    id: number,
+    payload: CompanyBalanceTransactionPayload,
+  ): Observable<CompanyBalanceTransactionDto> {
+    return this.api.put<CompanyBalanceTransactionDto>(
+      API_ENDPOINTS.shareholders.companyBalanceTransactionById(id),
+      payload,
+      {
+        context: withInlineHandling(
+          withCacheInvalidate([SHAREHOLDERS_CACHE_KEY, TREASURY_CACHE_KEY]),
+        ),
+      },
+    );
+  }
+
+  /**
+   * Deletes a company-balance deposit/withdrawal — reverses its effect on the
+   * company balance and on the treasury. Invalidates both scopes.
+   */
+  deleteCompanyBalanceTransaction(id: number): Observable<{ message: string }> {
+    return this.api.delete<{ message: string }>(
+      API_ENDPOINTS.shareholders.companyBalanceTransactionById(id),
       {
         context: withInlineHandling(
           withCacheInvalidate([SHAREHOLDERS_CACHE_KEY, TREASURY_CACHE_KEY]),

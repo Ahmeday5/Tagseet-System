@@ -17,6 +17,12 @@
         <div class="cps-sc-label">إجمالي المدفوع</div>
         <div class="cps-sc-val">{{ st.totalPaid | currencyAr: true }}</div>
       </div>
+      <div class="cps-sc cps-sc-net">
+        <div class="cps-sc-label">{{ netBalanceTitle() }}</div>
+        <div class="cps-sc-val" [class.text-danger]="st.netBalance < 0">
+          {{ st.netBalance | currencyAr: true }}
+        </div>
+      </div>
       <div class="cps-sc cps-sc-bal">
         <div class="cps-sc-label">الرصيد الحالي</div>
         <div class="cps-sc-val">{{ st.currentBalance | currencyAr: true }}</div>
@@ -93,12 +99,15 @@
       <thead>
         <tr>
           <th class="cps-w-date">التاريخ</th>
+          <th class="cps-w-voucher">رقم السند</th>
           <th class="cps-w-type">النوع</th>
-          <th class="cps-w-ref">المرجع</th>
+          <th class="cps-w-ref">المصدر</th>
           <th>المساهم / الخزنة</th>
+          <th>التصنيف</th>
           <th class="cps-w-amount">المبلغ</th>
           <th class="cps-w-amount">الرصيد بعد</th>
           <th>ملاحظات</th>
+          <th class="cps-w-actions"></th>
         </tr>
       </thead>
       <tbody>
@@ -106,13 +115,17 @@
           @let e = row.entry;
           <tr>
             <td class="cps-date">{{ e.date | dateAr: 'short' }}</td>
+            <td class="cps-voucher" [title]="e.voucherNumber ?? ''">
+              {{ e.voucherNumber | voucherAr }}
+            </td>
             <td>
               <app-badge [text]="row.voucherLabel" [type]="row.voucherBadge" />
             </td>
             <td>
-              <app-badge [text]="row.referenceLabel" [type]="row.referenceBadge" />
+              <app-badge [text]="row.sourceLabel" [type]="row.sourceBadge" />
             </td>
             <td class="cps-shareholder" [class.cps-treasury]="row.isTransfer">{{ row.counterparty }}</td>
+            <td class="cps-classification">{{ row.classification }}</td>
             <td class="cps-amount" [class.cps-in]="row.inflow" [class.cps-out]="!row.inflow">
               {{ row.inflow ? '+' : '−' }}{{ e.amount | currencyAr: true }}
             </td>
@@ -120,10 +133,36 @@
               {{ e.balanceAfter | currencyAr: true }}
             </td>
             <td class="cps-notes" [title]="e.notes ?? ''">{{ e.notes || '—' }}</td>
+            <td class="cps-actions">
+              @if (row.isEditable) {
+                <div class="d-inline-flex gap-1">
+                  <button
+                    type="button"
+                    class="btn btn-icon btn-xs"
+                    title="تعديل"
+                    [disabled]="deletingId() === e.id"
+                    (click)="openEdit(e)"
+                  >✎</button>
+                  <button
+                    type="button"
+                    class="btn btn-icon btn-xs btn-danger-soft"
+                    title="حذف"
+                    [disabled]="deletingId() === e.id"
+                    (click)="confirmDelete(e)"
+                  >
+                    @if (deletingId() === e.id) {
+                      <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                    } @else {
+                      🗑
+                    }
+                  </button>
+                </div>
+              }
+            </td>
           </tr>
         } @empty {
           <tr>
-            <td colspan="7" class="text-center py-4" style="color:var(--txt3);font-size:12px">
+            <td colspan="10" class="text-center py-4" style="color:var(--txt3);font-size:12px">
               @if (loading()) {
                 جاري التحميل...
               } @else if (hasFilters()) {
@@ -154,3 +193,11 @@
     <button type="button" class="btn" (click)="close()">إغلاق</button>
   </ng-container>
 </app-modal>
+
+<!-- ── EDIT (reuses the company-balance modal in edit mode) ── -->
+<app-company-balance-modal
+  [open]="editOpen()"
+  [editing]="editingTx()"
+  (closed)="onEditClosed()"
+  (saved)="onEditSaved()"
+/>

@@ -162,10 +162,13 @@ function buildObligations(dto: BalanceCheck): BalanceSideView {
         amountHeader: 'المساهمة',
         searchPlaceholder: 'ابحث باسم الشريك…',
         emptyText: 'لا يوجد شركاء.',
+        // The company balance leads the list as the synthetic id 0 row — tag it
+        // so it reads distinctly from the real partners.
         rows: o.shareholders.map<BalanceEntry>((s) => ({
           id: s.id,
           name: s.name,
           amount: s.contributedAmount,
+          tag: s.id === 0 ? { text: 'الشركة', type: 'info' } : undefined,
         })),
       },
     },

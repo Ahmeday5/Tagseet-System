@@ -10,7 +10,7 @@
       <div class="sc-v" style="color:var(--re)">{{ st.totalWithdrawals | currencyAr: true }}</div>
     </div>
     <div class="sc flex-fill">
-      <div class="sc-l">صافي الرصيد</div>
+      <div class="sc-l">{{ netBalanceTitle() }}</div>
       <div class="sc-v" [style.color]="st.netBalance < 0 ? 'var(--re)' : 'var(--bl)'">
         {{ st.netBalance | currencyAr: true }}
       </div>
@@ -40,6 +40,16 @@
       }
       <span>تحديث</span>
     </button>
+    <button
+      type="button"
+      class="btn btn-sm btn-wa d-inline-flex align-items-center gap-1 ms-auto"
+      [disabled]="loading() || !statement()"
+      title="مشاركة الملخص عبر واتساب"
+      (click)="shareOnWhatsApp()"
+    >
+      <span aria-hidden="true">🟢</span>
+      <span>واتساب</span>
+    </button>
   </div>
 
   @if (error(); as msg) {
@@ -64,7 +74,7 @@
         @for (e of entries(); track e.id) {
         <tr>
           <td class="fs-10">{{ e.date | dateAr: 'short' }}</td>
-          <td class="fs-10">{{ e.voucherNumber || '—' }}</td>
+          <td class="fs-10" [title]="e.voucherNumber || ''">{{ e.voucherNumber | voucherAr }}</td>
           <td class="fw-600">{{ e.shareholderName }}</td>
           <td>
             <app-badge [text]="e.transactionTypeAr || (isDeposit(e) ? 'إيداع' : 'سحب')"

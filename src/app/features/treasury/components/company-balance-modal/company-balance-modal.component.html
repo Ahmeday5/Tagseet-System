@@ -1,6 +1,6 @@
 <app-modal
   [open]="open()"
-  title="رصيد الشركة — إيداع / سحب"
+  [title]="isEdit() ? 'تعديل عملية رصيد الشركة' : 'رصيد الشركة — إيداع / سحب'"
   size="md"
   [closeOnBackdrop]="!submitting()"
   [closeOnEsc]="!submitting()"
@@ -32,6 +32,29 @@
       </div>
 
       <div class="col-12 col-md-6">
+        <label class="form-label">الخزينة <span class="text-danger">*</span></label>
+        <app-searchable-select
+          formControlName="treasuryId"
+          [options]="treasuryOptions()"
+          [isDisabled]="treasuriesLoading()"
+          placeholder="اختر الخزينة"
+          searchPlaceholder="ابحث باسم الخزينة…"
+        />
+        <app-form-error [control]="form.controls.treasuryId" label="الخزينة" />
+      </div>
+
+      <div class="col-12 col-md-6">
+        <label class="form-label">التصنيف</label>
+        <app-searchable-select
+          formControlName="capitalClassificationId"
+          [options]="classificationOptions()"
+          [isDisabled]="classificationsLoading()"
+          placeholder="بدون تصنيف"
+          searchPlaceholder="ابحث باسم التصنيف…"
+        />
+      </div>
+
+      <div class="col-12 col-md-6">
         <label class="form-label">التاريخ <span class="text-danger">*</span></label>
         <input type="date" class="form-control" formControlName="date" dir="ltr" />
         <app-form-error [control]="form.controls.date" label="التاريخ" />
@@ -43,13 +66,16 @@
       </div>
     </div>
 
-    <div class="d-flex justify-content-between flex-wrap gap-2 mt-3" style="font-size:12px">
-      <span>الرصيد الحالي: <strong [class.text-danger]="balance() < 0">{{ balance() | currencyAr: true }}</strong></span>
-      <span>الرصيد بعد العملية: <strong [class.text-danger]="projected() < 0">{{ projected() | currencyAr: true }}</strong></span>
-    </div>
+    @if (!isEdit()) {
+      <div class="d-flex justify-content-between flex-wrap gap-2 mt-3" style="font-size:12px">
+        <span>الرصيد الحالي: <strong [class.text-danger]="balance() < 0">{{ balance() | currencyAr: true }}</strong></span>
+        <span>الرصيد بعد العملية: <strong [class.text-danger]="projected() < 0">{{ projected() | currencyAr: true }}</strong></span>
+      </div>
+    }
 
     <div class="alert alert-info mt-2 mb-0 py-2" role="note" style="font-size:11px">
-      تظهر العملية في سجل عمليات الخزينة ويمكن تعديلها أو حذفها من هناك.
+      الإيداع يُدخل فلوس فعلية في الخزينة المختارة ويزيد رصيد الشركة، والسحب يُخرج
+      فلوس من الخزينة ويقلل رصيد الشركة. تظهر العملية أيضاً في سجل عمليات الخزينة.
     </div>
 
     @if (serverError(); as msg) {
@@ -68,7 +94,13 @@
       @if (submitting()) {
         <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
       }
-      <span>{{ submitting() ? 'جاري الحفظ...' : (draftType() === 'Receipt' ? 'تسجيل إيداع' : 'تسجيل سحب') }}</span>
+      <span>{{
+        submitting()
+          ? 'جاري الحفظ...'
+          : isEdit()
+            ? 'حفظ التعديل'
+            : (draftType() === 'Receipt' ? 'تسجيل إيداع' : 'تسجيل سحب')
+      }}</span>
     </button>
   </ng-container>
 </app-modal>

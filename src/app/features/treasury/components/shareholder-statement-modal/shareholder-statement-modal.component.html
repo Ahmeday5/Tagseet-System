@@ -68,7 +68,7 @@
         <div class="shst-sc-val">{{ st.accruedProfit | currencyAr: true }}</div>
       </div>
       <div class="shst-sc shst-sc-net">
-        <div class="shst-sc-label">صافي رصيد رأس المال</div>
+        <div class="shst-sc-label">{{ netBalanceTitle() }}</div>
         <div class="shst-sc-val" [class.text-danger]="st.netCapitalBalance < 0">
           {{ st.netCapitalBalance | currencyAr: true }}
         </div>

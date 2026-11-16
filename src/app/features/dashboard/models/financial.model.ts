@@ -10,7 +10,8 @@
  *   - `companySubAccountsBalance`         balance held in company sub-accounts
  *   - `representativesSubAccountsDue`     amounts due in representatives' sub-accounts
  *   - `netSubAccountsBalance`             net total across all sub-accounts
- *   - `totalShareholdersCapital`          total capital contributed by shareholders
+ *   - `totalShareholdersCapital`          shareholders' capital, INCLUDING the company balance
+ *   - `companyBalance`                    the company's own balance (a part of the total above)
  *   - `totalShareholdersCount`            number of shareholders
  *   - `netFinancialPosition`              (treasury + receivables + inventoryValue) − payables
  */
@@ -24,6 +25,8 @@ export interface FinancialSeparation {
   representativesSubAccountsDue: number;
   netSubAccountsBalance: number;
   totalShareholdersCapital: number;
+  /** The company's own balance — already included in `totalShareholdersCapital`. */
+  companyBalance: number;
   totalShareholdersCount: number;
   netFinancialPosition: number;
 }

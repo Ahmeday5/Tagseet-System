@@ -29,13 +29,47 @@ export interface ShareholdersSummary {
   totalIncludingCompany: number;
 }
 
-/** `POST shareholders/company-balance/transactions` — Receipt = إيداع, Payment = سحب. */
+export type CompanyBalanceTransactionType = 'Receipt' | 'Payment';
+export type CompanyBalanceDirection = 'Deposit' | 'Withdrawal';
+
+/**
+ * `POST / PUT shareholders/company-balance/transactions` — Receipt = إيداع
+ * (real cash into the chosen treasury, raises the company balance), Payment =
+ * سحب (cash out of the treasury, lowers it).
+ *
+ * On edit (`PUT …/{id}`): a null `treasuryId` keeps the current treasury; a
+ * null `capitalClassificationId` clears the tag, so resend the current value to
+ * keep it.
+ */
 export interface CompanyBalanceTransactionPayload {
-  type: 'Receipt' | 'Payment';
+  type: CompanyBalanceTransactionType;
   amount: number;
   /** `yyyy-MM-dd`. */
   date: string;
+  /** Required on create — which real treasury the cash moves in/out of. */
+  treasuryId: number | null;
+  /** Optional capital classification (تصنيف) — same list used for shareholders. */
+  capitalClassificationId: number | null;
   notes: string | null;
+}
+
+/** Response of a company-balance create/edit — also the editable statement row shape. */
+export interface CompanyBalanceTransactionDto {
+  id: number;
+  voucherNumber: string;
+  type: CompanyBalanceTransactionType;
+  direction: CompanyBalanceDirection;
+  amount: number;
+  /** Company balance immediately after this movement posted. */
+  balanceAfter: number;
+  /** ISO datetime as returned by the server. */
+  date: string;
+  treasuryId: number | null;
+  treasuryName: string | null;
+  capitalClassificationId: number | null;
+  capitalClassificationName: string | null;
+  notes: string | null;
+  userName: string;
 }
 
 export interface ReconcileTreasuryLine {

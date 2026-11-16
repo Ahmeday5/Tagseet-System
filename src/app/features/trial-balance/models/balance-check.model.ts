@@ -27,7 +27,10 @@ export interface BalanceAssets {
 }
 
 export interface BalanceObligations {
+  /** Shareholders' capital + the company balance (which leads the list as id 0). */
   readonly shareholdersCapitalTotal: number;
+  /** The company's own balance (also surfaced as the `id: 0` "الشركة" row). */
+  readonly companyBalance: number;
   readonly shareholders: readonly BalanceShareholder[];
   readonly profit: BalanceProfit;
   readonly supplierPayablesTotal: number;

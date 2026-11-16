@@ -30,6 +30,7 @@
 
 .cps-sc-recv .cps-sc-val { color: var(--gr); }
 .cps-sc-paid .cps-sc-val { color: var(--re, #c0392b); }
+.cps-sc-net  .cps-sc-val { color: var(--te, #0d9488); }
 .cps-sc-bal  .cps-sc-val { color: var(--bl); }
 
 // ── unexplained balance difference ──
@@ -94,10 +95,56 @@
 
 // ── table cell helpers ──
 
-.cps-w-date   { width: 90px; }
-.cps-w-type   { width: 80px; }
-.cps-w-ref    { width: 150px; }
-.cps-w-amount { width: 120px; text-align: end; }
+.cps-w-date    { width: 90px; }
+.cps-w-voucher { width: 90px; }
+.cps-w-type    { width: 70px; }
+.cps-w-ref     { width: 150px; }
+.cps-w-amount  { width: 120px; text-align: end; }
+.cps-w-actions { width: 68px; }
+
+.cps-voucher {
+  font-size: 10.5px;
+  color: var(--txt2);
+  font-weight: 600;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  direction: ltr;
+  unicode-bidi: plaintext;
+}
+
+.cps-classification {
+  font-size: 11px;
+  color: var(--txt2);
+}
+
+.cps-actions {
+  text-align: center;
+  white-space: nowrap;
+}
+
+.cps-actions .btn-icon {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  font-size: 13px;
+}
+
+.cps-actions .btn-xs {
+  border: 1px solid var(--brd, #e5e7eb);
+  border-radius: 6px;
+  background: var(--bg2, #f9fafb);
+}
+
+.cps-actions .btn-danger-soft {
+  color: var(--re, #c0392b);
+}
+.cps-actions .btn-danger-soft:hover:not(:disabled) {
+  background: #fde8e8;
+}
 
 .cps-date {
   font-size: 10.5px;
