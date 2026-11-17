@@ -54,6 +54,18 @@ import { ShareholderTreasuryLookup } from '../models/shareholder-treasury-lookup
  */
 const SHAREHOLDERS_CACHE_KEY = 'shareholder';
 const TREASURY_CACHE_KEY = 'treasur';
+/**
+ * `dashboard/company-profit-statement` matches neither key above, yet every
+ * capital/profit write moves the company balance — so it gets its own scope.
+ */
+const COMPANY_STATEMENT_CACHE_KEY = 'company-profit-statement';
+
+/** Scopes dropped by any write that moves money or shifts ownership %. */
+const MONEY_WRITE_SCOPES = [
+  SHAREHOLDERS_CACHE_KEY,
+  TREASURY_CACHE_KEY,
+  COMPANY_STATEMENT_CACHE_KEY,
+] as const;
 
 /** Short TTL: ownership percentages shift whenever any partner is added/removed. */
 const SHAREHOLDERS_TTL_MS = 60 * 1000;
@@ -93,7 +105,7 @@ export class ShareholdersService {
       payload,
       {
         context: withInlineHandling(
-          withCacheInvalidate([SHAREHOLDERS_CACHE_KEY, TREASURY_CACHE_KEY]),
+          withCacheInvalidate(MONEY_WRITE_SCOPES),
         ),
       },
     );
@@ -108,7 +120,7 @@ export class ShareholdersService {
       payload,
       {
         context: withInlineHandling(
-          withCacheInvalidate([SHAREHOLDERS_CACHE_KEY, TREASURY_CACHE_KEY]),
+          withCacheInvalidate(MONEY_WRITE_SCOPES),
         ),
       },
     );
@@ -119,7 +131,7 @@ export class ShareholdersService {
       API_ENDPOINTS.shareholders.byId(id),
       {
         context: withInlineHandling(
-          withCacheInvalidate([SHAREHOLDERS_CACHE_KEY, TREASURY_CACHE_KEY]),
+          withCacheInvalidate(MONEY_WRITE_SCOPES),
         ),
       },
     );
@@ -147,7 +159,7 @@ export class ShareholdersService {
       payload,
       {
         context: withInlineHandling(
-          withCacheInvalidate([SHAREHOLDERS_CACHE_KEY, TREASURY_CACHE_KEY]),
+          withCacheInvalidate(MONEY_WRITE_SCOPES),
         ),
       },
     );
@@ -167,7 +179,7 @@ export class ShareholdersService {
       payload,
       {
         context: withInlineHandling(
-          withCacheInvalidate([SHAREHOLDERS_CACHE_KEY, TREASURY_CACHE_KEY]),
+          withCacheInvalidate(MONEY_WRITE_SCOPES),
         ),
       },
     );
@@ -182,7 +194,7 @@ export class ShareholdersService {
       API_ENDPOINTS.shareholders.companyBalanceTransactionById(id),
       {
         context: withInlineHandling(
-          withCacheInvalidate([SHAREHOLDERS_CACHE_KEY, TREASURY_CACHE_KEY]),
+          withCacheInvalidate(MONEY_WRITE_SCOPES),
         ),
       },
     );
@@ -195,7 +207,7 @@ export class ShareholdersService {
       {},
       {
         context: withInlineHandling(
-          withCacheInvalidate([SHAREHOLDERS_CACHE_KEY, TREASURY_CACHE_KEY]),
+          withCacheInvalidate(MONEY_WRITE_SCOPES),
         ),
       },
     );
@@ -251,7 +263,7 @@ export class ShareholdersService {
       payload,
       {
         context: withInlineHandling(
-          withCacheInvalidate([SHAREHOLDERS_CACHE_KEY, TREASURY_CACHE_KEY]),
+          withCacheInvalidate(MONEY_WRITE_SCOPES),
         ),
       },
     );
@@ -311,7 +323,7 @@ export class ShareholdersService {
       payload,
       {
         context: withInlineHandling(
-          withCacheInvalidate([SHAREHOLDERS_CACHE_KEY, TREASURY_CACHE_KEY]),
+          withCacheInvalidate(MONEY_WRITE_SCOPES),
         ),
       },
     );
@@ -329,7 +341,7 @@ export class ShareholdersService {
       payload,
       {
         context: withInlineHandling(
-          withCacheInvalidate([SHAREHOLDERS_CACHE_KEY, TREASURY_CACHE_KEY]),
+          withCacheInvalidate(MONEY_WRITE_SCOPES),
         ),
       },
     );
@@ -349,7 +361,7 @@ export class ShareholdersService {
       payload,
       {
         context: withInlineHandling(
-          withCacheInvalidate([SHAREHOLDERS_CACHE_KEY, TREASURY_CACHE_KEY]),
+          withCacheInvalidate(MONEY_WRITE_SCOPES),
         ),
       },
     );
@@ -369,7 +381,7 @@ export class ShareholdersService {
       payload,
       {
         context: withInlineHandling(
-          withCacheInvalidate([SHAREHOLDERS_CACHE_KEY, TREASURY_CACHE_KEY]),
+          withCacheInvalidate(MONEY_WRITE_SCOPES),
         ),
       },
     );
@@ -387,7 +399,7 @@ export class ShareholdersService {
       API_ENDPOINTS.shareholders.capitalTransactionById(shareholderId, transactionId),
       {
         context: withInlineHandling(
-          withCacheInvalidate([SHAREHOLDERS_CACHE_KEY, TREASURY_CACHE_KEY]),
+          withCacheInvalidate(MONEY_WRITE_SCOPES),
         ),
       },
     );

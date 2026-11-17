@@ -1,6 +1,6 @@
 <app-modal
   [open]="open()"
-  [title]="'تعديل عملية رأس مال' + (transaction()?.voucherNumber ? ' — ' + transaction()?.voucherNumber : '')"
+  [title]="'تعديل عملية رأس مال' + (transaction()?.voucherNumber ? ' — ' + (transaction()?.voucherNumber | voucherAr) : '')"
   size="md"
   [closeOnBackdrop]="!submitting()"
   [closeOnEsc]="!submitting()"

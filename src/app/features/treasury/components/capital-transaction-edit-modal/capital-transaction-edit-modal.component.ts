@@ -14,6 +14,7 @@ import {
   SearchableSelectComponent,
   SearchableSelectOption,
 } from '../../../../shared/components/searchable-select/searchable-select.component';
+import { VoucherArPipe } from '../../../../shared/pipes/voucher-ar.pipe';
 import { ToastService } from '../../../../core/services/toast.service';
 import { ApiError } from '../../../../core/models/api-response.model';
 import { apiErrorToMessage } from '../../../../core/utils/api-error.util';
@@ -34,6 +35,7 @@ import { CAPITAL_TX_TYPE_OPTIONS } from '../../constants/capital-transaction-lab
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    VoucherArPipe,
     ReactiveFormsModule,
     ModalComponent,
     FormErrorComponent,

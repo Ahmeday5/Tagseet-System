@@ -7,6 +7,7 @@ import {
   input,
   output,
   signal,
+  untracked,
 } from '@angular/core';
 
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';
@@ -110,15 +111,13 @@ export class CompanyProfitStatementModalComponent {
     periodTitle('صافي الرصيد', this.appliedFrom(), this.appliedTo()),
   );
 
-  private loaded = false;
-
   constructor() {
+    // Fresh on every open: the company balance moves with every booked
+    // profit, not only with writes made from this screen.
     effect(
       () => {
         if (!this.open()) return;
-        if (this.loaded) return;
-        this.loaded = true;
-        this.fetch(1, this.pageSize(), false);
+        untracked(() => this.fetch(this.pageIndex(), this.pageSize(), true));
       },
       { allowSignalWrites: true },
     );

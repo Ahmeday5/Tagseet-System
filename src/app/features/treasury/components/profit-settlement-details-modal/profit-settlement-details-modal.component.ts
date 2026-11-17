@@ -14,12 +14,12 @@ import { ModalComponent } from '../../../../shared/components/modal/modal.compon
 import { CurrencyArPipe } from '../../../../shared/pipes/currency-ar.pipe';
 import { DateArPipe } from '../../../../shared/pipes/date-ar.pipe';
 import { ApiError } from '../../../../core/models/api-response.model';
+import { VoucherArPipe } from '../../../../shared/pipes/voucher-ar.pipe';
 import { ToastService } from '../../../../core/services/toast.service';
 
 import { ShareholdersService } from '../../services/shareholders.service';
 import { ProfitSettlement } from '../../models/profit-settlement.model';
 
-const VOUCHER_PREFIX_LEN = 18;
 
 /**
  * Read-only details for one executed profit settlement.
@@ -37,7 +37,7 @@ const VOUCHER_PREFIX_LEN = 18;
   selector: 'app-profit-settlement-details-modal',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DecimalPipe, ModalComponent, CurrencyArPipe, DateArPipe],
+  imports: [DecimalPipe, ModalComponent, CurrencyArPipe, DateArPipe, VoucherArPipe],
   templateUrl: './profit-settlement-details-modal.component.html',
   styleUrl: './profit-settlement-details-modal.component.scss',
 })
@@ -76,13 +76,6 @@ export class ProfitSettlementDetailsModalComponent {
 
   protected close(): void {
     this.closed.emit();
-  }
-
-  protected shortVoucher(value: string | undefined): string {
-    if (!value) return '—';
-    return value.length > VOUCHER_PREFIX_LEN
-      ? `${value.slice(0, VOUCHER_PREFIX_LEN)}…`
-      : value;
   }
 
   protected copyVoucher(value: string | undefined): void {

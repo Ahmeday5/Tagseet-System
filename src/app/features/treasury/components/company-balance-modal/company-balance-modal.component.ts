@@ -93,6 +93,15 @@ export class CompanyBalanceModalComponent {
 
   protected readonly isEdit = computed(() => this.editing() !== null);
 
+  /**
+   * A movement recorded before treasuries were required. It may stay without
+   * one: on PUT a null `treasuryId` keeps the current (empty) treasury.
+   */
+  protected readonly isLegacy = computed(() => {
+    const editing = this.editing();
+    return editing !== null && editing.treasuryId == null;
+  });
+
   protected readonly typeOptions: ReadonlyArray<{
     value: CompanyBalanceTransactionType;
     label: string;
@@ -101,11 +110,14 @@ export class CompanyBalanceModalComponent {
     { value: 'Payment', label: 'سحب' },
   ];
 
-  protected readonly projected = computed(
-    () =>
-      this.balance() +
-      (this.draftType() === 'Receipt' ? this.draftAmount() : -this.draftAmount()),
-  );
+  /** Balance after saving — in edit mode the original movement is backed out first. */
+  protected readonly projected = computed(() => {
+    const signed = (type: CompanyBalanceTransactionType, amount: number) =>
+      type === 'Receipt' ? amount : -amount;
+    const editing = this.editing();
+    const original = editing ? signed(editing.type, editing.amount) : 0;
+    return this.balance() - original + signed(this.draftType(), this.draftAmount());
+  });
 
   protected readonly form = this.fb.nonNullable.group({
     type: ['Receipt' as CompanyBalanceTransactionType, [Validators.required]],
@@ -126,6 +138,11 @@ export class CompanyBalanceModalComponent {
         this.serverError.set(null);
         this.loadTreasuries();
         this.loadClassifications();
+
+        // Required on create, and on edit when the movement already has one.
+        this.form.controls.treasuryId.setValidators(
+          !editing || editing.treasuryId != null ? [Validators.required] : [],
+        );
 
         if (editing) {
           this.draftType.set(editing.type);

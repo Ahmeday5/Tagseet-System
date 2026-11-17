@@ -141,7 +141,7 @@
       <tbody>
         @for (s of shareholders(); track s.id) {
         @if (s.isCompany) {
-        <!-- Synthetic company row — read-only: no edit / delete / details. -->
+        <!-- Synthetic company row — no edit / delete; its ownership % earns profit like a partner's. -->
         <tr class="sh-company-row">
           <td class="sh-id">—</td>
           <td>
@@ -156,9 +156,19 @@
           <td>—</td>
           <td>—</td>
           <td class="sh-amount" [class.text-danger]="companyBalance() < 0">{{ companyBalance() | currencyAr: true }}</td>
-          <td colspan="6" class="text-muted fs-10">يُدار رصيد الشركة بالإيداع والسحب المباشر — لا يمكن تعديله أو حذفه</td>
+          <td>
+            <div class="d-flex align-items-center gap-2" title="نسبة الشركة من الأرباح — رصيدها ÷ (رأس مال المساهمين + رصيدها)">
+              <span class="sh-pct">{{ s.ownedPercentage | number: '1.0-2' }}%</span>
+              <div class="sh-bar">
+                <div class="sh-bar-fill" [style.width.%]="s.ownedPercentage > 0 ? s.ownedPercentage : 0"></div>
+              </div>
+            </div>
+          </td>
+          <td colspan="5" class="text-muted fs-10">يُدار رصيد الشركة بالإيداع والسحب المباشر، وتأخذ أرباحها بنسبة ملكيتها</td>
           <td>
             <div class="d-flex gap-1 justify-content-center">
+              <button type="button" class="btn btn-sm" title="كشف حساب الشركة"
+                (click)="openCompanyStatement()">كشف حساب</button>
               <button *appHasPermission="PERMS.treasuryFullAccess" type="button" class="btn btn-sm btn-te"
                 (click)="openCompanyBalance()">إيداع / سحب</button>
             </div>

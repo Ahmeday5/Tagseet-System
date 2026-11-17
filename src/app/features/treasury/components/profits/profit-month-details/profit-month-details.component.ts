@@ -15,6 +15,10 @@ import {
 
 const SH = 'MonthlyProfitDistribution.Shareholders';
 
+/** Below this, a derived company share is rounding noise, not a real line. */
+const COMPANY_LINE_EPSILON = 0.01;
+const COMPANY_LINE_NAME = 'الشركة (من رصيدها)';
+
 const SHAREHOLDER_COLUMNS: readonly ShareholderColumn<ShareholderProfitShare>[] = [
   { key: 'contributionPercentage', label: 'نسبة المساهمة %', kind: 'percent', field: `${SH}.ContributionPercentage` },
   { key: 'poolShare', label: 'نصيبه', kind: 'amount', field: `${SH}.PoolShare` },
@@ -82,6 +86,39 @@ export class ProfitMonthDetailsComponent {
       { fromContracts: 0, fromRevenues: 0, fromExpenses: 0 },
     ),
   );
+
+  /**
+   * The company takes a profit share like a shareholder (its balance ÷
+   * (shareholders' capital + its balance)), but the API lists only real
+   * shareholders per month. Their percentages now sum below 100% and the
+   * remainder is the company's — derived here from the server's own figures
+   * so the breakdown reconciles with the pool totals in the footer.
+   */
+  protected readonly companyLine = computed<ShareholderProfitShare | null>(() => {
+    const r = this.row();
+    const rows = r.shareholders ?? [];
+    const poolShare = r.shareholdersPool - rows.reduce((s, x) => s + (x.poolShare ?? 0), 0);
+    const percentage = 100 - rows.reduce((s, x) => s + (x.contributionPercentage ?? 0), 0);
+    if (Math.abs(poolShare) < COMPANY_LINE_EPSILON && Math.abs(percentage) < COMPANY_LINE_EPSILON) {
+      return null;
+    }
+    return {
+      shareholderId: 0,
+      shareholderName: COMPANY_LINE_NAME,
+      contributionPercentage: Math.max(percentage, 0),
+      poolShare,
+      // The company keeps all of its own share.
+      companyPercentage: 100,
+      companyShare: poolShare,
+      shareholderShare: 0,
+    };
+  });
+
+  protected readonly shareholderRows = computed(() => {
+    const company = this.companyLine();
+    const rows = this.row().shareholders ?? [];
+    return company ? [company, ...rows] : rows;
+  });
 
   /** Pool totals are the backend's own figures — they are what the main table shows. */
   protected readonly shareholderTotals = computed(() => {

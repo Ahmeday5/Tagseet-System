@@ -142,18 +142,24 @@ function buildAssets(dto: BalanceCheck): BalanceSideView {
   };
 }
 
+/** Synthetic first line of `obligations.shareholders` carrying the company balance. */
+const COMPANY_LINE_ID = 0;
+
 function buildObligations(dto: BalanceCheck): BalanceSideView {
   const o = dto.obligations;
   const total = o.total;
   const openInvoices = o.suppliers.reduce((s, x) => s + x.openInvoicesCount, 0);
+  // The company line (id 0) is listed with the partners but is not one of them.
+  const partners = o.shareholders.filter((s) => s.id !== COMPANY_LINE_ID).length;
+  const hasCompanyLine = o.shareholders.length !== partners;
 
   const lines: BalanceLine[] = [
     {
       kind: 'entries',
       key: 'shareholders',
       label: 'رأس مال الشركاء',
-      hint: 'إجمالي مساهمات الشركاء في رأس المال',
-      caption: `${formatCount(o.shareholders.length)} شريك`,
+      hint: 'إجمالي مساهمات الشركاء في رأس المال + رصيد الشركة',
+      caption: `${formatCount(partners)} شريك${hasCompanyLine ? ' + رصيد الشركة' : ''}`,
       icon: 'hand-coin',
       amount: o.shareholdersCapitalTotal,
       share: share(o.shareholdersCapitalTotal, total),
@@ -168,7 +174,7 @@ function buildObligations(dto: BalanceCheck): BalanceSideView {
           id: s.id,
           name: s.name,
           amount: s.contributedAmount,
-          tag: s.id === 0 ? { text: 'الشركة', type: 'info' } : undefined,
+          tag: s.id === COMPANY_LINE_ID ? { text: 'الشركة', type: 'info' } : undefined,
         })),
       },
     },

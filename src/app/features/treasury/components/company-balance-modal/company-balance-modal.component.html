@@ -32,15 +32,25 @@
       </div>
 
       <div class="col-12 col-md-6">
-        <label class="form-label">الخزينة <span class="text-danger">*</span></label>
+        <label class="form-label">
+          الخزينة
+          @if (!isLegacy()) {
+            <span class="text-danger">*</span>
+          }
+        </label>
         <app-searchable-select
           formControlName="treasuryId"
           [options]="treasuryOptions()"
           [isDisabled]="treasuriesLoading()"
-          placeholder="اختر الخزينة"
+          [placeholder]="isLegacy() ? 'بدون خزينة (عملية قديمة)' : 'اختر الخزينة'"
           searchPlaceholder="ابحث باسم الخزينة…"
         />
         <app-form-error [control]="form.controls.treasuryId" label="الخزينة" />
+        @if (isLegacy()) {
+          <div class="form-text" style="font-size:11px">
+            عملية قديمة مسجلة بدون خزينة — اتركها فارغة للإبقاء عليها كما هي.
+          </div>
+        }
       </div>
 
       <div class="col-12 col-md-6">

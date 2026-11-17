@@ -41,7 +41,7 @@ export const PROFITS_HINTS = {
   distributionNetProfit: 'صافي الربح من جدول أرباح المبيعات',
   representativesProfit: 'إجمالي أرباح المناديب في الشهر (عمولات + نسبة الإيرادات − نسبة المصروفات)',
   shareholdersPool: 'صافي الربح − أرباح المناديب',
-  companyProfit: 'مجموع حصة الشركة من نصيب كل مساهم',
+  companyProfit: 'نصيب الشركة من رصيدها + حصة الشركة من نصيب كل مساهم',
   shareholdersProfit: 'مجموع صافي نصيب المساهمين بعد خصم حصة الشركة',
   distributedProfit: 'أرباح المناديب + أرباح الشركة + أرباح المساهمين',
   monthlyRepresentativeProfit: 'أرباح المندوب في الشهر',
