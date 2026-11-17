@@ -1,6 +1,6 @@
 <app-modal
   [open]="open()"
-  title="تسجيل دفعة للمورد"
+  [title]="isEdit() ? 'تعديل دفعة المورد' : 'تسجيل دفعة للمورد'"
   size="md"
   [closeOnBackdrop]="!submitting()"
   [closeOnEsc]="!submitting()"
@@ -19,18 +19,29 @@
           <span class="spm-summary-val cv-ltr">{{ sup.phoneNumber }}</span>
         </div>
       }
-      <div class="spm-summary-row">
-        <span class="spm-summary-label">إجمالي المشتريات</span>
-        <span class="spm-summary-val spm-total">{{ sup.totalAmount | currencyAr: true }}</span>
-      </div>
-      <div class="spm-summary-row">
-        <span class="spm-summary-label">المدفوع حتى الآن</span>
-        <span class="spm-summary-val spm-paid">{{ sup.paidAmount | currencyAr: true }}</span>
-      </div>
-      <div class="spm-summary-row">
-        <span class="spm-summary-label">المتبقي للمورد</span>
-        <span class="spm-summary-val spm-rem">{{ remaining() | currencyAr: true }}</span>
-      </div>
+      @if (editing(); as p) {
+        <div class="spm-summary-row">
+          <span class="spm-summary-label">رقم السند</span>
+          <span class="spm-summary-val cv-ltr">{{ p.voucherNumber || '—' }}</span>
+        </div>
+        <div class="spm-summary-row">
+          <span class="spm-summary-label">مبلغ الدفعة الحالي</span>
+          <span class="spm-summary-val spm-paid">{{ p.amount | currencyAr: true }}</span>
+        </div>
+      } @else {
+        <div class="spm-summary-row">
+          <span class="spm-summary-label">إجمالي المشتريات</span>
+          <span class="spm-summary-val spm-total">{{ sup.totalAmount | currencyAr: true }}</span>
+        </div>
+        <div class="spm-summary-row">
+          <span class="spm-summary-label">المدفوع حتى الآن</span>
+          <span class="spm-summary-val spm-paid">{{ sup.paidAmount | currencyAr: true }}</span>
+        </div>
+        <div class="spm-summary-row">
+          <span class="spm-summary-label">المتبقي للمورد</span>
+          <span class="spm-summary-val spm-rem">{{ remaining() | currencyAr: true }}</span>
+        </div>
+      }
     </div>
 
     <!-- ── Payment form ── -->
@@ -65,7 +76,7 @@
         <div class="col-12 col-md-6">
           <label class="form-label d-flex justify-content-between align-items-center">
             <span>المبلغ</span>
-            @if (remaining() > 0) {
+            @if (!isEdit() && remaining() > 0) {
               <button
                 type="button"
                 class="spm-link"
@@ -120,7 +131,7 @@
     </form>
 
     <!-- ── Projection ── -->
-    @if (draftAmount() > 0 && !amountExceedsRemaining()) {
+    @if (!isEdit() && draftAmount() > 0 && !amountExceedsRemaining()) {
       <div class="spm-projection">
         <div class="spm-projection-row">
           <span>المتبقي للمورد بعد الدفعة:</span>
@@ -161,7 +172,13 @@
       @if (submitting()) {
         <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
       }
-      <span>{{ submitting() ? 'جاري التسجيل...' : 'تسجيل الدفعة' }}</span>
+      <span>{{
+        submitting()
+          ? 'جاري الحفظ...'
+          : isEdit()
+            ? 'حفظ التعديل'
+            : 'تسجيل الدفعة'
+      }}</span>
     </button>
   </ng-container>
 </app-modal>

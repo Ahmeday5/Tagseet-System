@@ -26,6 +26,10 @@
         <span class="pd-summary-value" style="color:var(--txt2)">{{ totalCompanyShare() | currencyAr: true }}</span>
       </div>
       <div class="pd-summary-item">
+        <span class="pd-summary-label">نصيب الشركة من رصيدها</span>
+        <span class="pd-summary-value" style="color:var(--txt2)">{{ companyOwnProfit() | currencyAr: true }}</span>
+      </div>
+      <div class="pd-summary-item">
         <span class="pd-summary-label">عدد المساهمين</span>
         <span class="pd-summary-value">{{ lines().length }}</span>
       </div>
@@ -41,10 +45,11 @@
           </svg>
         </div>
         <div class="pd-empty-title">لا توجد أرباح للتوزيع حاليًا</div>
-        <div class="pd-empty-sub">رصيد خزينة الأرباح صفر — لن يتم إنشاء أي سندات.</div>
+        <div class="pd-empty-sub">رصيد خزينة الأرباح صفر ولا توجد أرباح معلّقة للشركة — لن يتم إنشاء أي سندات.</div>
       </div>
     } @else {
       <!-- distribution preview -->
+      @if (lines().length) {
       <div class="tw pd-table">
         <table>
           <thead>
@@ -84,6 +89,7 @@
           </tfoot>
         </table>
       </div>
+      }
 
       <!-- form -->
       <form [formGroup]="form" (ngSubmit)="onSubmit()" novalidate autocomplete="off" class="pd-form">

@@ -10,12 +10,22 @@ import {
 } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { DecimalPipe } from '@angular/common';
+import { catchError, of } from 'rxjs';
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';
 import { CurrencyArPipe } from '../../../../shared/pipes/currency-ar.pipe';
+import { VoucherArPipe } from '../../../../shared/pipes/voucher-ar.pipe';
 import { BadgeComponent, BadgeType } from '../../../../shared/components/badge/badge.component';
 import { ApiError } from '../../../../core/models/api-response.model';
+import { LookupItem } from '../../../../core/models/lookup.model';
+import { AuthService } from '../../../../core/services/auth.service';
+import { DialogService } from '../../../../core/services/dialog.service';
+import { ToastService } from '../../../../core/services/toast.service';
+import { apiErrorToMessage } from '../../../../core/utils/api-error.util';
+import { RepsService } from '../../../reps/services/reps.service';
 import { SuppliersService } from '../../services/suppliers.service';
 import {
+  ADMIN_REPRESENTATIVE_ID,
+  ADMINISTRATION_LABEL,
   Supplier,
   SupplierStatement,
   SupplierStatementInvoice,
@@ -24,6 +34,10 @@ import {
   SupplierStatementQuery,
 } from '../../models/supplier.model';
 import { PrintService } from '../../../../core/services/print.service';
+import { SupplierPaymentModalComponent } from '../supplier-payment-modal/supplier-payment-modal.component';
+
+/** Representative-filter value for "every representative" (no scoping). */
+const ALL_REPRESENTATIVES = '';
 
 const STATUS_BADGE: Record<SupplierStatementInvoiceStatus, BadgeType> = {
   Draft: 'info',
@@ -51,7 +65,9 @@ const STATUS_LABEL: Record<SupplierStatementInvoiceStatus, string> = {
     DecimalPipe,
     ModalComponent,
     CurrencyArPipe,
+    VoucherArPipe,
     BadgeComponent,
+    SupplierPaymentModalComponent,
   ],
   templateUrl: './supplier-statement-modal.component.html',
   styleUrl: './supplier-statement-modal.component.scss',
@@ -68,12 +84,32 @@ export class SupplierStatementModalComponent {
   // ── deps ──
   private readonly fb = inject(FormBuilder);
   private readonly service = inject(SuppliersService);
+  private readonly repsService = inject(RepsService);
+  private readonly auth = inject(AuthService);
+  private readonly dialog = inject(DialogService);
+  private readonly toast = inject(ToastService);
   private readonly printer = inject(PrintService);
+
+  protected readonly ALL_REPRESENTATIVES = ALL_REPRESENTATIVES;
+  protected readonly ADMIN_REPRESENTATIVE_ID = ADMIN_REPRESENTATIVE_ID;
+  protected readonly ADMINISTRATION_LABEL = ADMINISTRATION_LABEL;
 
   // ── reactive state ──
   protected readonly statement = signal<SupplierStatement | null>(null);
   protected readonly loading = signal(false);
   protected readonly error = signal<string | null>(null);
+
+  // ── representative filter (non-representatives only) ──
+  /** A representative is always scoped to their own account server-side. */
+  protected readonly canFilterByRepresentative = computed(
+    () => !this.auth.hasRole('Representative'),
+  );
+  protected readonly representatives = signal<LookupItem[]>([]);
+
+  // ── direct-payment edit / delete ──
+  protected readonly paymentEditOpen = signal(false);
+  protected readonly editingPayment = signal<SupplierStatementPayment | null>(null);
+  protected readonly deletingPaymentId = signal<number | null>(null);
 
   /** Set of expanded invoice ids — controls per-row item visibility. */
   protected readonly expanded = signal<ReadonlySet<number>>(new Set<number>());
@@ -83,6 +119,8 @@ export class SupplierStatementModalComponent {
     from: [''],
     to: [''],
     includeDrafts: [false],
+    /** `''` = all representatives, `'0'` = the administration, else a rep id. */
+    representativeId: [ALL_REPRESENTATIVES],
   });
 
   // ── derived ──
@@ -102,10 +140,19 @@ export class SupplierStatementModalComponent {
     return Math.min(100, (s.totalPaid / s.totalPurchases) * 100);
   });
 
-  /** Resolved title for the modal — combines entity name when known. */
+  /** Name of the representative the loaded statement is scoped to, if any. */
+  protected readonly scopedRepresentativeName = computed(() => {
+    const rep = this.statement()?.representative;
+    if (!rep) return null;
+    return rep.id === ADMIN_REPRESENTATIVE_ID ? ADMINISTRATION_LABEL : rep.name || ADMINISTRATION_LABEL;
+  });
+
+  /** Resolved title for the modal — combines entity + representative names when known. */
   protected readonly title = computed(() => {
     const s = this.supplier();
-    return s ? `كشف حساب — ${s.fullName}` : 'كشف حساب المورد';
+    if (!s) return 'كشف حساب المورد';
+    const rep = this.scopedRepresentativeName();
+    return rep ? `كشف حساب — ${s.fullName} — ${rep}` : `كشف حساب — ${s.fullName}`;
   });
 
   // ── debounce ──
@@ -123,6 +170,7 @@ export class SupplierStatementModalComponent {
         // First-open reset so reopening for the same supplier doesn't
         // surface a stale draft toggle from the previous session.
         this.resetIfNewSupplier(supplier.id);
+        this.loadRepresentatives();
         this.fetch(supplier.id, this.currentQuery(), false);
       },
       { allowSignalWrites: true },
@@ -152,7 +200,63 @@ export class SupplierStatementModalComponent {
   }
 
   protected resetFilters(): void {
-    this.form.reset({ from: '', to: '', includeDrafts: false });
+    this.form.reset({
+      from: '',
+      to: '',
+      includeDrafts: false,
+      representativeId: ALL_REPRESENTATIVES,
+    });
+  }
+
+  /** `null` representative = the administration. */
+  protected representativeLabel(name: string | null | undefined): string {
+    return name || ADMINISTRATION_LABEL;
+  }
+
+  // ─────────── direct payments: edit / delete ───────────
+
+  protected openPaymentEdit(payment: SupplierStatementPayment): void {
+    if (!payment.canEdit) return;
+    this.editingPayment.set(payment);
+    this.paymentEditOpen.set(true);
+  }
+
+  protected closePaymentEdit(): void {
+    this.paymentEditOpen.set(false);
+    this.editingPayment.set(null);
+  }
+
+  /** Invoice statuses and balances shift with the payment — reload the statement. */
+  protected onPaymentSaved(): void {
+    this.closePaymentEdit();
+    this.refresh();
+  }
+
+  protected async confirmPaymentDelete(payment: SupplierStatementPayment): Promise<void> {
+    const supplier = this.supplier();
+    if (!supplier || !payment.canDelete || this.deletingPaymentId() !== null) return;
+
+    const ok = await this.dialog.confirm({
+      title: 'حذف دفعة المورد',
+      message: `هل أنت متأكد من حذف الدفعة رقم ${payment.voucherNumber || payment.id} بمبلغ ${payment.amount.toLocaleString('ar-EG')} ج.م؟ سيُعاد احتساب المتبقي وحالات الفواتير ويُعكس أثرها على الخزنة. لا يمكن التراجع عن هذا الإجراء.`,
+      confirmText: 'حذف',
+      cancelText: 'إلغاء',
+      type: 'danger',
+    });
+    if (!ok) return;
+
+    this.deletingPaymentId.set(payment.id);
+    this.service.deletePayment(supplier.id, payment.id).subscribe({
+      next: () => {
+        this.deletingPaymentId.set(null);
+        this.toast.success('تم حذف الدفعة بنجاح');
+        this.refresh();
+      },
+      error: (err: ApiError) => {
+        this.deletingPaymentId.set(null);
+        this.toast.error(apiErrorToMessage(err, 'تعذّر حذف الدفعة'));
+      },
+    });
   }
 
   protected toggleInvoice(id: number): void {
@@ -214,6 +318,8 @@ export class SupplierStatementModalComponent {
     const meta: Array<{ label: string; value: string }> = [
       { label: 'المورد', value: supplier.fullName },
     ];
+    const rep = this.scopedRepresentativeName();
+    if (rep) meta.push({ label: 'المندوب', value: rep });
     if (s.period.from) meta.push({ label: 'من تاريخ', value: this.formatDate(s.period.from) });
     if (s.period.to)   meta.push({ label: 'إلى تاريخ', value: this.formatDate(s.period.to) });
     meta.push({ label: 'عدد الفواتير', value: String(s.summary.invoicesCount) });
@@ -234,6 +340,12 @@ export class SupplierStatementModalComponent {
         { key: 'invoiceDate',    header: 'تاريخ الفاتورة', align: 'center', format: 'shortDate' },
         { key: 'dueDate',        header: 'الاستحقاق',     align: 'center', format: 'shortDate' },
         {
+          key: 'representativeName',
+          header: 'المندوب',
+          align: 'center',
+          format: (v) => this.representativeLabel(v as string | null | undefined),
+        },
+        {
           key: 'status',
           header: 'الحالة',
           align: 'center',
@@ -248,7 +360,7 @@ export class SupplierStatementModalComponent {
       ],
       totals: {
         label: 'الإجمالي',
-        labelColSpan: 7,
+        labelColSpan: 8,
         cells: [
           `${Math.round(s.summary.totalPurchases).toLocaleString('ar-EG')} ج.م`,
           `${Math.round(s.summary.totalPaid).toLocaleString('ar-EG')} ج.م`,
@@ -263,11 +375,25 @@ export class SupplierStatementModalComponent {
 
   private currentQuery(): SupplierStatementQuery {
     const raw = this.form.getRawValue();
+    const rep = raw.representativeId;
     return {
       from: raw.from?.trim() || undefined,
       to: raw.to?.trim() || undefined,
       includeDrafts: !!raw.includeDrafts,
+      representativeId:
+        this.canFilterByRepresentative() && rep !== ALL_REPRESENTATIVES
+          ? Number(rep)
+          : undefined,
     };
+  }
+
+  /** Lazy, once per component — a failure only leaves the per-rep options out. */
+  private loadRepresentatives(): void {
+    if (!this.canFilterByRepresentative() || this.representatives().length > 0) return;
+    this.repsService
+      .lookup()
+      .pipe(catchError(() => of([] as LookupItem[])))
+      .subscribe((list) => this.representatives.set(list ?? []));
   }
 
   /**
@@ -283,7 +409,7 @@ export class SupplierStatementModalComponent {
     this.error.set(null);
     this.expanded.set(new Set<number>());
     this.form.reset(
-      { from: '', to: '', includeDrafts: false },
+      { from: '', to: '', includeDrafts: false, representativeId: ALL_REPRESENTATIVES },
       { emitEvent: false },
     );
   }

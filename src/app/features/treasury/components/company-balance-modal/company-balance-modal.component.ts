@@ -26,19 +26,44 @@ import { CapitalClassificationsService } from '../../services/capital-classifica
 import { CapitalClassification } from '../../models/capital-classification.model';
 import { ShareholderTreasuryLookup } from '../../models/shareholder-treasury-lookup.model';
 import {
-  CompanyBalanceTransactionDto,
+  CompanyBalanceEditKind,
+  CompanyBalanceEditTarget,
   CompanyBalanceTransactionPayload,
   CompanyBalanceTransactionType,
 } from '../../models/shareholder.model';
 
+type TypeOption = { value: CompanyBalanceTransactionType; label: string };
+
+const TYPE_OPTIONS: Readonly<Record<CompanyBalanceEditKind, readonly TypeOption[]>> = {
+  Adjustment: [
+    { value: 'Receipt', label: 'إيداع' },
+    { value: 'Payment', label: 'سحب' },
+  ],
+  Transfer: [
+    { value: 'Receipt', label: 'تحويل وارد إلى رصيد الشركة' },
+    { value: 'Payment', label: 'تحويل صادر من رصيد الشركة' },
+  ],
+  Voucher: [
+    { value: 'Receipt', label: 'قبض' },
+    { value: 'Payment', label: 'صرف' },
+  ],
+};
+
+const EDIT_TITLES: Readonly<Record<CompanyBalanceEditKind, string>> = {
+  Adjustment: 'تعديل عملية رصيد الشركة',
+  Transfer: 'تعديل تحويل من رصيد الشركة',
+  Voucher: 'تعديل سند على رصيد الشركة',
+};
+
 /**
- * Create (`[editing]` null) or edit (`[editing]` set) a direct deposit
- * (`Receipt`) / withdrawal (`Payment`) on the company balance. A deposit moves
- * real cash into the chosen treasury and raises the balance; a withdrawal takes
- * cash out of it and lowers the balance.
+ * Create (`[editing]` null) a direct deposit (`Receipt`) / withdrawal
+ * (`Payment`) on the company balance, or edit (`[editing]` set) any editable
+ * company-balance line. A deposit moves real cash into the chosen treasury and
+ * raises the balance; a withdrawal takes cash out of it and lowers the balance.
  *
- * The resulting entries also show up in the treasury operations log, where they
- * can be edited/deleted like any other operation.
+ * Edit behaviour follows the line's kind (see `CompanyBalanceEditKind`): legacy
+ * transfers edit their other treasury with a fixed direction; other payment
+ * vouchers have no treasury (ignored server-side) and a fixed type.
  */
 @Component({
   selector: 'app-company-balance-modal',
@@ -57,8 +82,8 @@ export class CompanyBalanceModalComponent {
   readonly open = input.required<boolean>();
   /** Current company balance — shown with a live projection (create mode). */
   readonly balance = input<number>(0);
-  /** When set, the modal opens in edit mode pre-filled with this row. */
-  readonly editing = input<CompanyBalanceTransactionDto | null>(null);
+  /** When set, the modal opens in edit mode pre-filled with this line. */
+  readonly editing = input<CompanyBalanceEditTarget | null>(null);
 
   readonly closed = output<void>();
   readonly saved = output<void>();
@@ -93,22 +118,35 @@ export class CompanyBalanceModalComponent {
 
   protected readonly isEdit = computed(() => this.editing() !== null);
 
+  /** Create mode is always a deposit/withdrawal. */
+  protected readonly kind = computed<CompanyBalanceEditKind>(
+    () => this.editing()?.kind ?? 'Adjustment',
+  );
+
+  protected readonly title = computed(() =>
+    this.isEdit() ? EDIT_TITLES[this.kind()] : 'رصيد الشركة — إيداع / سحب',
+  );
+
+  /** Only deposits/withdrawals may flip direction; other lines keep their type. */
+  protected readonly typeLocked = computed(() => this.kind() !== 'Adjustment');
+
+  /** Non-adjustment vouchers carry no treasury — the server ignores it. */
+  protected readonly showTreasury = computed(() => this.kind() !== 'Voucher');
+
+  protected readonly treasuryLabel = computed(() =>
+    this.kind() === 'Transfer' ? 'الخزينة الأخرى في التحويل' : 'الخزينة',
+  );
+
   /**
-   * A movement recorded before treasuries were required. It may stay without
-   * one: on PUT a null `treasuryId` keeps the current (empty) treasury.
+   * A line recorded without a treasury. It may stay without one: on PUT a null
+   * `treasuryId` keeps the current (empty) treasury.
    */
   protected readonly isLegacy = computed(() => {
     const editing = this.editing();
-    return editing !== null && editing.treasuryId == null;
+    return editing !== null && editing.kind !== 'Voucher' && editing.treasuryId == null;
   });
 
-  protected readonly typeOptions: ReadonlyArray<{
-    value: CompanyBalanceTransactionType;
-    label: string;
-  }> = [
-    { value: 'Receipt', label: 'إيداع' },
-    { value: 'Payment', label: 'سحب' },
-  ];
+  protected readonly typeOptions = computed(() => TYPE_OPTIONS[this.kind()]);
 
   /** Balance after saving — in edit mode the original movement is backed out first. */
   protected readonly projected = computed(() => {
@@ -139,10 +177,18 @@ export class CompanyBalanceModalComponent {
         this.loadTreasuries();
         this.loadClassifications();
 
-        // Required on create, and on edit when the movement already has one.
+        // Required on create, and on edit when the line already has one —
+        // except plain vouchers, whose treasury the server ignores.
+        const treasuryRequired =
+          !editing || (editing.kind !== 'Voucher' && editing.treasuryId != null);
         this.form.controls.treasuryId.setValidators(
-          !editing || editing.treasuryId != null ? [Validators.required] : [],
+          treasuryRequired ? [Validators.required] : [],
         );
+        if (editing && editing.kind !== 'Adjustment') {
+          this.form.controls.type.disable({ emitEvent: false });
+        } else {
+          this.form.controls.type.enable({ emitEvent: false });
+        }
 
         if (editing) {
           this.draftType.set(editing.type);
@@ -204,7 +250,7 @@ export class CompanyBalanceModalComponent {
     this.submitting.set(true);
 
     const stream$ = editing
-      ? this.service.updateCompanyBalanceTransaction(editing.id, payload)
+      ? this.service.updateCompanyBalanceTransaction(editing.id, editing.source, payload)
       : this.service.createCompanyBalanceTransaction(payload);
 
     stream$.subscribe({
@@ -228,7 +274,7 @@ export class CompanyBalanceModalComponent {
   }
 
   private successMessage(
-    editing: CompanyBalanceTransactionDto | null,
+    editing: CompanyBalanceEditTarget | null,
     type: CompanyBalanceTransactionType,
   ): string {
     if (editing) return 'تم تعديل عملية رصيد الشركة بنجاح';

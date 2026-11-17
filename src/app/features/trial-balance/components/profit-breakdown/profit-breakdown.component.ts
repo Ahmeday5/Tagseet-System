@@ -30,11 +30,11 @@ export class ProfitBreakdownComponent {
   protected readonly steps = computed<readonly ProfitStep[]>(() => {
     const p = this.profit();
     const raw: Omit<ProfitStep, 'width'>[] = [
-      { label: 'ربح العقود', hint: 'إجمالي هامش الربح على عقود التقسيط', amount: p.grossContractsProfit, sign: 1 },
+      { label: 'أرباح العقود', hint: 'إجمالي هامش الربح على عقود التقسيط', amount: p.grossContractsProfit, sign: 1 },
       { label: 'الإيرادات', hint: 'الإيرادات الأخرى المسجلة', amount: p.revenues, sign: 1 },
       { label: 'المصروفات', hint: 'المصروفات التشغيلية', amount: p.expenses, sign: -1 },
-      { label: 'الأرباح الموزعة', hint: 'حصص المساهمين المخصومة عند التوزيع', amount: p.distributedProfit, sign: -1 },
-      { label: 'عمولة المناديب', hint: 'العمولات المستحقة للمناديب', amount: p.representativeCommission, sign: -1 },
+      { label: 'الموزع', hint: 'حصص المساهمين المخصومة عند التوزيع', amount: p.distributedProfit, sign: -1 },
+      { label: 'عمولات المناديب المدفوعة', hint: 'عمولات المناديب المصروفة فعليًا', amount: p.representativeCommission, sign: -1 },
     ];
     const max = Math.max(...raw.map((s) => Math.abs(s.amount)), 0);
     return raw.map((s) => ({

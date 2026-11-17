@@ -181,7 +181,7 @@ function buildObligations(dto: BalanceCheck): BalanceSideView {
     {
       kind: 'profit',
       key: 'profit',
-      label: 'الأرباح',
+      label: 'الأرباح الحالية',
       hint: 'صافي الأرباح غير الموزعة بعد المصروفات والعمولات',
       caption: isProfitClamped(o.profit) ? 'خسارة محتسبة صفرًا' : 'صافي بعد الخصومات',
       icon: 'trending-up',
@@ -243,7 +243,7 @@ function buildDiagnostics(dto: BalanceCheck): BalanceDiagnostic[] {
       title: 'الأرباح الموزعة ما زالت في الخزائن',
       text:
         `عند توزيع الأرباح تُخصم حصص المساهمين (${formatAmount(profit.distributedProfit)}) ` +
-        'من إجمالي الأرباح فورًا، بينما تظل المبالغ نفسها في الخزائن حتى تُصرف فعليًا، ' +
+        'من الأرباح الحالية فورًا، بينما تظل المبالغ نفسها في الخزائن حتى تُصرف فعليًا، ' +
         'فترتفع الأصول عن الالتزامات بقيمة الجزء غير المصروف منها.',
     });
   }
@@ -254,7 +254,7 @@ function buildDiagnostics(dto: BalanceCheck): BalanceDiagnostic[] {
       title: 'خسارة غير محتسبة في الأرباح',
       text:
         `صافي الأرباح الفعلي ${formatAmount(computeNetProfit(profit))} (خسارة)، ` +
-        'لكن إجمالي الأرباح لا يقل عن الصفر فيُحتسب صفرًا، ' +
+        'لكن الأرباح الحالية لا تقل عن الصفر فيُحتسب صفرًا، ' +
         'فتظهر قيمة الخسارة كفرق بين الأصول والالتزامات.',
     });
   }

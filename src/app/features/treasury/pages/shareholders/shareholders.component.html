@@ -20,8 +20,17 @@
       <span>معالجة تاريخية لرصيد الشركة</span>
     </button>
     }
-    <button *appHasPermission="PERMS.treasuryFullAccess" class="btn btn-sm btn-te" [disabled]="!hasPendingProfits()"
-      (click)="openCapitalizeAll()" title="ترحيل أرباح جميع المساهمين إلى رأس مالهم دفعةً واحدة">ترحيل إلى رأس
+    @if (isAdmin()) {
+    <button class="btn btn-sm d-inline-flex align-items-center gap-1" [disabled]="consolidating()"
+      title="دمج سطور نصيب الشركة من الأرباح القديمة في سندات مُجمّعة — آمن عند التكرار" (click)="runConsolidate()">
+      @if (consolidating()) {
+      <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+      }
+      <span>تجميع السندات القديمة</span>
+    </button>
+    }
+    <button *appHasPermission="PERMS.treasuryFullAccess" class="btn btn-sm btn-te" [disabled]="!canPostProfits()"
+      (click)="openCapitalizeAll()" title="ترحيل أرباح جميع المساهمين ونصيب الشركة إلى رأس المال دفعةً واحدة">ترحيل إلى رأس
       المال</button>
     <button *appHasPermission="PERMS.treasuryFullAccess" class="btn btn-sm btn-bl" (click)="openCreate()">+ مساهم
       جديد</button>
@@ -294,7 +303,7 @@
     }
     <button type="button" class="btn btn-sm" [disabled]="previewLoading()" (click)="loadPreview()">تحديث</button>
     <button *appHasPermission="PERMS.treasuryFullAccess" type="button" class="btn btn-sm btn-te"
-      [disabled]="!hasPendingProfits()" (click)="openCapitalizeAll()">ترحيل إلى رأس المال</button>
+      [disabled]="!canPostProfits()" (click)="openCapitalizeAll()">ترحيل إلى رأس المال</button>
   </div>
 </div>
 
@@ -314,6 +323,10 @@
       <span>نصيب المساهمين: {{ previewTotalShareholdersShare() | currencyAr: true }}</span>
       <span>·</span>
       <span>نصيب الشركة: {{ previewTotalCompanyShare() | currencyAr: true }}</span>
+      }
+      @if (previewCompanyOwnProfit() !== 0) {
+      <span>·</span>
+      <span>نصيب الشركة من رصيدها: {{ previewCompanyOwnProfit() | currencyAr: true }}</span>
       }
     </div>
   </div>

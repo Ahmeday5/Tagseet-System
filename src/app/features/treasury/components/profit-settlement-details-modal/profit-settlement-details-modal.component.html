@@ -23,6 +23,16 @@
         <dt>إجمالي الموزّع</dt>
         <dd class="psd-amount">{{ s.totalAmount | currencyAr: true }}</dd>
       </div>
+      @if (s.companyVoucherNumber) {
+        <div class="psd-head-item">
+          <dt>دخل رصيد الشركة</dt>
+          <dd class="psd-amount">{{ ((s.totalCompanyShare ?? 0) + (s.companyOwnProfit ?? 0)) | currencyAr: true }}</dd>
+        </div>
+        <div class="psd-head-item">
+          <dt>سند الشركة</dt>
+          <dd class="cv-ltr">{{ s.companyVoucherNumber | voucherAr }}</dd>
+        </div>
+      }
       @if (s.notes) {
         <div class="psd-head-item psd-head-item--full">
           <dt>ملاحظات</dt>

@@ -50,7 +50,35 @@ export interface ProfitSettlementPreview {
   totalShareholdersShare: number;
   /** Sum of all companyShare values — what flows into the company's profits treasury. */
   totalCompanyShare: number;
+  /**
+   * The company's own pending profit (its cut of profits earned on the company
+   * balance) that the next capitalization/distribution posts alongside
+   * `totalCompanyShare`. Absent on older backend builds.
+   */
+  companyOwnProfit?: number;
   lines: ProfitSettlementPreviewLines;
+}
+
+/**
+ * What a capitalization/distribution posted to the company balance — a single
+ * company voucher carrying `totalCompanyShare + companyOwnProfit`. The voucher
+ * is a payment when the combined figure is a loss.
+ */
+export interface CompanyProfitPosting {
+  totalCompanyShare?: number;
+  companyOwnProfit?: number;
+  /** The single company voucher issued by the operation; absent when nothing was posted. */
+  companyVoucherNumber?: string | null;
+}
+
+/** Total that entered the company balance in one capitalization/distribution. */
+export function companyPostedTotal(posting: CompanyProfitPosting | null | undefined): number {
+  return (posting?.totalCompanyShare ?? 0) + (posting?.companyOwnProfit ?? 0);
+}
+
+/** Whether a preview has anything to post — shareholder profits or the company's own pending profit. */
+export function hasPostableProfits(preview: ProfitSettlementPreview | null | undefined): boolean {
+  return (preview?.totalAmount ?? 0) > 0 || (preview?.companyOwnProfit ?? 0) !== 0;
 }
 
 /** Query parameters for `GET /profit-settlement/preview`. */
@@ -75,7 +103,7 @@ export interface CreateProfitSettlementPayload {
  * `GET /profit-settlements/{id}`. `treasuryBalanceAfter` is present only on
  * the POST response (the treasury is drained to zero on success).
  */
-export interface ProfitSettlement {
+export interface ProfitSettlement extends CompanyProfitPosting {
   id: number;
   settlementDate: string;
   profitsTreasuryId: number;

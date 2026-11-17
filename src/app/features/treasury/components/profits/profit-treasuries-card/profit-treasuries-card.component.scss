@@ -61,6 +61,10 @@
 .pt-sub {
   padding-inline-start: 12px;
 
+  &.pt-sub-nested {
+    padding-inline-start: 24px;
+  }
+
   dt {
     font-size: 12.5px;
     font-weight: 700;

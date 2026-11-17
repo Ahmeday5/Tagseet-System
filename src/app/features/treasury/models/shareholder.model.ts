@@ -33,6 +33,39 @@ export type CompanyBalanceTransactionType = 'Receipt' | 'Payment';
 export type CompanyBalanceDirection = 'Deposit' | 'Withdrawal';
 
 /**
+ * Which ledger an editable company-balance line lives in — sent as `?source=`
+ * on PUT/DELETE. `Voucher` is the server default; `Transfer` (legacy transfers
+ * out of the company balance) must always be sent explicitly.
+ */
+export type CompanyBalanceEntrySource = 'Voucher' | 'Transfer';
+
+/**
+ * What kind of company-balance line is being edited — drives the edit form:
+ *   - `Adjustment` deposit/withdrawal: type and treasury are editable.
+ *   - `Transfer`   legacy transfer: `treasuryId` is the other treasury of the
+ *                  transfer, `type` its fixed direction (`Payment` = out).
+ *   - `Voucher`    any other payment voucher: treasury is ignored server-side
+ *                  and the type is fixed.
+ */
+export type CompanyBalanceEditKind = 'Adjustment' | 'Transfer' | 'Voucher';
+
+/** An existing company-balance line opened in the company-balance modal for editing. */
+export interface CompanyBalanceEditTarget {
+  id: number;
+  source: CompanyBalanceEntrySource;
+  kind: CompanyBalanceEditKind;
+  voucherNumber: string | null;
+  type: CompanyBalanceTransactionType;
+  amount: number;
+  /** ISO datetime as returned by the server. */
+  date: string;
+  treasuryId: number | null;
+  treasuryName: string | null;
+  capitalClassificationId: number | null;
+  notes: string | null;
+}
+
+/**
  * `POST / PUT shareholders/company-balance/transactions` — Receipt = إيداع
  * (real cash into the chosen treasury, raises the company balance), Payment =
  * سحب (cash out of the treasury, lowers it).
@@ -77,6 +110,14 @@ export interface ReconcileTreasuryLine {
   treasuryName?: string;
   amount?: number;
   [key: string]: unknown;
+}
+
+/** `POST shareholders/company-balance/consolidate-historical` report (idempotent). */
+export interface ConsolidateHistoricalReport {
+  mergedRuns: number;
+  vouchersRemoved: number;
+  profitShareRowsConsolidated: number;
+  vouchersCreated: number;
 }
 
 /** `POST shareholders/company-balance/reconcile-historical` report. */

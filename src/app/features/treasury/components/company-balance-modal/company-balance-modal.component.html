@@ -1,6 +1,6 @@
 <app-modal
   [open]="open()"
-  [title]="isEdit() ? 'تعديل عملية رصيد الشركة' : 'رصيد الشركة — إيداع / سحب'"
+  [title]="title()"
   size="md"
   [closeOnBackdrop]="!submitting()"
   [closeOnEsc]="!submitting()"
@@ -11,7 +11,7 @@
       <div class="col-12 col-md-6">
         <label class="form-label">نوع العملية <span class="text-danger">*</span></label>
         <select class="form-select" formControlName="type" (change)="onTypeChange($any($event.target).value)">
-          @for (opt of typeOptions; track opt.value) {
+          @for (opt of typeOptions(); track opt.value) {
             <option [value]="opt.value">{{ opt.label }}</option>
           }
         </select>
@@ -31,27 +31,29 @@
         <app-form-error [control]="form.controls.amount" label="المبلغ" />
       </div>
 
-      <div class="col-12 col-md-6">
-        <label class="form-label">
-          الخزينة
-          @if (!isLegacy()) {
-            <span class="text-danger">*</span>
+      @if (showTreasury()) {
+        <div class="col-12 col-md-6">
+          <label class="form-label">
+            {{ treasuryLabel() }}
+            @if (!isLegacy()) {
+              <span class="text-danger">*</span>
+            }
+          </label>
+          <app-searchable-select
+            formControlName="treasuryId"
+            [options]="treasuryOptions()"
+            [isDisabled]="treasuriesLoading()"
+            [placeholder]="isLegacy() ? 'بدون خزينة (عملية قديمة)' : 'اختر الخزينة'"
+            searchPlaceholder="ابحث باسم الخزينة…"
+          />
+          <app-form-error [control]="form.controls.treasuryId" [label]="treasuryLabel()" />
+          @if (isLegacy()) {
+            <div class="form-text" style="font-size:11px">
+              عملية قديمة مسجلة بدون خزينة — اتركها فارغة للإبقاء عليها كما هي.
+            </div>
           }
-        </label>
-        <app-searchable-select
-          formControlName="treasuryId"
-          [options]="treasuryOptions()"
-          [isDisabled]="treasuriesLoading()"
-          [placeholder]="isLegacy() ? 'بدون خزينة (عملية قديمة)' : 'اختر الخزينة'"
-          searchPlaceholder="ابحث باسم الخزينة…"
-        />
-        <app-form-error [control]="form.controls.treasuryId" label="الخزينة" />
-        @if (isLegacy()) {
-          <div class="form-text" style="font-size:11px">
-            عملية قديمة مسجلة بدون خزينة — اتركها فارغة للإبقاء عليها كما هي.
-          </div>
-        }
-      </div>
+        </div>
+      }
 
       <div class="col-12 col-md-6">
         <label class="form-label">التصنيف</label>
@@ -84,8 +86,20 @@
     }
 
     <div class="alert alert-info mt-2 mb-0 py-2" role="note" style="font-size:11px">
-      الإيداع يُدخل فلوس فعلية في الخزينة المختارة ويزيد رصيد الشركة، والسحب يُخرج
-      فلوس من الخزينة ويقلل رصيد الشركة. تظهر العملية أيضاً في سجل عمليات الخزينة.
+      @switch (kind()) {
+        @case ('Transfer') {
+          تحويل قديم بين رصيد الشركة وخزينة أخرى — يمكن تعديل المبلغ والتاريخ والخزينة الأخرى،
+          ويُعاد احتساب أثره على الخزينتين ورصيد الشركة. اتجاه التحويل ثابت.
+        }
+        @case ('Voucher') {
+          سند على رصيد الشركة — يمكن تعديل المبلغ والتاريخ والتصنيف والملاحظات،
+          ويُعاد احتساب أثره على رصيد الشركة. نوع السند ثابت.
+        }
+        @default {
+          الإيداع يُدخل فلوس فعلية في الخزينة المختارة ويزيد رصيد الشركة، والسحب يُخرج
+          فلوس من الخزينة ويقلل رصيد الشركة. تظهر العملية أيضاً في سجل عمليات الخزينة.
+        }
+      }
     </div>
 
     @if (serverError(); as msg) {

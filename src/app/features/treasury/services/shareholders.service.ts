@@ -12,8 +12,10 @@ import {
 } from '../../../core/http/http-context.tokens';
 import { toList, toPaged } from '../../../core/utils/api-list.util';
 import {
+  CompanyBalanceEntrySource,
   CompanyBalanceTransactionDto,
   CompanyBalanceTransactionPayload,
+  ConsolidateHistoricalReport,
   CreateShareholderPayload,
   ReconcileHistoricalReport,
   Shareholder,
@@ -31,6 +33,7 @@ import {
 } from '../models/profit-settlement.model';
 import {
   CapitalizeAllProfitsPayload,
+  CapitalizeAllProfitsResult,
   CapitalizeProfitPayload,
   CapitalTransaction,
   CapitalTransactionsQuery,
@@ -166,18 +169,22 @@ export class ShareholdersService {
   }
 
   /**
-   * Edits a company-balance deposit/withdrawal in place. A null `treasuryId`
-   * keeps the current treasury; a null `capitalClassificationId` clears the tag.
-   * Reverses and re-applies the cash movement, so both scopes are invalidated.
+   * Edits an editable company-balance line in place — a deposit/withdrawal, any
+   * payment voucher, or a legacy transfer out of the company balance (`source`
+   * tells the server which ledger `id` belongs to). A null `treasuryId` keeps
+   * the current treasury; a null `capitalClassificationId` clears the tag.
+   * Reverses and re-applies the movement, so both scopes are invalidated.
    */
   updateCompanyBalanceTransaction(
     id: number,
+    source: CompanyBalanceEntrySource,
     payload: CompanyBalanceTransactionPayload,
   ): Observable<CompanyBalanceTransactionDto> {
     return this.api.put<CompanyBalanceTransactionDto>(
       API_ENDPOINTS.shareholders.companyBalanceTransactionById(id),
       payload,
       {
+        params: { source },
         context: withInlineHandling(
           withCacheInvalidate(MONEY_WRITE_SCOPES),
         ),
@@ -186,12 +193,32 @@ export class ShareholdersService {
   }
 
   /**
-   * Deletes a company-balance deposit/withdrawal — reverses its effect on the
+   * Deletes an editable company-balance line — reverses its effect on the
    * company balance and on the treasury. Invalidates both scopes.
    */
-  deleteCompanyBalanceTransaction(id: number): Observable<{ message: string }> {
+  deleteCompanyBalanceTransaction(
+    id: number,
+    source: CompanyBalanceEntrySource,
+  ): Observable<{ message: string }> {
     return this.api.delete<{ message: string }>(
       API_ENDPOINTS.shareholders.companyBalanceTransactionById(id),
+      {
+        params: { source },
+        context: withInlineHandling(
+          withCacheInvalidate(MONEY_WRITE_SCOPES),
+        ),
+      },
+    );
+  }
+
+  /**
+   * Admin maintenance: folds historical per-profit company rows into
+   * consolidated vouchers. Idempotent — safe to re-run.
+   */
+  consolidateHistoricalCompanyBalance(): Observable<ConsolidateHistoricalReport> {
+    return this.api.post<ConsolidateHistoricalReport>(
+      API_ENDPOINTS.shareholders.companyBalanceConsolidate,
+      {},
       {
         context: withInlineHandling(
           withCacheInvalidate(MONEY_WRITE_SCOPES),
@@ -335,8 +362,8 @@ export class ShareholdersService {
    */
   capitalizeAllProfits(
     payload: CapitalizeAllProfitsPayload,
-  ): Observable<{ message: string }> {
-    return this.api.post<{ message: string }>(
+  ): Observable<CapitalizeAllProfitsResult> {
+    return this.api.post<CapitalizeAllProfitsResult>(
       API_ENDPOINTS.shareholders.capitalizeAllProfits,
       payload,
       {

@@ -30,8 +30,11 @@ import {
   CompanyProfitStatement,
   CompanyProfitStatementQuery,
 } from '../../models/company-profit-statement.model';
-import { CompanyBalanceTransactionDto } from '../../models/shareholder.model';
-import { toCompanyProfitEntryRow } from '../../constants/company-profit-labels';
+import { CompanyBalanceEditTarget } from '../../models/shareholder.model';
+import {
+  toCompanyBalanceEditTarget,
+  toCompanyProfitEntryRow,
+} from '../../constants/company-profit-labels';
 import { periodTitle } from '../../constants/period-title.util';
 import { CompanyBalanceModalComponent } from '../company-balance-modal/company-balance-modal.component';
 
@@ -86,8 +89,9 @@ export class CompanyProfitStatementModalComponent {
 
   // ── edit/delete ──
   protected readonly editOpen = signal(false);
-  protected readonly editingTx = signal<CompanyBalanceTransactionDto | null>(null);
-  protected readonly deletingId = signal<number | null>(null);
+  protected readonly editingTx = signal<CompanyBalanceEditTarget | null>(null);
+  /** `source:id` of the line being deleted — ids are only unique per source. */
+  protected readonly deletingKey = signal<string | null>(null);
 
   // ── derived ──
   protected readonly currency = environment.currency;
@@ -154,11 +158,16 @@ export class CompanyProfitStatementModalComponent {
     this.fetch(1, size, false);
   }
 
-  // ─────────── edit / delete (manual deposit/withdrawal rows only) ───────────
+  /** Row identity across ledgers — a voucher and a transfer can share an id. */
+  protected entryKey(entry: CompanyProfitEntry): string {
+    return `${entry.source}:${entry.id}`;
+  }
+
+  // ─────────── edit / delete (rows flagged `isEditable`) ───────────
 
   protected openEdit(entry: CompanyProfitEntry): void {
     if (!entry.isEditable) return;
-    this.editingTx.set(this.toEditableDto(entry));
+    this.editingTx.set(toCompanyBalanceEditTarget(entry));
     this.editOpen.set(true);
   }
 
@@ -175,7 +184,8 @@ export class CompanyProfitStatementModalComponent {
   }
 
   protected async confirmDelete(entry: CompanyProfitEntry): Promise<void> {
-    if (!entry.isEditable) return;
+    if (!entry.isEditable || this.deletingKey()) return;
+    const target = toCompanyBalanceEditTarget(entry);
     const ok = await this.dialog.confirm({
       title: 'حذف عملية رصيد الشركة',
       message: `هل أنت متأكد من حذف هذه العملية بمبلغ ${entry.amount}؟ سيُعكس أثرها على رصيد الشركة وعلى الخزينة. لا يمكن التراجع عن هذا الإجراء.`,
@@ -185,10 +195,10 @@ export class CompanyProfitStatementModalComponent {
     });
     if (!ok) return;
 
-    this.deletingId.set(entry.id);
-    this.service.deleteCompanyBalanceTransaction(entry.id).subscribe({
+    this.deletingKey.set(this.entryKey(entry));
+    this.service.deleteCompanyBalanceTransaction(target.id, target.source).subscribe({
       next: () => {
-        this.deletingId.set(null);
+        this.deletingKey.set(null);
         this.toast.success('تم حذف عملية رصيد الشركة بنجاح');
         if (this.rows().length === 1 && this.pageIndex() > 1) {
           this.pageIndex.update((p) => p - 1);
@@ -197,29 +207,10 @@ export class CompanyProfitStatementModalComponent {
         this.changed.emit();
       },
       error: (err: ApiError) => {
-        this.deletingId.set(null);
+        this.deletingKey.set(null);
         this.toast.error(apiErrorToMessage(err, 'تعذّر حذف عملية رصيد الشركة'));
       },
     });
-  }
-
-  /** Projects a statement row onto the shape the company-balance modal edits. */
-  private toEditableDto(e: CompanyProfitEntry): CompanyBalanceTransactionDto {
-    return {
-      id: e.id,
-      voucherNumber: e.voucherNumber ?? '',
-      type: e.voucherType,
-      direction: e.voucherType === 'Receipt' ? 'Deposit' : 'Withdrawal',
-      amount: e.amount,
-      balanceAfter: e.balanceAfter,
-      date: e.date,
-      treasuryId: e.counterpartyTreasuryId,
-      treasuryName: e.counterpartyTreasuryName,
-      capitalClassificationId: e.capitalClassificationId,
-      capitalClassificationName: e.capitalClassificationName,
-      notes: e.notes,
-      userName: '',
-    };
   }
 
   private fetch(pageIndex: number, pageSize: number, force: boolean): void {

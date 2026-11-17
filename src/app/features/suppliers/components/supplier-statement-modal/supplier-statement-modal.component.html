@@ -24,6 +24,19 @@
         <input type="date" class="form-control form-control-sm" formControlName="to" />
       </label>
 
+      @if (canFilterByRepresentative()) {
+        <label class="ss-field">
+          <span class="ss-field-label">المندوب</span>
+          <select class="form-select form-select-sm" formControlName="representativeId">
+            <option [value]="ALL_REPRESENTATIVES">كل المناديب</option>
+            <option [value]="'' + ADMIN_REPRESENTATIVE_ID">{{ ADMINISTRATION_LABEL }}</option>
+            @for (rep of representatives(); track rep.id) {
+              <option [value]="'' + rep.id">{{ rep.name }}</option>
+            }
+          </select>
+        </label>
+      }
+
       <label class="ss-toggle">
         <input type="checkbox" formControlName="includeDrafts" />
         <span>تضمين المسودات</span>
@@ -66,6 +79,12 @@
           <div class="ss-hero-eyebrow">كشف حساب مورد</div>
           <div class="ss-hero-name">{{ st.supplier.fullName }}</div>
           <div class="ss-hero-meta">
+            @if (scopedRepresentativeName(); as repName) {
+              <span class="ss-hero-meta-item">
+                <span class="ss-hero-meta-label">المندوب</span>
+                <span class="ss-hero-meta-val">{{ repName }}</span>
+              </span>
+            }
             <span class="ss-hero-meta-item">
               <span class="ss-hero-meta-label">رقم الهاتف</span>
               <span class="ss-hero-meta-val" dir="ltr">{{ st.supplier.phoneNumber }}</span>
@@ -173,6 +192,12 @@
                   </div>
 
                   <div class="ss-invoice-meta">
+                    <div class="ss-invoice-meta-cell">
+                      <span class="ss-invoice-meta-label">المندوب</span>
+                      <span class="ss-invoice-meta-val">
+                        {{ representativeLabel(inv.representativeName) }}
+                      </span>
+                    </div>
                     <div class="ss-invoice-meta-cell">
                       <span class="ss-invoice-meta-label">الإجمالي</span>
                       <span class="ss-invoice-meta-val">
@@ -301,29 +326,62 @@
                 <tr>
                   <th>رقم السند</th>
                   <th class="text-center">التاريخ</th>
+                  <th>المندوب</th>
+                  <th>الخزنة</th>
                   <th class="text-end">المبلغ</th>
                   <th>ملاحظات</th>
+                  <th class="ss-pay-actions"></th>
                 </tr>
               </thead>
               <tbody>
                 @for (p of st.payments; track p.id) {
+                  @let busy = deletingPaymentId() === p.id;
                   <tr>
                     <td class="cv-ltr ss-pay-voucher" [title]="p.voucherNumber">
-                      {{ p.voucherNumber }}
+                      {{ p.voucherNumber | voucherAr }}
                     </td>
                     <td class="text-center">{{ formatDate(p.date) }}</td>
+                    <td>{{ representativeLabel(p.representativeName) }}</td>
+                    <td>{{ p.treasuryName || '—' }}</td>
                     <td class="text-end ss-text-gr fw-600">{{ p.amount | currencyAr: true }}</td>
                     <td class="ss-pay-notes">{{ p.notes || '—' }}</td>
+                    <td class="ss-pay-actions">
+                      @if (p.canEdit || p.canDelete) {
+                        <div class="d-inline-flex gap-1">
+                          @if (p.canEdit) {
+                            <button
+                              type="button"
+                              class="btn btn-sm btn-bl"
+                              [disabled]="busy"
+                              (click)="openPaymentEdit(p)"
+                            >تعديل</button>
+                          }
+                          @if (p.canDelete) {
+                            <button
+                              type="button"
+                              class="btn btn-sm btn-re d-inline-flex align-items-center gap-1"
+                              [disabled]="busy"
+                              (click)="confirmPaymentDelete(p)"
+                            >
+                              @if (busy) {
+                                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                              }
+                              <span>حذف</span>
+                            </button>
+                          }
+                        </div>
+                      }
+                    </td>
                   </tr>
                 }
               </tbody>
               <tfoot>
                 <tr>
-                  <td colspan="2" class="fw-600">الإجمالي</td>
+                  <td colspan="4" class="fw-600">الإجمالي</td>
                   <td class="text-end ss-text-gr fw-600">
                     {{ paymentsTotal(st.payments) | currencyAr: true }}
                   </td>
-                  <td></td>
+                  <td colspan="2"></td>
                 </tr>
               </tfoot>
             </table>
@@ -344,3 +402,12 @@
     <button type="button" class="btn" (click)="close()">إغلاق</button>
   </ng-container>
 </app-modal>
+
+<!-- ── EDIT DIRECT PAYMENT (reuses the payment modal in edit mode) ── -->
+<app-supplier-payment-modal
+  [open]="paymentEditOpen()"
+  [supplier]="supplier()"
+  [editing]="editingPayment()"
+  (closed)="closePaymentEdit()"
+  (paid)="onPaymentSaved()"
+/>

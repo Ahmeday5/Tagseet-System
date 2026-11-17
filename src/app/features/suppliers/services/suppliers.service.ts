@@ -24,6 +24,12 @@ import {
 } from '../models/supplier.model';
 
 const SUPPLIERS_CACHE_KEY = 'suppliers';
+/**
+ * Editing/deleting a direct payment re-allocates it across the supplier's
+ * invoices — `supplier` also matches `supplier-purchase-invoices`, so invoice
+ * statuses/remaining refetch along with the supplier aggregates.
+ */
+const PAYMENT_WRITE_SCOPES = ['supplier', 'treasur', 'financial-separation'];
 const SUPPLIERS_TTL_MS = 5 * 60 * 1000; // 5 min — list churns whenever a supplier is added/edited
 const STATEMENT_TTL_MS = 60 * 1000; // 1 min — figures move with every payment/draft
 
@@ -112,6 +118,8 @@ export class SuppliersService {
       from: query.from || undefined,
       to: query.to || undefined,
       includeDrafts: query.includeDrafts ?? false,
+      // `0` is meaningful (the administration) — only null/undefined is omitted.
+      representativeId: query.representativeId ?? undefined,
     };
   }
 
@@ -133,6 +141,30 @@ export class SuppliersService {
           withCacheInvalidate([SUPPLIERS_CACHE_KEY, 'treasur', 'financial-separation']),
         ),
       },
+    );
+  }
+
+  /**
+   * Edit a direct supplier payment — same body/response as {@link pay}.
+   * PUT /dashboard/suppliers/{id}/payments/{paymentId}
+   */
+  updatePayment(
+    supplierId: number,
+    paymentId: number,
+    payload: SupplierPaymentPayload,
+  ): Observable<SupplierPaymentResponse> {
+    return this.api.put<SupplierPaymentResponse>(
+      API_ENDPOINTS.suppliers.paymentById(supplierId, paymentId),
+      payload,
+      { context: withInlineHandling(withCacheInvalidate(PAYMENT_WRITE_SCOPES)) },
+    );
+  }
+
+  /** DELETE /dashboard/suppliers/{id}/payments/{paymentId} */
+  deletePayment(supplierId: number, paymentId: number): Observable<{ message: string }> {
+    return this.api.delete<{ message: string }>(
+      API_ENDPOINTS.suppliers.paymentById(supplierId, paymentId),
+      { context: withInlineHandling(withCacheInvalidate(PAYMENT_WRITE_SCOPES)) },
     );
   }
 

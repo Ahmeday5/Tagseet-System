@@ -43,11 +43,15 @@
     <button
       type="button"
       class="btn btn-sm btn-wa d-inline-flex align-items-center gap-1 ms-auto"
-      [disabled]="loading() || !statement()"
-      title="مشاركة الملخص عبر واتساب"
+      [disabled]="loading() || sharing() || !statement()"
+      title="مشاركة كشف الحساب كاملاً عبر واتساب"
       (click)="shareOnWhatsApp()"
     >
+      @if (sharing()) {
+      <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+      } @else {
       <span aria-hidden="true">🟢</span>
+      }
       <span>واتساب</span>
     </button>
   </div>
@@ -71,13 +75,13 @@
         </tr>
       </thead>
       <tbody>
-        @for (e of entries(); track e.id) {
+        @for (e of entries(); track e.id; let i = $index) {
         <tr>
           <td class="fs-10">{{ e.date | dateAr: 'short' }}</td>
-          <td class="fs-10" [title]="e.voucherNumber || ''">{{ e.voucherNumber | voucherAr }}</td>
+          <td class="fs-10 fw-600" [title]="e.voucherNumber || ''">{{ rowOffset() + i + 1 }}</td>
           <td class="fw-600">{{ e.shareholderName }}</td>
           <td>
-            <app-badge [text]="e.transactionTypeAr || (isDeposit(e) ? 'إيداع' : 'سحب')"
+            <app-badge [text]="typeLabel(e)"
               [type]="isDeposit(e) ? 'ok' : 'bad'" />
           </td>
           <td class="text-end fw-600" [style.color]="isDeposit(e) ? 'var(--gr)' : 'var(--re)'">

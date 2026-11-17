@@ -81,6 +81,25 @@ export interface SupplierStatementQuery {
   to?: string;
   /** Include `Draft` invoices in the response. Defaults to `false` server-side. */
   includeDrafts?: boolean;
+  /**
+   * Admin-only account scope: omitted → every movement; a rep id → that
+   * representative's account only; {@link ADMIN_REPRESENTATIVE_ID} → movements
+   * the administration made itself. Representatives are always scoped to their
+   * own account server-side.
+   */
+  representativeId?: number;
+}
+
+/** `representativeId` value selecting the administration's own movements. */
+export const ADMIN_REPRESENTATIVE_ID = 0;
+
+/** Label for movements with no representative (made by the administration). */
+export const ADMINISTRATION_LABEL = 'الإدارة';
+
+/** Representative a statement is scoped to. */
+export interface SupplierStatementRepresentative {
+  id: number;
+  name: string;
 }
 
 /** Trimmed supplier projection embedded in the statement payload. */
@@ -132,6 +151,9 @@ export interface SupplierStatementInvoice {
   totalAmount: number;
   paidAmount: number;
   remainingAmount: number;
+  /** Who recorded the invoice — `null` means the administration. */
+  representativeId?: number | null;
+  representativeName?: string | null;
   items: SupplierStatementItem[];
 }
 
@@ -141,9 +163,19 @@ export interface SupplierStatementPayment {
   date: string;
   amount: number;
   notes: string | null;
+  /** Who made the payment — `null` means the administration. */
+  representativeId?: number | null;
+  representativeName?: string | null;
+  treasuryId?: number | null;
+  treasuryName?: string | null;
+  /** Server-resolved permissions for the current user on this payment. */
+  canEdit?: boolean;
+  canDelete?: boolean;
 }
 
 export interface SupplierStatement {
+  /** The representative the statement is scoped to; `null` when it covers everyone. */
+  representative?: SupplierStatementRepresentative | null;
   supplier: SupplierStatementParty;
   period: SupplierStatementPeriod;
   summary: SupplierStatementSummary;
@@ -156,6 +188,7 @@ export interface SupplierStatement {
 //  Direct supplier payment — not tied to a specific invoice.
 // ─────────────────────────────────────────────────────────────────
 
+/** Body of both `POST …/payments` and `PUT …/payments/{paymentId}`. */
 export interface SupplierPaymentPayload {
   treasuryId: number;
   amount: number;

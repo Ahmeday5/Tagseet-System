@@ -17,7 +17,11 @@ import { ApiError } from '../../../../core/models/api-response.model';
 import { ToastService } from '../../../../core/services/toast.service';
 
 import { ShareholdersService } from '../../services/shareholders.service';
-import { ProfitSettlementPreview } from '../../models/profit-settlement.model';
+import {
+  hasPostableProfits,
+  ProfitSettlementPreview,
+} from '../../models/profit-settlement.model';
+import { companyPostingSummary } from '../../constants/company-posting.util';
 import { FETCH_ALL_PAGE_SIZE } from '../../../../core/utils/api-list.util';
 
 @Component({
@@ -61,7 +65,12 @@ export class CapitalizeAllProfitsModalComponent {
   protected readonly totalCompanyShare = computed(
     () => this.preview()?.totalCompanyShare ?? 0,
   );
-  protected readonly canCapitalize = computed(() => this.totalAmount() > 0);
+  /** The company's own pending profit — posted with its share in one voucher. */
+  protected readonly companyOwnProfit = computed(
+    () => this.preview()?.companyOwnProfit ?? 0,
+  );
+  /** Allowed with no shareholder profits as long as the company has pending profit. */
+  protected readonly canCapitalize = computed(() => hasPostableProfits(this.preview()));
 
   /** Ledger-only capitalisation — no source treasury. */
   protected readonly form = this.fb.nonNullable.group({
@@ -99,9 +108,11 @@ export class CapitalizeAllProfitsModalComponent {
         notes: (raw.notes ?? '').trim(),
       })
       .subscribe({
-        next: () => {
+        next: (result) => {
           this.submitting.set(false);
-          this.toast.success('تم ترحيل أرباح جميع المساهمين إلى رأس المال بنجاح');
+          this.toast.success(
+            `تم ترحيل الأرباح إلى رأس المال بنجاح — ${companyPostingSummary(result)}`,
+          );
           this.capitalized.emit();
         },
         error: (err: ApiError) => {

@@ -23,8 +23,19 @@ import { LookupItem } from '../../../../core/models/lookup.model';
 
 import { TreasuryService } from '../../../treasury/services/treasury.service';
 import { SuppliersService } from '../../services/suppliers.service';
-import { Supplier, SupplierPaymentResponse } from '../../models/supplier.model';
+import {
+  Supplier,
+  SupplierPaymentPayload,
+  SupplierPaymentResponse,
+  SupplierStatementPayment,
+} from '../../models/supplier.model';
 
+/**
+ * Records a direct supplier payment, or edits one (`[editing]` set) — same
+ * form, pre-filled. A representative's ceiling is their own invoices' balance;
+ * in edit mode the server owns that check (its 400 message is shown verbatim)
+ * because the client can't know the balance net of the payment being edited.
+ */
 @Component({
   selector: 'app-supplier-payment-modal',
   standalone: true,
@@ -43,6 +54,8 @@ export class SupplierPaymentModalComponent {
   // ── inputs ──
   readonly open = input.required<boolean>();
   readonly supplier = input<Supplier | null>(null);
+  /** When set, the modal edits this payment instead of recording a new one. */
+  readonly editing = input<SupplierStatementPayment | null>(null);
 
   // ── outputs ──
   readonly closed = output<void>();
@@ -62,6 +75,8 @@ export class SupplierPaymentModalComponent {
   protected readonly draftAmount = signal(0);
 
   // ── derived ──
+  protected readonly isEdit = computed(() => this.editing() !== null);
+
   protected readonly remaining = computed(
     () => this.supplier()?.remainingAmount ?? 0,
   );
@@ -70,8 +85,9 @@ export class SupplierPaymentModalComponent {
     Math.max(0, this.remaining() - this.draftAmount()),
   );
 
+  /** Client-side ceiling applies to new payments only (see class doc). */
   protected readonly amountExceedsRemaining = computed(
-    () => this.draftAmount() > this.remaining() + 1e-9,
+    () => !this.isEdit() && this.draftAmount() > this.remaining() + 1e-9,
   );
 
   protected readonly treasuryOptions = computed<SearchableSelectOption[]>(() =>
@@ -91,16 +107,28 @@ export class SupplierPaymentModalComponent {
       () => {
         const sup = this.supplier();
         if (!this.open() || !sup) return;
-        const remaining = sup.remainingAmount ?? 0;
+        const editing = this.editing();
         this.serverError.set(null);
         this.submitting.set(false);
-        this.draftAmount.set(remaining);
-        this.form.reset({
-          treasuryId: null,
-          amount: remaining,
-          paymentDate: this.todayISO(),
-          notes: '',
-        });
+
+        if (editing) {
+          this.draftAmount.set(editing.amount);
+          this.form.reset({
+            treasuryId: editing.treasuryId ?? null,
+            amount: editing.amount,
+            paymentDate: editing.date ? editing.date.slice(0, 10) : this.todayISO(),
+            notes: editing.notes ?? '',
+          });
+        } else {
+          const remaining = sup.remainingAmount ?? 0;
+          this.draftAmount.set(remaining);
+          this.form.reset({
+            treasuryId: null,
+            amount: remaining,
+            paymentDate: this.todayISO(),
+            notes: '',
+          });
+        }
         this.loadTreasuries();
       },
       { allowSignalWrites: true },
@@ -130,29 +158,40 @@ export class SupplierPaymentModalComponent {
     }
 
     const raw = this.form.getRawValue();
+    const editing = this.editing();
+    const notes = (raw.notes ?? '').trim();
+    const payload: SupplierPaymentPayload = {
+      treasuryId: Number(raw.treasuryId),
+      amount: Number(raw.amount),
+      paymentDate: raw.paymentDate,
+      // On edit an empty string clears the notes; on create it's simply omitted.
+      notes: editing ? notes : notes || undefined,
+    };
     this.serverError.set(null);
     this.submitting.set(true);
 
-    this.suppliersService
-      .pay(sup.id, {
-        treasuryId: Number(raw.treasuryId),
-        amount: Number(raw.amount),
-        paymentDate: raw.paymentDate,
-        notes: (raw.notes ?? '').trim() || undefined,
-      })
-      .subscribe({
-        next: (res) => {
-          this.submitting.set(false);
-          this.toast.success(
-            `تم تسجيل دفعة ${Number(raw.amount).toLocaleString('ar-EG')} ج.م للمورد ${res.supplierName}`,
-          );
-          this.paid.emit(res);
-        },
-        error: (err: ApiError) => {
-          this.submitting.set(false);
-          this.serverError.set(err.message || 'تعذّر تسجيل الدفعة');
-        },
-      });
+    const stream$ = editing
+      ? this.suppliersService.updatePayment(sup.id, editing.id, payload)
+      : this.suppliersService.pay(sup.id, payload);
+
+    stream$.subscribe({
+      next: (res) => {
+        this.submitting.set(false);
+        const amount = `${payload.amount.toLocaleString('ar-EG')} ج.م`;
+        this.toast.success(
+          editing
+            ? `تم تعديل الدفعة إلى ${amount} بنجاح`
+            : `تم تسجيل دفعة ${amount} للمورد ${res.supplierName ?? sup.fullName}`,
+        );
+        this.paid.emit(res);
+      },
+      error: (err: ApiError) => {
+        this.submitting.set(false);
+        this.serverError.set(
+          err.message || (editing ? 'تعذّر تعديل الدفعة' : 'تعذّر تسجيل الدفعة'),
+        );
+      },
+    });
   }
 
   protected close(): void {

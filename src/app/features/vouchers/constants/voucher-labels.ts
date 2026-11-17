@@ -48,6 +48,7 @@ export const REFERENCE_TYPE_LABELS: Readonly<Record<ReferenceType, string>> = {
   [ReferenceType.SubAccountTransfer]: 'تحويل حساب فرعي',
   [ReferenceType.RepresentativeCommission]: 'عمولة مندوب',
   [ReferenceType.ShareholderProfitCapitalization]: 'رسملة أرباح مساهم',
+  [ReferenceType.CompanyProfitShare]: 'نصيب الشركة من الأرباح (مُجمّع)',
 };
 
 export const REFERENCE_TYPE_BADGE: Readonly<Record<ReferenceType, BadgeType>> = {
@@ -67,6 +68,7 @@ export const REFERENCE_TYPE_BADGE: Readonly<Record<ReferenceType, BadgeType>> = 
   [ReferenceType.SubAccountTransfer]: 'info',
   [ReferenceType.RepresentativeCommission]: 'warn',
   [ReferenceType.ShareholderProfitCapitalization]: 'teal',
+  [ReferenceType.CompanyProfitShare]: 'teal',
 };
 
 export const REFERENCE_TYPE_OPTIONS: ReadonlyArray<{

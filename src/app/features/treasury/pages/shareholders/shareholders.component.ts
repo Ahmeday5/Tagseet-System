@@ -15,7 +15,10 @@ import {
   Shareholder,
   ShareholdersSummary,
 } from '../../models/shareholder.model';
-import { ProfitSettlementPreview } from '../../models/profit-settlement.model';
+import {
+  hasPostableProfits,
+  ProfitSettlementPreview,
+} from '../../models/profit-settlement.model';
 import { ShareholderFormModalComponent } from '../../components/shareholder-form-modal/shareholder-form-modal.component';
 import { ShareholderCapitalModalComponent } from '../../components/shareholder-capital-modal/shareholder-capital-modal.component';
 import { CapitalizeAllProfitsModalComponent } from '../../components/capitalize-all-profits-modal/capitalize-all-profits-modal.component';
@@ -96,6 +99,7 @@ export class ShareholdersComponent {
   protected readonly reconciling = signal(false);
   protected readonly reconcileDone = signal(this.storage.get(RECONCILE_DONE_KEY) === '1');
   protected readonly reconcileReport = signal<ReconcileHistoricalReport | null>(null);
+  protected readonly consolidating = signal(false);
 
   // ── filters ──
   protected readonly searchTerm = signal('');
@@ -134,11 +138,17 @@ export class ShareholdersComponent {
   protected readonly previewTotalCompanyShare = computed(
     () => this.preview()?.totalCompanyShare ?? 0,
   );
+  /** The company's own pending profit — posted with the next capitalization. */
+  protected readonly previewCompanyOwnProfit = computed(
+    () => this.preview()?.companyOwnProfit ?? 0,
+  );
   protected readonly previewTreasuryName = computed(
     () => this.preview()?.profitsTreasuryName ?? '—',
   );
-  /** Whether there's anything to distribute — based on the whole-population total, not the current search/page. */
+  /** Whether shareholders have accrued profits — whole-population total, not the current search/page. */
   protected readonly hasPendingProfits = computed(() => this.previewTotal() > 0);
+  /** Capitalization is allowed on shareholder profits OR the company's own pending profit. */
+  protected readonly canPostProfits = computed(() => hasPostableProfits(this.preview()));
 
   private readonly previewTrigger = computed(() => ({
     search: this.previewSearch().trim(),
@@ -590,6 +600,36 @@ export class ShareholdersComponent {
       error: (err: ApiError) => {
         this.reconciling.set(false);
         this.toast.error(apiErrorToMessage(err, 'تعذّر تنفيذ المعالجة التاريخية'));
+      },
+    });
+  }
+
+  /** Admin maintenance — merges historical company profit rows into vouchers. Idempotent. */
+  protected async runConsolidate(): Promise<void> {
+    if (this.consolidating()) return;
+    const ok = await this.dialog.confirm({
+      title: 'تجميع سندات أرباح الشركة القديمة',
+      message:
+        'سيتم دمج سطور نصيب الشركة من الأرباح القديمة في سندات مُجمّعة. العملية آمنة ويمكن تكرارها دون أثر إضافي. هل تريد المتابعة؟',
+      confirmText: 'تنفيذ التجميع',
+      cancelText: 'إلغاء',
+      type: 'warning',
+    });
+    if (!ok) return;
+
+    this.consolidating.set(true);
+    this.service.consolidateHistoricalCompanyBalance().subscribe({
+      next: (r) => {
+        this.consolidating.set(false);
+        this.toast.success(
+          `تم تجميع السندات القديمة: ${r.mergedRuns ?? 0} مجموعة، ` +
+            `${r.profitShareRowsConsolidated ?? 0} سطر نصيب أرباح، ` +
+            `حذف ${r.vouchersRemoved ?? 0} سند وإنشاء ${r.vouchersCreated ?? 0} سند`,
+        );
+      },
+      error: (err: ApiError) => {
+        this.consolidating.set(false);
+        this.toast.error(apiErrorToMessage(err, 'تعذّر تجميع السندات القديمة'));
       },
     });
   }

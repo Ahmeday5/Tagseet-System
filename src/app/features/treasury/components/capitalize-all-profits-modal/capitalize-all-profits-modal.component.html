@@ -26,6 +26,10 @@
         <span class="cap-all-value" style="color:var(--txt2)">{{ totalCompanyShare() | currencyAr: true }}</span>
       </div>
       <div class="cap-all-summary-item">
+        <span class="cap-all-label">نصيب الشركة من رصيدها</span>
+        <span class="cap-all-value" style="color:var(--txt2)">{{ companyOwnProfit() | currencyAr: true }}</span>
+      </div>
+      <div class="cap-all-summary-item">
         <span class="cap-all-label">عدد المساهمين</span>
         <span class="cap-all-value">{{ lines().length }}</span>
       </div>
@@ -41,10 +45,11 @@
           </svg>
         </div>
         <div class="cap-all-empty-title">لا توجد أرباح مستحقة للترحيل حاليًا</div>
-        <div class="cap-all-empty-sub">لا يوجد مساهمون لديهم أرباح متراكمة غير مُسوَّاة.</div>
+        <div class="cap-all-empty-sub">لا يوجد مساهمون لديهم أرباح متراكمة غير مُسوَّاة، ولا أرباح معلّقة للشركة.</div>
       </div>
     } @else {
       <!-- breakdown table -->
+      @if (lines().length) {
       <div class="tw cap-all-table">
         <table>
           <thead>
@@ -75,6 +80,7 @@
           </tfoot>
         </table>
       </div>
+      }
 
       <!-- form -->
       <form [formGroup]="form" (ngSubmit)="onSubmit()" novalidate autocomplete="off" class="cap-all-form">
@@ -103,7 +109,9 @@
       </form>
 
       <div class="cap-all-note" role="note">
-        سيتم ترحيل الأرباح المتراكمة إلى رأس مال كل مساهم وتصفير رصيد أرباحه كقيد محاسبي فقط (بدون حركة نقدية على أي خزينة). هذا الإجراء لا يمكن التراجع عنه.
+        سيتم ترحيل الأرباح المتراكمة إلى رأس مال كل مساهم وتصفير رصيد أرباحه كقيد محاسبي فقط (بدون حركة نقدية على أي خزينة).
+        ويُرحَّل نصيب الشركة مع أرباحها المعلّقة إلى رصيد الشركة في سند واحد
+        ({{ (totalCompanyShare() + companyOwnProfit()) | currencyAr: true }}). هذا الإجراء لا يمكن التراجع عنه.
       </div>
     }
 

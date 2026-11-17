@@ -194,9 +194,11 @@ export class SubAccountStatementModalComponent {
    * Transfer-leg mirror rows (created by a direct sub-account-to-sub-account
    * transfer) carry no treasury and can't be edited/deleted through the
    * generic voucher endpoints — the backend rejects that with a 400.
+   * Detected by the missing treasury only: voucher numbers are plain serials
+   * and carry no type prefix.
    */
   protected isTransferLeg(v: SubAccountVoucher): boolean {
-    return v.treasuryId == null || v.voucherNumber?.startsWith('SA-TRF') === true;
+    return v.treasuryId == null;
   }
 
   /** Exports every voucher in the ledger (all pages) to a PDF. */

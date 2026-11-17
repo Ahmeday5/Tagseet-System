@@ -6,7 +6,9 @@
 export const PROFITS_HINTS = {
   // treasuries
   profitsTreasury: 'الأرباح اللي لسه ما اتسوّتش: حصة الشركة المعلقة + حصة المساهمين المعلقة',
-  companyPendingShare: 'نصيب الشركة من الأرباح اللي لسه ما اتسوّتش',
+  companyPendingShare: 'نصيب الشركة من الأرباح اللي لسه ما اتسوّتش — شامل نصيبها من الأرباح برصيدها',
+  companyOwnPendingProfit:
+    'نصيب الشركة من الأرباح على رصيدها، معلّق لحد الترحيل إلى رأس المال أو التوزيع الجاي',
   shareholdersPendingShare: 'نصيب المساهمين من الأرباح اللي لسه ما اتسوّتش',
   companyProfitsTreasury: 'رصيد خزنة أرباح الشركة — لا يشمل حصتها من الأرباح اللي لسه ما اتسوّتش',
   companyTotalProfit: 'خزنة أرباح الشركة + حصة الشركة المعلقة',

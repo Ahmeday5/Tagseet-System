@@ -32,6 +32,8 @@
 .cps-sc-paid .cps-sc-val { color: var(--re, #c0392b); }
 .cps-sc-net  .cps-sc-val { color: var(--te, #0d9488); }
 .cps-sc-bal  .cps-sc-val { color: var(--bl); }
+.cps-sc-pending { border-style: dashed; }
+.cps-sc-pending .cps-sc-val { color: var(--am); }
 
 // ── unexplained balance difference ──
 

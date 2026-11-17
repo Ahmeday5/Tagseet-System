@@ -26,6 +26,8 @@ export enum ReferenceType {
   SubAccountTransfer = 'SubAccountTransfer',
   RepresentativeCommission = 'RepresentativeCommission',
   ShareholderProfitCapitalization = 'ShareholderProfitCapitalization',
+  /** Consolidated voucher posting the company's own profit share to its balance. */
+  CompanyProfitShare = 'CompanyProfitShare',
 }
 
 export enum RelatedPartyType {

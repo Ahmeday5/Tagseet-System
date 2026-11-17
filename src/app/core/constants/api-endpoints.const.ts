@@ -86,11 +86,13 @@ export const API_ENDPOINTS = {
       `dashboard/shareholders/capital-classifications/${id}/statement`,
     /** POST: direct deposit/withdrawal on the company balance. */
     companyBalanceTransactions: 'dashboard/shareholders/company-balance/transactions',
-    /** PUT edit / DELETE a single company-balance deposit or withdrawal. */
+    /** PUT edit / DELETE a single editable company-balance line (`?source=Voucher|Transfer`). */
     companyBalanceTransactionById: (id: number) =>
       `dashboard/shareholders/company-balance/transactions/${id}`,
     /** POST (Admin, one-time): move legacy company cash back to the operating treasuries. */
     companyBalanceReconcile: 'dashboard/shareholders/company-balance/reconcile-historical',
+    /** POST (Admin, idempotent): merge historical per-profit company rows into consolidated vouchers. */
+    companyBalanceConsolidate: 'dashboard/shareholders/company-balance/consolidate-historical',
   },
   warehouses: {
     base: 'dashboard/warehouses',
@@ -120,6 +122,9 @@ export const API_ENDPOINTS = {
     lookup: 'dashboard/suppliers/lookup',
     /** POST: record a direct payment (not tied to an invoice) for a supplier. */
     payments: (id: number) => `dashboard/suppliers/${id}/payments`,
+    /** PUT edit / DELETE a single direct supplier payment. */
+    paymentById: (id: number, paymentId: number) =>
+      `dashboard/suppliers/${id}/payments/${paymentId}`,
   },
   purchaseInvoices: {
     base: 'dashboard/supplier-purchase-invoices',
